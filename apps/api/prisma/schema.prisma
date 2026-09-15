@@ -1,0 +1,859 @@
+// SPDX-FileCopyrightText: © 2023-2026 André Hoarau <andre@hoarau.dev> (modèle d'origine, Brinjel)
+// SPDX-FileCopyrightText: © 2026 Sillon contributors
+// SPDX-License-Identifier: AGPL-3.0-or-later
+//
+// Schéma Prisma de Sillon, dérivé des migrations de Brinjel.
+// Architecture : un seul schéma PostgreSQL, isolation par farmId + Row-Level Security.
+// Conventions : toutes les mesures sont des entiers (longueurs en cm, prix en centimes,
+// durées en jours, temps de travail en minutes). Les enums entiers de Brinjel sont
+// transcrits en enums Prisma ; les valeurs marquées "à confirmer" doivent être
+// vérifiées dans lib/brinjel/.
+
+generator client {
+  provider        = "prisma-client-js"
+  // `postgresqlExtensions` permet de déclarer citext / unaccent / ltree dans la datasource.
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [citext, unaccent, ltree]
+}
+
+// ───────────────────────────── Comptes ─────────────────────────────
+
+model User {
+  id             Int       @id @default(autoincrement())
+  email          String    @unique @db.Citext
+  hashedPassword String    @map("hashed_password")
+  confirmedAt    DateTime? @map("confirmed_at")
+  lastSeen       DateTime  @default(now()) @map("last_seen")
+  locale         String    @default("fr") @db.VarChar(5)
+  profile        Json?
+  insertedAt     DateTime  @default(now()) @map("inserted_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  tokens        UserToken[]
+  totp          TotpSettings?
+  recoveryCodes TotpRecoveryCode[]
+  memberships   FarmMembership[]
+  invitations   Invitation[]       @relation("Inviter")
+  ownedFarms    Farm[]             @relation("Owner")
+
+  @@map("users")
+}
+
+model UserToken {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  token     Bytes
+  context   String // session | confirm | reset_password | change:<email>
+  sentTo    String?  @map("sent_to")
+  insertedAt DateTime @default(now()) @map("inserted_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([context, token])
+  @@index([userId])
+  @@map("users_tokens")
+}
+
+model TotpSettings {
+  userId     Int       @id @map("user_id")
+  secret     Bytes?
+  enabled    Boolean   @default(false)
+  lastUsedAt DateTime? @map("last_used_at")
+  insertedAt DateTime  @default(now()) @map("inserted_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("totp_settings")
+}
+
+model TotpRecoveryCode {
+  id         Int      @id @default(autoincrement())
+  userId     Int      @map("user_id")
+  hashedCode Bytes    @map("hashed_code")
+  insertedAt DateTime @default(now()) @map("inserted_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("totp_recovery_codes")
+}
+
+// ───────────────────────────── Fermes ─────────────────────────────
+
+enum OverdueUnit {
+  day
+  week
+  month
+  year
+}
+
+model Farm {
+  id                    Int         @id @default(autoincrement()) @map("farm_id")
+  name                  String
+  slug                  String      @unique
+  ownerId               Int?        @map("owner_id")
+  countryCode           String      @default("FR") @map("country_code")
+  locked                Boolean     @default(false)
+  trialExpiryDate       DateTime    @map("trial_expiry_date") @db.Date
+  defaultProviderId     Int?        @map("default_provider_id")
+  taskOverdueWindowValue Int        @default(1) @map("task_overdue_window_value")
+  taskOverdueWindowUnit OverdueUnit @default(year) @map("task_overdue_window_unit")
+  insertedAt            DateTime    @default(now()) @map("inserted_at")
+  updatedAt             DateTime    @updatedAt @map("updated_at")
+
+  owner           User?            @relation("Owner", fields: [ownerId], references: [id], onDelete: Cascade)
+  memberships     FarmMembership[]
+  invitations     Invitation[]
+  bedSettings     BedSettings?
+  subscriptions   Subscription[]
+  billingDetails  BillingDetails?
+  trainingCenter  TrainingCenter?
+  studentFarm     StudentFarm?
+  templateForCenters  TrainingCenter[] @relation("DefaultTemplate")
+  templateForStudents StudentFarm[]    @relation("StudentTemplate")
+
+  // Données de culture
+  families       Family[]
+  crops          Crop[]
+  varieties      Variety[]
+  providers      Provider[]
+  units          Unit[]
+  containers     Container[]
+  tags           Tag[]
+  plantings      Planting[]
+  locations      Location[]
+  taskTypes      TaskType[]
+  taskMethods    TaskMethod[]
+  taskImplements TaskImplement[]
+  tasks          Task[]
+  taskTemplates  TaskTemplate[]
+  harvests       Harvest[]
+  notes          Note[]
+  photos         Photo[]
+
+  @@index([ownerId])
+  @@map("farms")
+}
+
+enum FarmRole {
+  owner
+  manager // chef·fe de culture — à confirmer
+  member  // membre de l'équipe — à confirmer
+}
+
+model FarmMembership {
+  farmId     Int      @map("farm_id")
+  userId     Int      @map("user_id")
+  role       FarmRole
+  insertedAt DateTime @default(now()) @map("inserted_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  farm Farm @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([farmId, userId])
+  @@index([userId])
+  // NB : Brinjel impose UN SEUL owner par ferme via un index partiel
+  // `CREATE UNIQUE INDEX ON farm_memberships (farm_id, role) WHERE role = 'owner'`.
+  // Prisma ne sait pas déclarer d'index partiel : à ajouter en migration SQL manuelle.
+  @@map("farm_memberships")
+}
+
+model Invitation {
+  id           Int      @id @default(autoincrement())
+  farmId       Int      @map("farm_id")
+  inviterId    Int      @map("inviter_id")
+  email        String
+  role         FarmRole
+  invitationId String   @unique @map("invitation_id")
+  insertedAt   DateTime @default(now()) @map("inserted_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  farm    Farm @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  inviter User @relation("Inviter", fields: [inviterId], references: [id], onDelete: Cascade)
+
+  @@unique([farmId, email])
+  @@index([inviterId])
+  @@map("invitations")
+}
+
+model BedSettings {
+  farmId           Int      @id @map("farm_id")
+  bedWidth         Int?     @map("bed_width") // cm
+  pathWidth        Int?     @map("path_width") // cm
+  bedLength        Int?     @map("bed_length") // cm
+  standardizedBeds Boolean  @default(false) @map("standardized_beds")
+  insertedAt       DateTime @default(now()) @map("inserted_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  farm Farm @relation(fields: [farmId], references: [id], onDelete: Cascade)
+
+  @@map("bed_settings")
+}
+
+// ─────────────────────── Abonnements (Paddle → à adapter) ───────────────────────
+
+model Subscription {
+  id                    Int       @id @default(autoincrement())
+  farmId                Int       @map("farm_id")
+  providerSubscriptionId String   @unique @map("provider_subscription_id")
+  providerProductId     String    @map("provider_product_id")
+  providerPriceId       String    @map("provider_price_id")
+  status                String
+  nextBilledAt          DateTime? @map("next_billed_at") @db.Date
+  previouslyBilledAt    DateTime  @map("previously_billed_at") @db.Date
+  canceledAt            DateTime? @map("canceled_at") @db.Date
+  pausedAt              DateTime? @map("paused_at") @db.Date
+  nextBillAmount        Int?      @map("next_bill_amount") // centimes
+  currencyCode          String    @map("currency_code")
+  scheduledChangeAction String?   @map("scheduled_change_action")
+  scheduledChangeAt     DateTime? @map("scheduled_change_at")
+  lastEventOccurredAt   DateTime  @map("last_event_occurred_at")
+  insertedAt            DateTime  @default(now()) @map("inserted_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  farm Farm @relation(fields: [farmId], references: [id], onDelete: Cascade)
+
+  @@index([farmId])
+  @@map("subscriptions")
+}
+
+model BillingDetails {
+  farmId             Int    @id @map("farm_id")
+  providerCustomerId String @map("provider_customer_id")
+  providerAddressId  String @map("provider_address_id")
+  providerBusinessId String @map("provider_business_id")
+
+  farm Farm @relation(fields: [farmId], references: [id], onDelete: Cascade)
+
+  @@map("billing_details")
+}
+
+// ───────────────────────── Centres de formation ─────────────────────────
+
+model TrainingCenter {
+  farmId                  Int      @id @map("farm_id")
+  defaultTemplateFarmId   Int      @map("default_template_farm_id")
+  defaultTrainingDuration Int      @default(365) @map("default_training_duration") // jours
+  maximumTrainingDuration Int      @default(365) @map("maximum_training_duration")
+  insertedAt              DateTime @default(now()) @map("inserted_at")
+  updatedAt               DateTime @updatedAt @map("updated_at")
+
+  farm                Farm          @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  defaultTemplateFarm Farm          @relation("DefaultTemplate", fields: [defaultTemplateFarmId], references: [id])
+  studentFarms        StudentFarm[]
+
+  @@index([defaultTemplateFarmId])
+  @@map("training_centers")
+}
+
+model StudentFarm {
+  farmId           Int      @id @map("farm_id")
+  trainingCenterId Int      @map("training_center_id")
+  templateFarmId   Int?     @map("template_farm_id")
+  insertedAt       DateTime @default(now()) @map("inserted_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  farm           Farm           @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  trainingCenter TrainingCenter @relation(fields: [trainingCenterId], references: [farmId], onDelete: Cascade)
+  templateFarm   Farm?          @relation("StudentTemplate", fields: [templateFarmId], references: [id], onDelete: SetNull)
+
+  @@index([trainingCenterId])
+  @@index([templateFarmId])
+  @@map("student_farms")
+}
+
+// ───────────────────────────── Référentiel ─────────────────────────────
+
+model Family {
+  id         Int      @id @default(autoincrement())
+  farmId     Int      @map("farm_id")
+  name       String
+  color      String
+  interval   Int // délai de rotation (unité à confirmer)
+  insertedAt DateTime @default(now()) @map("inserted_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  farm  Farm   @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  crops Crop[]
+
+  @@unique([farmId, name])
+  @@map("families")
+}
+
+model Crop {
+  id               Int      @id @default(autoincrement())
+  farmId           Int      @map("farm_id")
+  familyId         Int      @map("family_id")
+  name             String
+  color            String
+  defaultVarietyId Int?     @map("default_variety_id")
+  insertedAt       DateTime @default(now()) @map("inserted_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  farm           Farm       @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  family         Family     @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  defaultVariety Variety?   @relation("DefaultVariety", fields: [defaultVarietyId], references: [id], onDelete: SetNull)
+  varieties      Variety[]  @relation("CropVarieties")
+  plantings      Planting[]
+
+  @@unique([farmId, name, familyId])
+  @@index([familyId])
+  @@map("crops")
+}
+
+enum ProviderType {
+  seeds
+  plants // à confirmer
+}
+
+model Provider {
+  id         Int          @id @default(autoincrement())
+  farmId     Int          @map("farm_id")
+  name       String
+  type       ProviderType
+  insertedAt DateTime     @default(now()) @map("inserted_at")
+  updatedAt  DateTime     @updatedAt @map("updated_at")
+
+  farm      Farm      @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  varieties Variety[]
+
+  @@unique([farmId, name, type])
+  @@map("providers")
+}
+
+model Variety {
+  id         Int      @id @default(autoincrement())
+  farmId     Int      @map("farm_id")
+  cropId     Int      @map("crop_id")
+  providerId Int      @map("provider_id")
+  name       String
+  insertedAt DateTime @default(now()) @map("inserted_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  farm           Farm       @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  crop           Crop       @relation("CropVarieties", fields: [cropId], references: [id], onDelete: Cascade)
+  provider       Provider   @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  defaultForCrop Crop[]     @relation("DefaultVariety")
+  plantings      Planting[]
+
+  @@unique([farmId, name, cropId, providerId])
+  @@index([cropId])
+  @@index([providerId])
+  @@map("varieties")
+}
+
+model Unit {
+  id         Int      @id @default(autoincrement())
+  farmId     Int      @map("farm_id")
+  name       String
+  insertedAt DateTime @default(now()) @map("inserted_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  farm      Farm       @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  plantings Planting[]
+
+  @@unique([farmId, name])
+  @@map("units")
+}
+
+model Container {
+  id         Int      @id @default(autoincrement())
+  farmId     Int      @map("farm_id")
+  name       String
+  size       Int // nombre d'alvéoles
+  insertedAt DateTime @default(now()) @map("inserted_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  farm      Farm       @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  plantings Planting[]
+
+  @@unique([farmId, name])
+  @@map("containers")
+}
+
+model Tag {
+  id         Int      @id @default(autoincrement())
+  farmId     Int      @map("farm_id")
+  name       String
+  color      String
+  insertedAt DateTime @default(now()) @map("inserted_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  farm      Farm          @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  plantings PlantingTag[]
+
+  @@unique([farmId, name])
+  @@map("tags")
+}
+
+// ───────────────────────────── Séries ─────────────────────────────
+
+enum PlantingType {
+  direct_seed       // semis direct
+  transplant_raised // plant produit en pépinière
+  transplant_bought // plant acheté
+}
+
+enum FinishReason {
+  harvested
+  failed
+  other // à confirmer
+}
+
+enum PlantingDateType {
+  greenhouse_sowing // semis en pépinière
+  sowing_planting   // semis direct ou plantation
+  harvest_begin
+  harvest_end
+}
+
+enum PlantingDurationType {
+  greenhouse // durée en pépinière
+  to_harvest // durée jusqu'à la récolte
+  harvest    // durée de récolte
+}
+
+model Planting {
+  id                     Int           @id @default(autoincrement())
+  farmId                 Int           @map("farm_id")
+  cropId                 Int           @map("crop_id")
+  varietyId              Int?          @map("variety_id")
+  unitId                 Int?          @map("unit_id")
+  containerId            Int?          @map("container_id")
+  plantingType           PlantingType  @map("planting_type")
+  inGreenhouse           Boolean?      @map("in_greenhouse")
+  length                 BigInt? // cm
+  rows                   Int?
+  spacingPlants          BigInt?       @map("spacing_plants") // cm
+  yieldPerBedMeter       BigInt?       @map("yield_per_bed_meter")
+  pricePerUnit           BigInt?       @map("price_per_unit") // centimes
+  seedsPerGram           Int?          @map("seeds_per_gram")
+  seedsPerHoleSeedling   Int?          @map("seeds_per_hole_seedling")
+  seedsPerHoleDirect     Int?          @map("seeds_per_hole_direct")
+  seedsExtraPercentage   Int?          @map("seeds_extra_percentage")
+  estimatedGreenhouseLoss Int?         @map("estimated_greenhouse_loss") // %
+  finished               Boolean       @default(false)
+  finishReason           FinishReason? @map("finish_reason")
+  insertedAt             DateTime      @default(now()) @map("inserted_at")
+  updatedAt              DateTime      @updatedAt @map("updated_at")
+
+  farm      Farm       @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  crop      Crop       @relation(fields: [cropId], references: [id], onDelete: Cascade)
+  variety   Variety?   @relation(fields: [varietyId], references: [id], onDelete: SetNull)
+  unit      Unit?      @relation(fields: [unitId], references: [id], onDelete: SetNull)
+  container Container? @relation(fields: [containerId], references: [id], onDelete: SetNull)
+
+  dates          PlantingDate[]
+  durations      PlantingDuration[]
+  harvestPeriods HarvestPeriod[]
+  harvests       Harvest[]
+  tags           PlantingTag[]
+  assignments    LocationAssignment[]
+  tasks          PlantingTask[]
+  notes          PlantingNote[]
+
+  @@index([farmId, plantingType])
+  @@index([farmId, inGreenhouse])
+  @@index([farmId, finished])
+  @@index([cropId])
+  @@index([varietyId])
+  @@map("plantings")
+}
+
+model PlantingDate {
+  plantingId Int              @map("planting_id")
+  type       PlantingDateType
+  planned    DateTime         @db.Date
+  effective  DateTime?        @db.Date
+  insertedAt DateTime         @default(now()) @map("inserted_at")
+  updatedAt  DateTime         @updatedAt @map("updated_at")
+
+  planting Planting @relation(fields: [plantingId], references: [id], onDelete: Cascade)
+
+  @@id([plantingId, type])
+  @@index([planned])
+  @@index([effective])
+  @@map("planting_dates")
+}
+
+model PlantingDuration {
+  plantingId Int                  @map("planting_id")
+  type       PlantingDurationType
+  duration   Int // jours
+  insertedAt DateTime             @default(now()) @map("inserted_at")
+  updatedAt  DateTime             @updatedAt @map("updated_at")
+
+  planting Planting @relation(fields: [plantingId], references: [id], onDelete: Cascade)
+
+  @@id([plantingId, type])
+  @@map("planting_durations")
+}
+
+model HarvestPeriod {
+  id         Int      @id @default(autoincrement())
+  plantingId Int      @map("planting_id")
+  begin      DateTime @db.Date
+  end        DateTime @db.Date
+  insertedAt DateTime @default(now()) @map("inserted_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  planting Planting @relation(fields: [plantingId], references: [id], onDelete: Cascade)
+
+  @@index([plantingId])
+  @@index([begin])
+  @@index([end])
+  @@map("harvest_periods")
+}
+
+model PlantingTag {
+  plantingId Int      @map("planting_id")
+  tagId      Int      @map("tag_id")
+  insertedAt DateTime @default(now()) @map("inserted_at")
+
+  planting Planting @relation(fields: [plantingId], references: [id], onDelete: Cascade)
+  tag      Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([plantingId, tagId])
+  @@index([tagId])
+  @@map("planting_tags")
+}
+
+// ───────────────────────────── Parcellaire ─────────────────────────────
+
+model Location {
+  id         Int      @id @default(autoincrement())
+  farmId     Int      @map("farm_id")
+  parentId   Int?     @map("parent_id")
+  name       String
+  bedLength  Int      @map("bed_length") // cm
+  bedWidth   Int?     @map("bed_width") // cm
+  greenhouse Boolean
+  position   Int
+  /// Chemin matérialisé (ltree), maintenu par trigger SQL : lpad(position,5,'0') à chaque niveau.
+  /// Prisma ne connaît pas ltree : déclaré Unsupported, index GiST à créer en migration manuelle.
+  path       Unsupported("ltree")?
+  insertedAt DateTime @default(now()) @map("inserted_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  farm        Farm                 @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  parent      Location?            @relation("LocationTree", fields: [parentId], references: [id], onDelete: Cascade)
+  children    Location[]           @relation("LocationTree")
+  assignments LocationAssignment[]
+  tasks       LocationTask[]
+  notes       LocationNote[]
+
+  @@index([farmId, greenhouse])
+  @@index([parentId])
+  @@map("locations")
+}
+
+model LocationAssignment {
+  plantingId Int      @map("planting_id")
+  locationId Int      @map("location_id")
+  length     Int // cm occupés sur cette planche
+  insertedAt DateTime @default(now()) @map("inserted_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  planting Planting @relation(fields: [plantingId], references: [id], onDelete: Cascade)
+  location Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  @@id([plantingId, locationId])
+  @@index([locationId])
+  @@index([length])
+  @@map("location_assignments")
+}
+
+// ───────────────────────────── Tâches ─────────────────────────────
+
+model TaskType {
+  id         Int      @id @default(autoincrement())
+  farmId     Int      @map("farm_id")
+  name       String
+  color      String
+  insertedAt DateTime @default(now()) @map("inserted_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  farm          Farm           @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  methods       TaskMethod[]
+  tasks         Task[]
+  templateTasks TemplateTask[]
+
+  @@unique([farmId, name])
+  @@map("task_types")
+}
+
+model TaskMethod {
+  id         Int      @id @default(autoincrement())
+  farmId     Int      @map("farm_id")
+  typeId     Int      @map("type_id")
+  name       String
+  insertedAt DateTime @default(now()) @map("inserted_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  farm          Farm            @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  type          TaskType        @relation(fields: [typeId], references: [id], onDelete: Cascade)
+  implements    TaskImplement[]
+  tasks         Task[]
+  templateTasks TemplateTask[]
+
+  @@unique([farmId, name, typeId])
+  @@index([typeId])
+  @@map("task_methods")
+}
+
+model TaskImplement {
+  id         Int      @id @default(autoincrement())
+  farmId     Int      @map("farm_id")
+  methodId   Int      @map("method_id")
+  name       String
+  insertedAt DateTime @default(now()) @map("inserted_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  farm          Farm           @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  method        TaskMethod     @relation(fields: [methodId], references: [id], onDelete: Cascade)
+  tasks         Task[]
+  templateTasks TemplateTask[]
+
+  @@unique([farmId, name, methodId])
+  @@index([methodId])
+  @@map("task_implements")
+}
+
+enum TaskDefaultType {
+  sowing   // tâche de semis générée
+  planting // tâche de plantation générée
+  other    // tâche libre — à confirmer
+}
+
+model Task {
+  id                 Int             @id @default(autoincrement())
+  farmId             Int             @map("farm_id")
+  typeId             Int?            @map("type_id")
+  methodId           Int?            @map("method_id")
+  implementId        Int?            @map("implement_id")
+  defaultType        TaskDefaultType @map("default_type")
+  plannedDate        DateTime        @map("planned_date") @db.Date
+  effectiveDate      DateTime        @map("effective_date") @db.Date
+  done               Boolean
+  daysInField        Int             @map("days_in_field")
+  plannedLaborTime   Int?            @map("planned_labor_time") // minutes
+  effectiveLaborTime Int?            @map("effective_labor_time") // minutes
+  description        String?
+  insertedAt         DateTime        @default(now()) @map("inserted_at")
+  updatedAt          DateTime        @updatedAt @map("updated_at")
+
+  farm      Farm           @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  type      TaskType?      @relation(fields: [typeId], references: [id], onDelete: Cascade)
+  method    TaskMethod?    @relation(fields: [methodId], references: [id], onDelete: SetNull)
+  implement TaskImplement? @relation(fields: [implementId], references: [id], onDelete: SetNull)
+
+  plantings     PlantingTask[]
+  locations     LocationTask[]
+  templateLink  TemplateTaskLink?  @relation("LinkedTask")
+  linkedFrom    TemplateTaskLink[] @relation("LinkSource")
+
+  @@index([farmId, plannedDate])
+  @@index([farmId, done])
+  @@index([typeId])
+  @@index([methodId])
+  @@index([implementId])
+  @@map("tasks")
+}
+
+model PlantingTask {
+  plantingId Int      @map("planting_id")
+  taskId     Int      @map("task_id")
+  insertedAt DateTime @default(now()) @map("inserted_at")
+
+  planting Planting @relation(fields: [plantingId], references: [id], onDelete: Cascade)
+  task     Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@id([plantingId, taskId])
+  @@index([taskId])
+  @@map("planting_tasks")
+}
+
+model LocationTask {
+  locationId Int      @map("location_id")
+  taskId     Int      @map("task_id")
+  insertedAt DateTime @default(now()) @map("inserted_at")
+
+  location Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  task     Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@id([locationId, taskId])
+  @@index([taskId])
+  @@map("location_tasks")
+}
+
+// ───────────────────────── Itinéraires techniques ─────────────────────────
+
+enum TemplateDateType {
+  greenhouse_sowing
+  sowing_planting
+  harvest_begin
+  harvest_end
+  // à confirmer : même jeu que PlantingDateType ?
+}
+
+model TaskTemplate {
+  id         Int      @id @default(autoincrement())
+  farmId     Int      @map("farm_id")
+  name       String
+  insertedAt DateTime @default(now()) @map("inserted_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  farm  Farm           @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  tasks TemplateTask[]
+
+  @@index([farmId, name])
+  @@map("task_templates")
+}
+
+model TemplateTask {
+  id               Int              @id @default(autoincrement())
+  taskTemplateId   Int              @map("task_template_id")
+  typeId           Int              @map("type_id")
+  methodId         Int?             @map("method_id")
+  implementId      Int?             @map("implement_id")
+  daysInField      Int              @map("days_in_field")
+  plannedLaborTime Int?             @map("planned_labor_time")
+  description      String?
+  linkDays         Int              @map("link_days") // décalage en jours
+  templateDateType TemplateDateType @map("template_date_type") // date de référence
+  insertedAt       DateTime         @default(now()) @map("inserted_at")
+  updatedAt        DateTime         @updatedAt @map("updated_at")
+
+  template  TaskTemplate   @relation(fields: [taskTemplateId], references: [id], onDelete: Cascade)
+  type      TaskType       @relation(fields: [typeId], references: [id], onDelete: Cascade)
+  method    TaskMethod?    @relation(fields: [methodId], references: [id], onDelete: SetNull)
+  implement TaskImplement? @relation(fields: [implementId], references: [id], onDelete: SetNull)
+  links     TemplateTaskLink[]
+
+  @@index([taskTemplateId])
+  @@index([typeId])
+  @@map("template_tasks")
+}
+
+/// Lie une tâche générée à l'étape d'itinéraire qui l'a produite,
+/// pour la recaler automatiquement quand les dates de la série changent.
+model TemplateTaskLink {
+  taskId           Int              @id @map("task_id")
+  templateTaskId   Int              @map("template_task_id")
+  linkTaskId       Int?             @map("link_task_id")
+  linkDays         Int              @map("link_days")
+  templateDateType TemplateDateType @map("template_date_type")
+  insertedAt       DateTime         @default(now()) @map("inserted_at")
+  updatedAt        DateTime         @updatedAt @map("updated_at")
+
+  task         Task         @relation("LinkedTask", fields: [taskId], references: [id], onDelete: Cascade)
+  templateTask TemplateTask @relation(fields: [templateTaskId], references: [id], onDelete: Cascade)
+  linkTask     Task?        @relation("LinkSource", fields: [linkTaskId], references: [id], onDelete: Cascade)
+
+  @@index([templateTaskId])
+  @@index([linkTaskId])
+  @@map("template_task_links")
+}
+
+// ───────────────────────────── Suivi ─────────────────────────────
+
+model Harvest {
+  id         Int      @id @default(autoincrement())
+  farmId     Int      @map("farm_id")
+  plantingId Int      @map("planting_id")
+  date       DateTime @db.Date
+  quantity   Int // dans l'unité de la série
+  laborTime  Int?     @map("labor_time") // minutes
+  done       Boolean  @default(false)
+  insertedAt DateTime @default(now()) @map("inserted_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  farm     Farm     @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  planting Planting @relation(fields: [plantingId], references: [id], onDelete: Cascade)
+
+  @@index([plantingId])
+  @@index([farmId, date])
+  @@map("harvests")
+}
+
+model Note {
+  id         Int       @id @default(autoincrement())
+  farmId     Int       @map("farm_id")
+  content    String
+  date       DateTime  @db.Date
+  pinned     Boolean   @default(false)
+  archivedAt DateTime? @map("archived_at")
+  insertedAt DateTime  @default(now()) @map("inserted_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+
+  farm      Farm           @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  plantings PlantingNote[]
+  locations LocationNote[]
+  photos    NotePhoto[]
+
+  @@index([farmId, date])
+  @@index([farmId, pinned])
+  @@index([archivedAt])
+  @@map("notes")
+}
+
+model PlantingNote {
+  plantingId Int      @map("planting_id")
+  noteId     Int      @map("note_id")
+  insertedAt DateTime @default(now()) @map("inserted_at")
+
+  planting Planting @relation(fields: [plantingId], references: [id], onDelete: Cascade)
+  note     Note     @relation(fields: [noteId], references: [id], onDelete: Cascade)
+
+  @@id([plantingId, noteId])
+  @@index([noteId])
+  @@map("plantings_notes")
+}
+
+model LocationNote {
+  locationId Int      @map("location_id")
+  noteId     Int      @map("note_id")
+  insertedAt DateTime @default(now()) @map("inserted_at")
+
+  location Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  note     Note     @relation(fields: [noteId], references: [id], onDelete: Cascade)
+
+  @@id([locationId, noteId])
+  @@index([noteId])
+  @@map("locations_notes")
+}
+
+model Photo {
+  id         Int      @id @default(autoincrement())
+  farmId     Int      @map("farm_id")
+  name       String
+  uuid       String // clé de l'objet sur le stockage S3
+  insertedAt DateTime @default(now()) @map("inserted_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  farm  Farm        @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  notes NotePhoto[]
+
+  @@index([farmId])
+  @@map("photos")
+}
+
+model NotePhoto {
+  photoId    Int      @map("photo_id")
+  noteId     Int      @map("note_id")
+  insertedAt DateTime @default(now()) @map("inserted_at")
+
+  photo Photo @relation(fields: [photoId], references: [id], onDelete: Cascade)
+  note  Note  @relation(fields: [noteId], references: [id], onDelete: Cascade)
+
+  @@id([photoId, noteId])
+  @@index([noteId])
+  @@map("notes_photos")
+}

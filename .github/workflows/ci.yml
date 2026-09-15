@@ -1,0 +1,90 @@
+# SPDX-FileCopyrightText: © 2026 Sillon contributors
+# SPDX-License-Identifier: AGPL-3.0-or-later
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # L'application se connecte sous un rôle ordinaire : voir l'étape de préparation.
+  DATABASE_URL: postgresql://sillon_app:sillon@localhost:5432/sillon_dev?schema=public
+  TEST_DATABASE_URL: postgresql://sillon_app:sillon@localhost:5432/sillon_test?schema=public
+  SESSION_SECRET: secret-integration-continue-32-car
+
+jobs:
+  verification:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: sillon
+          POSTGRES_PASSWORD: sillon
+          POSTGRES_DB: sillon_dev
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U sillon -d sillon_dev"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Préparer les bases et le rôle applicatif
+        run: |
+          # Le service PostgreSQL crée POSTGRES_USER en superutilisateur, et un
+          # superutilisateur ignore la Row-Level Security. L'application et les tests se
+          # connectent donc sous un rôle ordinaire, propriétaire des bases pour pouvoir
+          # appliquer les migrations — la même condition qu'en production (voir le README).
+          admin() { PGPASSWORD=sillon psql -h localhost -U sillon -d postgres -v ON_ERROR_STOP=1 "$@"; }
+          admin -c "CREATE ROLE sillon_app LOGIN PASSWORD 'sillon';"
+          admin -c 'ALTER DATABASE sillon_dev OWNER TO sillon_app;'
+          admin -c 'CREATE DATABASE sillon_test OWNER sillon_app;'
+          for db in sillon_dev sillon_test; do
+            PGPASSWORD=sillon psql -h localhost -U sillon -d "$db" -v ON_ERROR_STOP=1 \
+              -c 'CREATE EXTENSION IF NOT EXISTS citext; CREATE EXTENSION IF NOT EXISTS unaccent; CREATE EXTENSION IF NOT EXISTS ltree;'
+          done
+
+      - run: npm run build -w @sillon/core
+      - run: npm run db:migrate -w @sillon/api
+      - run: npm run typecheck
+      - run: npx prettier --check .
+      - run: npm test
+      - run: npm run build
+
+      - name: Tests de bout en bout (smartphone et bureau)
+        run: |
+          npx playwright install --with-deps chromium
+          npx playwright test
+        env:
+          E2E_DATABASE_URL: ${{ env.TEST_DATABASE_URL }}
+          CI: 'true'
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-traces
+          path: test-results/
+          retention-days: 7
+
+  conformite-licences:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Vérifier les en-têtes REUSE (SPDX)
+        uses: fsfe/reuse-action@v5

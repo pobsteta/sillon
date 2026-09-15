@@ -1,0 +1,14 @@
+# SPDX-FileCopyrightText: © 2026 Sillon contributors
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+dist
+coverage
+node_modules
+package-lock.json
+specs
+LICENSE
+LICENSES
+apps/api/prisma/migrations
+apps/web/dev-dist
+test-results
+playwright-report

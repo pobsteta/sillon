@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Sillon">
+  <rect width="64" height="64" rx="12" fill="#4d7c0f" />
+  <path d="M8 46c12-6 20-6 24-14s2-16 0-20" stroke="#faf9f5" stroke-width="5" fill="none" stroke-linecap="round" />
+  <path d="M14 52c14-4 28-10 38-22" stroke="#d9f99d" stroke-width="4" fill="none" stroke-linecap="round" />
+</svg>
