@@ -1,0 +1,16 @@
+# SPDX-FileCopyrightText: © 2026 Sillon contributors
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+node_modules/
+dist/
+build/
+coverage/
+*.tsbuildinfo
+.env
+.env.*
+!.env.example
+.DS_Store
+apps/web/dev-dist/
+apps/api/prisma/.generated/
+playwright-report/
+test-results/

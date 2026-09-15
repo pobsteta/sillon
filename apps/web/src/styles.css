@@ -1,0 +1,103 @@
+/* SPDX-FileCopyrightText: © 2026 Sillon contributors
+   SPDX-License-Identifier: AGPL-3.0-or-later
+
+   Charte : fond chaud, vert de sillon, contrastes élevés (WCAG AA) et cibles tactiles
+   d'au moins 44 px pour l'usage au champ, mains gantées. */
+
+@import 'tailwindcss';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --color-sillon-50: #f7fbef;
+  --color-sillon-100: #ecf6d9;
+  --color-sillon-200: #d9ecb4;
+  --color-sillon-300: #bcdb86;
+  --color-sillon-400: #9cc558;
+  --color-sillon-500: #7ba53a;
+  --color-sillon-600: #4d7c0f;
+  --color-sillon-700: #3f6410;
+  --color-sillon-800: #344f13;
+  --color-sillon-900: #2c4314;
+  --color-earth-50: #faf9f5;
+  --color-earth-100: #f2efe6;
+  --color-earth-200: #e5e0d1;
+  --color-earth-700: #514a3c;
+  --color-earth-800: #33302a;
+  --color-earth-900: #1f1d19;
+}
+
+@layer base {
+  :root {
+    color-scheme: light dark;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-earth-50 text-earth-900 antialiased;
+    @apply dark:bg-earth-900 dark:text-earth-100;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-sillon-600 dark:outline-sillon-300;
+  }
+}
+
+@layer components {
+  /* Cible tactile minimale : 44 px de haut, conformément au §7.3 du brief.
+     Tailwind v4 n'applique que des utilitaires : la base des boutons est donc partagée
+     par un sélecteur groupé plutôt que par `@apply .btn`. */
+  .btn,
+  .btn-primary,
+  .btn-ghost,
+  .btn-danger {
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-4 text-sm font-medium transition;
+    @apply disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-primary {
+    @apply bg-sillon-600 text-white hover:bg-sillon-700 active:bg-sillon-800;
+  }
+  .btn-ghost {
+    @apply border border-earth-200 bg-white text-earth-800 hover:bg-earth-100;
+    @apply dark:border-earth-700 dark:bg-earth-800 dark:text-earth-100 dark:hover:bg-earth-700;
+  }
+  .btn-danger {
+    @apply bg-red-700 text-white hover:bg-red-800;
+  }
+  .field {
+    @apply min-h-11 w-full rounded-lg border border-earth-200 bg-white px-3 text-base;
+    @apply focus:border-sillon-600 dark:border-earth-700 dark:bg-earth-800;
+  }
+  .label {
+    @apply mb-1 block text-sm font-medium text-earth-700 dark:text-earth-200;
+  }
+  .card {
+    @apply rounded-xl border border-earth-200 bg-white p-4 shadow-sm;
+    @apply dark:border-earth-700 dark:bg-earth-800;
+  }
+  .chip {
+    @apply inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium;
+  }
+}
+
+/* Feuilles de tâches, plan d'assolement et commandes doivent s'imprimer proprement. */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  body {
+    @apply bg-white text-black;
+  }
+  .card {
+    @apply border border-neutral-300 shadow-none;
+    break-inside: avoid;
+  }
+  a[href]::after {
+    content: '';
+  }
+}

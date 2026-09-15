@@ -1,0 +1,59 @@
+# SPDX-FileCopyrightText: © 2026 Sillon contributors
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# Environnement de développement complet : `docker compose up`.
+# La base est créée avec les extensions citext, unaccent et ltree, et un rôle applicatif
+# distinct du propriétaire : c'est ce rôle qui subit les politiques RLS.
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: sillon
+      POSTGRES_PASSWORD: sillon
+      POSTGRES_DB: sillon_dev
+    ports: ['5432:5432']
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - ./infra/postgres-init.sql:/docker-entrypoint-initdb.d/10-extensions.sql:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U sillon -d sillon_dev']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    # Réservé aux tâches de fond (exports, courriels, génération de tâches) — BullMQ.
+    image: redis:7-alpine
+    ports: ['6379:6379']
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    environment:
+      DATABASE_URL: postgresql://sillon:sillon@db:5432/sillon_dev?schema=public
+      REDIS_URL: redis://redis:6379
+      SESSION_SECRET: ${SESSION_SECRET:-changez-moi-en-production-32-caracteres}
+      CORS_ORIGINS: http://localhost:8080
+      COOKIE_SECURE: 'false'
+      NODE_ENV: production
+      PORT: '3000'
+      UPLOAD_DIR: /data/uploads
+    ports: ['3000:3000']
+    volumes:
+      - uploads:/data/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    ports: ['8080:80']
+    depends_on: [api]
+
+volumes:
+  db-data:
+  uploads:

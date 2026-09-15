@@ -1,0 +1,32 @@
+version = 1
+SPDX-PackageName = "Sillon"
+SPDX-PackageSupplier = "Sillon contributors"
+SPDX-PackageDownloadLocation = "https://github.com/pobsteta/sillon"
+
+[[annotations]]
+path = [
+  "specs/**",
+  "README.md",
+  "CLAUDE.md",
+  "LICENSE",
+  "REUSE.toml",
+  "**/*.json",
+  "**/*.md",
+  "**/*.po",
+  "**/*.svg",
+  "**/*.png",
+  "**/*.webmanifest",
+  "**/.env.example",
+]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "© 2026 Sillon contributors"
+SPDX-License-Identifier = "AGPL-3.0-or-later"
+
+[[annotations]]
+path = ["specs/schema.prisma", "apps/api/prisma/schema.prisma", "apps/web/src/i18n/locales/**"]
+precedence = "override"
+SPDX-FileCopyrightText = [
+  "© 2023-2026 André Hoarau <andre@hoarau.dev> (Brinjel, modèle d'origine)",
+  "© 2026 Sillon contributors",
+]
+SPDX-License-Identifier = "AGPL-3.0-or-later"
