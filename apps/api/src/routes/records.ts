@@ -11,6 +11,7 @@ import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import { toIsoDate, today } from '@sillon/core';
 import { inFarm } from '../scope.js';
 import { badRequest, notFound } from '../errors.js';
+import { assertReferences } from '../references.js';
 import { isoDate, toDbDate } from '../planting-io.js';
 import { createStorage } from '../storage.js';
 
@@ -204,6 +205,11 @@ export async function recordRoutes(app: FastifyInstance): Promise<void> {
     async (request, reply) => {
       const created = await inFarm(request, async (db, { farmId }) => {
         const { date, plantingIds, locationIds, photoIds, ...fields } = request.body;
+        await assertReferences(db, {
+          planting: plantingIds,
+          location: locationIds,
+          photo: photoIds,
+        });
         return db.note.create({
           data: {
             ...fields,
@@ -243,6 +249,7 @@ export async function recordRoutes(app: FastifyInstance): Promise<void> {
         const existing = await db.note.findFirst({ where: { id, farmId } });
         if (!existing) throw notFound('Note introuvable');
         const { date, archived, photoIds, ...fields } = request.body;
+        await assertReferences(db, { photo: photoIds });
         if (photoIds) {
           await db.notePhoto.deleteMany({ where: { noteId: id } });
           if (photoIds.length > 0) {

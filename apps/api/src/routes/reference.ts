@@ -12,6 +12,7 @@ import { z } from 'zod';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import { inFarm } from '../scope.js';
 import { notFound } from '../errors.js';
+import { assertReferences, type ReferenceKind } from '../references.js';
 import type { Tx } from '../db.js';
 
 /**
@@ -39,6 +40,12 @@ interface ResourceOptions {
   include?: unknown;
   /** Filtres de liste supportés, validés puis passés tels quels à `where`. */
   filters?: z.ZodType;
+  /**
+   * Champs du corps qui citent une autre ressource, avec la nature de celle-ci.
+   * Chacun est relu dans la ferme courante avant l'écriture : une clé étrangère
+   * est globale, elle accepterait sans cela une ligne d'une autre ferme.
+   */
+  references?: Record<string, ReferenceKind>;
 }
 
 const IdParams = z.object({
@@ -50,6 +57,16 @@ export function registerResource(app: FastifyInstance, options: ResourceOptions)
   const typed = app.withTypeProvider<ZodTypeProvider>();
   const base = `/api/farms/:farmId/${options.path}`;
   const tags = ['référentiel'];
+
+  const checkReferences = async (db: Tx, body: Record<string, unknown>): Promise<void> => {
+    if (!options.references) return;
+    const cited: Partial<Record<ReferenceKind, (number | null | undefined)[]>> = {};
+    for (const [field, kind] of Object.entries(options.references)) {
+      if (body[field] === undefined) continue;
+      (cited[kind] ??= []).push(body[field] as number | null);
+    }
+    await assertReferences(db, cited);
+  };
 
   typed.get(
     base,
@@ -78,12 +95,14 @@ export function registerResource(app: FastifyInstance, options: ResourceOptions)
       schema: { tags, summary: `Créer : ${options.label}`, body: options.create },
     },
     async (request, reply) => {
-      const created = await inFarm(request, (db, { farmId }) =>
-        options.delegate(db).create({
-          data: { ...(request.body as Record<string, unknown>), farmId },
+      const created = await inFarm(request, async (db, { farmId }) => {
+        const body = request.body as Record<string, unknown>;
+        await checkReferences(db, body);
+        return options.delegate(db).create({
+          data: { ...body, farmId },
           include: options.include,
-        }),
-      );
+        });
+      });
       return reply.status(201).send(created);
     },
   );
@@ -104,9 +123,11 @@ export function registerResource(app: FastifyInstance, options: ResourceOptions)
         const { id } = request.params;
         const existing = await options.delegate(db).findFirst({ where: { id, farmId } });
         if (!existing) throw notFound(`${options.label} introuvable`);
+        const body = request.body as Record<string, unknown>;
+        await checkReferences(db, body);
         return options.delegate(db).update({
           where: { id },
-          data: request.body as Record<string, unknown>,
+          data: body,
           include: options.include,
         });
       }),
@@ -168,6 +189,7 @@ export async function referenceRoutes(app: FastifyInstance): Promise<void> {
     }),
     include: { family: true },
     filters: z.object({ familyId: z.coerce.number().int().positive().optional() }),
+    references: { familyId: 'family', defaultVarietyId: 'variety' },
   });
 
   registerResource(app, {
@@ -197,6 +219,7 @@ export async function referenceRoutes(app: FastifyInstance): Promise<void> {
       cropId: z.coerce.number().int().positive().optional(),
       providerId: z.coerce.number().int().positive().optional(),
     }),
+    references: { cropId: 'crop', providerId: 'provider' },
   });
 
   registerResource(app, {
@@ -242,6 +265,7 @@ export async function referenceRoutes(app: FastifyInstance): Promise<void> {
     create: z.object({ name, typeId: z.number().int().positive() }),
     update: z.object({ name: name.optional(), typeId: z.number().int().positive().optional() }),
     filters: z.object({ typeId: z.coerce.number().int().positive().optional() }),
+    references: { typeId: 'taskType' },
   });
 
   registerResource(app, {
@@ -251,5 +275,6 @@ export async function referenceRoutes(app: FastifyInstance): Promise<void> {
     create: z.object({ name, methodId: z.number().int().positive() }),
     update: z.object({ name: name.optional(), methodId: z.number().int().positive().optional() }),
     filters: z.object({ methodId: z.coerce.number().int().positive().optional() }),
+    references: { methodId: 'taskMethod' },
   });
 }

@@ -22,6 +22,7 @@ import {
 } from '@sillon/core';
 import { inFarm } from '../scope.js';
 import { notFound } from '../errors.js';
+import { assertReferences } from '../references.js';
 import type { Tx } from '../db.js';
 import { datesFromRows, isoDate, toDbDate } from '../planting-io.js';
 import { defaultTaskTypeIds } from '../farm-setup.js';
@@ -72,6 +73,18 @@ async function insertGeneratedTask(
     });
   }
   return created.id;
+}
+
+/** Les étapes d'un itinéraire citent un type, une méthode et un outil de la ferme. */
+async function assertStepReferences(
+  db: Tx,
+  steps: readonly { typeId: number; methodId?: number | null; implementId?: number | null }[],
+): Promise<void> {
+  await assertReferences(db, {
+    taskType: steps.map((step) => step.typeId),
+    taskMethod: steps.map((step) => step.methodId),
+    taskImplement: steps.map((step) => step.implementId),
+  });
 }
 
 export async function taskRoutes(app: FastifyInstance): Promise<void> {
@@ -177,6 +190,13 @@ export async function taskRoutes(app: FastifyInstance): Promise<void> {
     async (request, reply) => {
       const created = await inFarm(request, async (db, { farmId }) => {
         const { plantingIds, locationIds, plannedDate, ...fields } = request.body;
+        await assertReferences(db, {
+          taskType: fields.typeId,
+          taskMethod: fields.methodId,
+          taskImplement: fields.implementId,
+          planting: plantingIds,
+          location: locationIds,
+        });
         const task = await db.task.create({
           data: {
             ...fields,
@@ -227,6 +247,13 @@ export async function taskRoutes(app: FastifyInstance): Promise<void> {
         if (!existing) throw notFound('Tâche introuvable');
 
         const { plantingIds, locationIds, plannedDate, effectiveDate, ...fields } = request.body;
+        await assertReferences(db, {
+          taskType: fields.typeId,
+          taskMethod: fields.methodId,
+          taskImplement: fields.implementId,
+          planting: plantingIds,
+          location: locationIds,
+        });
         await db.task.update({
           where: { id },
           data: {
@@ -510,16 +537,17 @@ export async function taskRoutes(app: FastifyInstance): Promise<void> {
       },
     },
     async (request, reply) => {
-      const created = await inFarm(request, (db, { farmId }) =>
-        db.taskTemplate.create({
+      const created = await inFarm(request, async (db, { farmId }) => {
+        await assertStepReferences(db, request.body.steps);
+        return db.taskTemplate.create({
           data: {
             farmId,
             name: request.body.name,
             tasks: { create: request.body.steps },
           },
           include: { tasks: true },
-        }),
-      );
+        });
+      });
       return reply.status(201).send(created);
     },
   );
@@ -560,6 +588,7 @@ export async function taskRoutes(app: FastifyInstance): Promise<void> {
           await db.taskTemplate.update({ where: { id }, data: { name: request.body.name } });
         }
         if (request.body.steps) {
+          await assertStepReferences(db, request.body.steps);
           // Les étapes sont remplacées en bloc ; les tâches déjà générées gardent leur lien
           // par `template_task_links`, qui conserve le décalage d'origine.
           await db.templateTask.deleteMany({ where: { taskTemplateId: id } });

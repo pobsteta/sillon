@@ -219,6 +219,8 @@ export interface Stats {
   };
   yields: { expected: number; actual: number; expectedRevenue: number };
   crops: {
+    /** Clé d'agrégat : une ligne par espèce ET par unité de récolte. */
+    key: string;
     cropId: number;
     cropName: string;
     familyName: string;

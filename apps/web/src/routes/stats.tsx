@@ -75,7 +75,7 @@ export function StatsPage() {
             <h2 className="mb-3 text-lg font-semibold">{t('stats.yieldByCrop')}</h2>
             <ul className="space-y-3">
               {data.crops.map((crop) => (
-                <li key={crop.cropId}>
+                <li key={crop.key}>
                   <div className="mb-1 flex items-baseline justify-between gap-2 text-sm">
                     <span className="font-medium">{crop.cropName}</span>
                     <span className="tabular-nums text-earth-700 dark:text-earth-200">

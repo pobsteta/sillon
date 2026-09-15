@@ -146,6 +146,65 @@ describe('isolation entre fermes', () => {
     expect(role?.bypassrls, 'le rôle de DATABASE_URL ne doit pas avoir BYPASSRLS').toBe(false);
   });
 
+  it('refuse une référence empruntée à une autre ferme', async () => {
+    // Les clés étrangères sont globales : sans contrôle applicatif, PostgreSQL accepterait
+    // une méthode de cette ferme rattachée à un type de tâche de la ferme voisine.
+    const other = await registerAccount(app, { email: 'voisine2@example.org' });
+    const foreignType = (
+      await app.inject({
+        method: 'GET',
+        url: `/api/farms/${other.farmId}/task-types`,
+        headers: { cookie: other.cookie },
+      })
+    ).json()[0];
+
+    const refused = await app.inject({
+      method: 'POST',
+      url: farmUrl('/task-methods'),
+      headers: headers(),
+      payload: { name: 'Méthode empruntée', typeId: foreignType.id },
+    });
+    expect(refused.statusCode).toBe(400);
+    expect(refused.json().details.kind).toBe('taskType');
+
+    // Rien n'a été écrit : la ferme garde ses seules méthodes.
+    const methods = await app.inject({
+      method: 'GET',
+      url: farmUrl('/task-methods'),
+      headers: headers(),
+    });
+    expect(
+      methods.json().some((method: { name: string }) => method.name === 'Méthode empruntée'),
+    ).toBe(false);
+  });
+
+  it('refuse une série qui cite l’espèce d’une autre ferme', async () => {
+    const other = await registerAccount(app, { email: 'voisine3@example.org' });
+    const foreignCrop = (
+      await app.inject({
+        method: 'GET',
+        url: `/api/farms/${other.farmId}/crops`,
+        headers: { cookie: other.cookie },
+      })
+    ).json()[0];
+
+    const refused = await app.inject({
+      method: 'POST',
+      url: farmUrl('/plantings'),
+      headers: headers(),
+      payload: {
+        cropId: foreignCrop.id,
+        plantingType: 'direct_seed',
+        length: 1000,
+        rows: 1,
+        spacingPlants: 25,
+        anchorDate: '2026-04-01',
+      },
+    });
+    expect(refused.statusCode).toBe(400);
+    expect(refused.json().details.kind).toBe('crop');
+  });
+
   it('la politique RLS filtre même une requête sans clause farm_id', async () => {
     await createPlanting();
     const other = await registerAccount(app, { email: 'voisine@example.org' });
@@ -317,6 +376,43 @@ describe('assolement', () => {
     });
     expect(paths[0]!.path).toMatch(/^\d{5}$/);
     expect(paths[1]!.path).toBe(`${paths[0]!.path}.00003`);
+  });
+
+  it('refuse de déplacer un emplacement sous l’un de ses descendants', async () => {
+    const garden = await createBed('Jardin nord', 0);
+    const bed = await app.inject({
+      method: 'POST',
+      url: farmUrl('/locations'),
+      headers: headers(),
+      payload: { name: 'Planche A1', bedLength: 5000, parentId: garden.id },
+    });
+    const child = bed.json();
+
+    const cycle = await app.inject({
+      method: 'PATCH',
+      url: farmUrl(`/locations/${garden.id}`),
+      headers: headers(),
+      payload: { parentId: child.id },
+    });
+    expect(cycle.statusCode).toBe(400);
+
+    const itself = await app.inject({
+      method: 'PATCH',
+      url: farmUrl(`/locations/${garden.id}`),
+      headers: headers(),
+      payload: { parentId: garden.id },
+    });
+    expect(itself.statusCode).toBe(400);
+
+    // L'arbre est resté intact.
+    const locations = await app.inject({
+      method: 'GET',
+      url: farmUrl('/locations'),
+      headers: headers(),
+    });
+    expect(
+      locations.json().find((location: { id: number }) => location.id === child.id).parentId,
+    ).toBe(garden.id);
   });
 
   it('propose les emplacements disponibles et place la série', async () => {
@@ -548,6 +644,46 @@ describe('commandes, récoltes et statistiques', () => {
     expect(body.yields.expected).toBe(7500);
     expect(body.yields.actual).toBe(4500);
     expect(body.crops[0].comparison.differencePercentage).toBe(-40);
+  });
+
+  it('ne mélange pas deux unités de récolte pour une même espèce', async () => {
+    const units = (
+      await app.inject({ method: 'GET', url: farmUrl('/units'), headers: headers() })
+    ).json();
+    const kilos = units.find((unit: { name: string }) => unit.name === 'kg');
+    const bottes = units.find((unit: { name: string }) => unit.name === 'botte');
+
+    const enKilos = await createPlanting({ unitId: kilos.id, yieldPerBedMeter: 250 });
+    const enBottes = await createPlanting({ unitId: bottes.id, yieldPerBedMeter: 40 });
+    for (const [planting, quantity] of [
+      [enKilos, 6000],
+      [enBottes, 900],
+    ] as const) {
+      await app.inject({
+        method: 'POST',
+        url: farmUrl('/harvests'),
+        headers: headers(),
+        payload: { plantingId: planting.id, date: '2026-06-20', quantity },
+      });
+    }
+
+    const stats = await app.inject({
+      method: 'GET',
+      url: farmUrl('/stats?year=2026'),
+      headers: headers(),
+    });
+    const lines = stats.json().crops;
+    expect(lines).toHaveLength(2);
+    expect(lines.map((line: { unitName: string }) => line.unitName).sort()).toEqual([
+      'botte',
+      'kg',
+    ]);
+    expect(lines.find((line: { unitName: string }) => line.unitName === 'kg').actualYield).toBe(
+      6000,
+    );
+    expect(lines.find((line: { unitName: string }) => line.unitName === 'botte').actualYield).toBe(
+      900,
+    );
   });
 
   it('exporte toutes les données de la ferme', async () => {

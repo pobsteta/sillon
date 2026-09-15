@@ -84,6 +84,24 @@ export async function api<T>(path: string, options: RequestOptions = {}): Promis
   ) as Promise<T>;
 }
 
+/**
+ * Vide le cache de réponses tenu par le service worker.
+ * Ce cache est indexé par URL, pas par session : sans cette purge, les données de la
+ * ferme précédente resteraient lisibles hors ligne après une déconnexion, ou après le
+ * passage d'un autre compte sur le même appareil.
+ */
+export async function clearApiCache(): Promise<void> {
+  if (typeof caches === 'undefined') return;
+  try {
+    await caches.delete(API_CACHE);
+  } catch {
+    // Stockage refusé (navigation privée) : il n'y a alors rien à purger.
+  }
+}
+
+/** Nom du cache déclaré dans `vite.config.ts` (runtimeCaching). */
+const API_CACHE = 'sillon-api';
+
 /** Rejoue la file d'attente ; appelé au retour du réseau et au démarrage. */
 export function synchronize(): Promise<{ sent: number; dropped: number }> {
   return flushOutbox((entry) =>

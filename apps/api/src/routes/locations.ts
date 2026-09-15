@@ -19,6 +19,7 @@ import {
 } from '@sillon/core';
 import { inFarm } from '../scope.js';
 import { badRequest, notFound } from '../errors.js';
+import { assertReferences } from '../references.js';
 import type { Tx } from '../db.js';
 import { datesFromRows, isoDate } from '../planting-io.js';
 
@@ -154,8 +155,26 @@ export async function locationRoutes(app: FastifyInstance): Promise<void> {
         const { id } = request.params;
         const existing = await db.location.findFirst({ where: { id, farmId } });
         if (!existing) throw notFound('Emplacement introuvable');
-        if (request.body.parentId === id)
-          throw badRequest('Un emplacement ne peut pas être son propre parent');
+
+        const { parentId } = request.body;
+        if (parentId === id) throw badRequest('Un emplacement ne peut pas être son propre parent');
+        if (parentId) {
+          await assertReferences(db, { location: parentId });
+          // Déplacer un emplacement sous l'un de ses propres descendants formerait un cycle :
+          // la clé étrangère l'accepterait, mais l'arbre ltree ne sait pas le représenter et
+          // le trigger recalculerait les chemins contre un sous-arbre devenu incohérent.
+          const cycle = await db.$queryRaw<{ id: number }[]>`
+            SELECT enfant.id
+              FROM locations enfant, locations racine
+             WHERE enfant.id = ${parentId} AND racine.id = ${id}
+               AND enfant.path <@ racine.path`;
+          if (cycle.length > 0) {
+            throw badRequest(
+              'Un emplacement ne peut pas être déplacé sous l’un de ses descendants',
+            );
+          }
+        }
+
         // Le trigger `locations_path_before` recalcule le chemin ltree, et
         // `locations_path_after` celui de toute la descendance.
         return db.location.update({ where: { id }, data: request.body });

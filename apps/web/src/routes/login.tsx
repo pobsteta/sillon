@@ -6,7 +6,7 @@ import { useNavigate } from '@tanstack/react-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useLocale } from '../lib/locale.js';
-import { ApiError, api } from '../lib/api.js';
+import { ApiError, api, clearApiCache } from '../lib/api.js';
 import { Field } from '../components/ui.js';
 
 export function LoginPage() {
@@ -39,6 +39,9 @@ export function LoginPage() {
           },
         });
       }
+      // Un autre compte a pu se servir de cet appareil : ses réponses mises en cache par
+      // le service worker ne doivent pas ressortir hors ligne sous cette session.
+      await clearApiCache();
       await queryClient.invalidateQueries();
       await navigate({ to: '/' });
     } catch (cause) {

@@ -9,7 +9,7 @@ import { Link, useRouterState } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { useCurrentSession } from '../lib/session.js';
 import { useAutoSynchronize, useOnlineStatus, usePendingWrites } from '../lib/online.js';
-import { api } from '../lib/api.js';
+import { api, clearApiCache } from '../lib/api.js';
 import { useQueryClient } from '@tanstack/react-query';
 
 interface NavEntry {
@@ -60,8 +60,11 @@ export function AppShell({ children }: { children: ReactNode }) {
   const isActive = (to: string) => (to === '/' ? path === '/' : path.startsWith(to));
 
   const signOut = async () => {
-    await api('/api/auth/logout', { method: 'POST' });
+    // La session locale est fermée même si l'appel échoue : sans réseau, rester connecté
+    // à l'écran serait pire que de perdre la confirmation du serveur.
+    await api('/api/auth/logout', { method: 'POST' }).catch(() => undefined);
     queryClient.clear();
+    await clearApiCache();
     window.location.href = '/connexion';
   };
 

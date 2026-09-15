@@ -59,9 +59,12 @@ export async function statsRoutes(app: FastifyInstance): Promise<void> {
           return range ? range.begin <= to && from <= range.end : false;
         });
 
+        // L'agrégat est tenu par espèce ET par unité : additionner des kilogrammes et des
+        // bottes donnerait un total, un rendement au mètre et un écart dépourvus de sens.
         const byCrop = new Map<
-          number,
+          string,
           {
+            key: string;
             cropId: number;
             cropName: string;
             familyName: string;
@@ -87,7 +90,9 @@ export async function statsRoutes(app: FastifyInstance): Promise<void> {
             pricePerUnit: planting.pricePerUnit === null ? null : Number(planting.pricePerUnit),
           };
           const harvested = planting.harvests.reduce((total, h) => total + h.quantity, 0);
-          const entry = byCrop.get(planting.cropId) ?? {
+          const key = `${planting.cropId}:${planting.unitId ?? 0}`;
+          const entry = byCrop.get(key) ?? {
+            key,
             cropId: planting.cropId,
             cropName: planting.crop.name,
             familyName: planting.crop.family.name,
@@ -106,7 +111,7 @@ export async function statsRoutes(app: FastifyInstance): Promise<void> {
           entry.actualYield += harvested;
           entry.expectedRevenue += expectedRevenue(spec);
           entry.harvestLaborTime += planting.harvests.reduce((t, h) => t + (h.laborTime ?? 0), 0);
-          byCrop.set(planting.cropId, entry);
+          byCrop.set(key, entry);
         }
 
         const tasks = await db.task.findMany({

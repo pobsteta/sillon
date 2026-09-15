@@ -18,6 +18,7 @@ import {
 } from '@sillon/core';
 import { inFarm } from '../scope.js';
 import { notFound } from '../errors.js';
+import { assertReferences } from '../references.js';
 import type { Tx } from '../db.js';
 import {
   DatesInput,
@@ -282,6 +283,13 @@ export async function plantingRoutes(app: FastifyInstance): Promise<void> {
     async (request, reply) => {
       const created = await inFarm(request, async (db, { farmId }) => {
         const { dates, anchorDate, durations, tagIds, ...fields } = request.body;
+        await assertReferences(db, {
+          crop: fields.cropId,
+          variety: fields.varietyId,
+          unit: fields.unitId,
+          container: fields.containerId,
+          tag: tagIds,
+        });
         const planting = await db.planting.create({ data: { ...fields, farmId } });
         await writeDatesAndDurations(db, planting.id, {
           dates,
@@ -317,6 +325,13 @@ export async function plantingRoutes(app: FastifyInstance): Promise<void> {
 
         const body = request.body as any;
         const { dates, anchorDate, durations, tagIds, ...fields } = body;
+        await assertReferences(db, {
+          crop: fields.cropId,
+          variety: fields.varietyId,
+          unit: fields.unitId,
+          container: fields.containerId,
+          tag: tagIds,
+        });
         if (Object.keys(fields).length > 0) {
           await db.planting.update({ where: { id }, data: fields });
         }
@@ -445,6 +460,12 @@ export async function plantingRoutes(app: FastifyInstance): Promise<void> {
     async (request) =>
       inFarm(request, async (db, { farmId }) => {
         const { ids, shiftDays, data, addTagIds, removeTagIds } = request.body;
+        await assertReferences(db, {
+          variety: data?.varietyId,
+          unit: data?.unitId,
+          container: data?.containerId,
+          tag: [...(addTagIds ?? []), ...(removeTagIds ?? [])],
+        });
         const owned = await db.planting.findMany({
           where: { id: { in: ids }, farmId },
           include: { dates: true },
