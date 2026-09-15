@@ -133,6 +133,19 @@ describe('isolation entre fermes', () => {
     expect(response.statusCode).toBe(404);
   });
 
+  it('exige un rôle de connexion ordinaire, sinon la RLS ne s’applique pas', async () => {
+    // Un superutilisateur — ou un rôle BYPASSRLS — ignore toutes les politiques.
+    // La base tournerait alors sans isolation, et le test suivant échouerait sans dire
+    // pourquoi. C'est aussi la condition d'exploitation rappelée dans le README.
+    const [role] = await getPrisma().$queryRaw<{ superuser: boolean; bypassrls: boolean }[]>`
+      SELECT rolsuper AS superuser, rolbypassrls AS bypassrls
+        FROM pg_roles WHERE rolname = current_user`;
+    expect(role?.superuser, 'le rôle de DATABASE_URL ne doit pas être superutilisateur').toBe(
+      false,
+    );
+    expect(role?.bypassrls, 'le rôle de DATABASE_URL ne doit pas avoir BYPASSRLS').toBe(false);
+  });
+
   it('la politique RLS filtre même une requête sans clause farm_id', async () => {
     await createPlanting();
     const other = await registerAccount(app, { email: 'voisine@example.org' });
