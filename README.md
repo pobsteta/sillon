@@ -77,6 +77,42 @@ npm run db:seed        # compte : maraichere@example.org / sillon-demonstration
 npm run dev
 ```
 
+### Tester sur un smartphone
+
+Le téléphone et l'ordinateur doivent être sur le même réseau local. Relevez l'adresse
+locale de l'ordinateur (`192.168.x.y`) : Vite l'affiche au démarrage sous « Network ».
+
+**Coup d'œil rapide, avec rechargement à chaud** — l'API sur son port habituel, l'interface
+ouverte au réseau :
+
+```bash
+npm run dev -w @sillon/api
+npm run dev -w @sillon/web -- --host     # affiche l'URL « Network »
+```
+
+Sur le téléphone : `http://192.168.x.y:5173`. Le proxy de Vite relaie `/api` vers l'API
+depuis l'ordinateur ; rien d'autre n'est à ouvrir sur le réseau.
+
+**Mode hors ligne et installation** — il faut le vrai build, car le service worker est
+désactivé en développement :
+
+```bash
+npm run build -w @sillon/web
+npm run preview -w @sillon/web -- --host
+```
+
+Sur le téléphone : `http://192.168.x.y:4173`.
+
+Attention : les navigateurs réservent le service worker et l'installation aux **contextes
+sécurisés**. Sur une adresse `http://` du réseau local, l'application fonctionne, mais
+l'installation sur l'écran d'accueil et le mode hors ligne restent inactifs. Pour les
+essayer, exposez le port en HTTPS — par exemple `cloudflared tunnel --url http://localhost:4173`
+ou `ngrok http 4173` — et ouvrez l'adresse `https://…` obtenue : « Ajouter à l'écran
+d'accueil » apparaît alors, et couper les données mobiles permet de vérifier que la feuille
+de la semaine reste lisible et que les récoltes saisies partent en file d'attente.
+
+Le port de l'API derrière le proxy se change avec `API_PORT` (3000 par défaut).
+
 ### Commandes utiles
 
 | Commande                                | Effet                                                                            |

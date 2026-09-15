@@ -5,6 +5,10 @@ import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
+// Cible du proxy vers l'API : le port de développement par défaut, que les tests de bout
+// en bout surchargent puisqu'ils démarrent l'API sur un port dédié.
+const apiTarget = `http://localhost:${process.env.API_PORT ?? 3000}`;
+
 export default defineConfig({
   plugins: [
     react(),
@@ -53,16 +57,16 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      '/api': { target: 'http://localhost:3000', changeOrigin: true },
-      '/docs': { target: 'http://localhost:3000', changeOrigin: true },
+      '/api': { target: apiTarget, changeOrigin: true },
+      '/docs': { target: apiTarget, changeOrigin: true },
     },
   },
   // `vite preview` sert le build : les tests de bout en bout tournent sur le vrai bundle.
   preview: {
     port: 4173,
     proxy: {
-      '/api': { target: 'http://localhost:3100', changeOrigin: true },
-      '/docs': { target: 'http://localhost:3100', changeOrigin: true },
+      '/api': { target: apiTarget, changeOrigin: true },
+      '/docs': { target: apiTarget, changeOrigin: true },
     },
   },
   build: { target: 'es2022', sourcemap: true },

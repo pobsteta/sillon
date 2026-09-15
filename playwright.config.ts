@@ -57,6 +57,8 @@ export default defineConfig({
       command: `npm run preview -w @sillon/web -- --port ${WEB_PORT} --strictPort`,
       port: WEB_PORT,
       reuseExistingServer: !process.env.CI,
+      // Le proxy de `vite preview` doit viser l'API démarrée ci-dessus, pas celle de développement.
+      env: { API_PORT: String(API_PORT) },
     },
   ],
 });
