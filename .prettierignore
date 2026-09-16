@@ -5,6 +5,9 @@ dist
 coverage
 node_modules
 package-lock.json
+# Réécrit intégralement par release-please à chaque publication, dans son propre
+# format : le reformater ici serait défait à la release suivante.
+CHANGELOG.md
 specs
 LICENSE
 LICENSES
