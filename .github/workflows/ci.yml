@@ -82,6 +82,32 @@ jobs:
           path: test-results/
           retention-days: 7
 
+  images:
+    name: Construction des images Docker
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - image: api
+            dockerfile: apps/api/Dockerfile
+          - image: web
+            dockerfile: apps/web/Dockerfile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+
+      # Construction seule, sans publication : les images ne partent sur ghcr.io qu'au
+      # moment d'une release. Ce contrôle existe parce qu'un Dockerfile cassé passait
+      # inaperçu jusqu'à la publication — le postinstall de l'API lance `prisma generate`
+      # et ne trouvait pas son schéma.
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          push: false
+          cache-from: type=gha,scope=${{ matrix.image }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image }}
+
   convention-commits:
     name: Convention des messages de commit
     if: github.event_name == 'pull_request'
