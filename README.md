@@ -42,7 +42,8 @@ les fichiers qui en dérivent conservent son copyright (convention REUSE / SPDX)
 | Interface fr/en, mode sombre, cibles tactiles ≥ 44 px, feuilles d'impression                                      | ✅   |
 | Export complet des données de la ferme (RGPD, auto-service)                                                       | ✅   |
 | Abonnements, centres de formation, TOTP : **tables présentes, interface à écrire**                                | ⏳   |
-| Courriels (invitations, confirmation), tâches de fond BullMQ, stockage S3                                         | ⏳   |
+| Courriels : invitation, confirmation d'adresse, mot de passe oublié                                               | ✅   |
+| Tâches de fond BullMQ, stockage S3                                                                                | ⏳   |
 
 Les points marqués ⏳ ont leur place dans le schéma et dans l'architecture, mais pas encore
 d'implémentation : voir « Ce qui reste à faire ».
@@ -150,6 +151,40 @@ npm run typecheck
 npm test               # unitaires + intégration
 npm run test:e2e       # Playwright ; `npx playwright install chromium` la première fois
 ```
+
+### Courriels
+
+Trois messages partent : l'invitation à rejoindre une ferme, la confirmation d'adresse à
+l'inscription, et le lien de réinitialisation du mot de passe.
+
+**Sans configuration, rien ne part et tout s'affiche.** Le transport par défaut écrit le
+message dans la console du serveur, lien compris : de quoi dérouler un parcours complet en
+développement sans serveur SMTP.
+
+```
+─── courriel non envoyé (transport console) ───
+  à      : maraichere@example.org
+  objet  : Confirmez votre adresse Sillon
+  …
+  http://localhost:5173/confirmation/nDq8…
+───────────────────────────────────────────────
+```
+
+En production, `SMTP_URL` bascule sur un vrai serveur. S'il est absent, l'API le dit au
+démarrage — une invitation qui ne part pas est un défaut silencieux, et c'est bien le
+genre de chose qu'on découvre trop tard.
+
+| Variable      | Rôle                                                      | Défaut                               |
+| ------------- | --------------------------------------------------------- | ------------------------------------ |
+| `SMTP_URL`    | `smtps://utilisateur:motdepasse@serveur:465`              | _absent_ → console                   |
+| `MAIL_FROM`   | Expéditeur                                                | `Sillon <ne-pas-repondre@localhost>` |
+| `APP_URL`     | Adresse publique de l'interface, base des liens envoyés   | `http://localhost:5173`              |
+| `TOKEN_HOURS` | Validité des liens de confirmation et de réinitialisation | `24`                                 |
+
+Les liens sont à usage unique : le jeton est détruit dès qu'il est validé, et une nouvelle
+demande annule la précédente. Réinitialiser un mot de passe ferme toutes les sessions
+ouvertes, y compris sur d'autres appareils. Enfin, la demande de réinitialisation répond
+la même chose que l'adresse soit inscrite ou non.
 
 ### Tester sur un smartphone
 
@@ -333,12 +368,12 @@ fichier Elixir dont la formule est tirée.
 
 ## Tests
 
-| Niveau       | Où                                | Contenu                                                                                                                                                                                                               |
-| ------------ | --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Unitaire     | `packages/core/src/*.test.ts`     | 99 tests : dates et semaines ISO, chaîne des dates d'une série, semences et plaques, **matrice des permissions**, itinéraires techniques, disponibilité des planches, rotations, rendements, commandes, CSV, montants |
-| Unitaire     | `apps/web/src/lib/outbox.test.ts` | file d'attente hors ligne : ordre, rejeu, abandon d'une saisie refusée, reprise après panne                                                                                                                           |
-| Intégration  | `apps/api/src/api.test.ts`        | 30 tests sur une vraie base : inscription, **rôles et permissions**, **isolation RLS**, trigger `ltree`, filtres, lot, duplication, rotations, génération et recalage des tâches, commandes CSV, statistiques, export |
-| Bout en bout | `e2e/parcours.spec.ts`            | parcours complet joué au **smartphone** et au **bureau** sur le build de production                                                                                                                                   |
+| Niveau       | Où                                | Contenu                                                                                                                                                                                                                                              |
+| ------------ | --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Unitaire     | `packages/core/src/*.test.ts`     | 99 tests : dates et semaines ISO, chaîne des dates d'une série, semences et plaques, **matrice des permissions**, itinéraires techniques, disponibilité des planches, rotations, rendements, commandes, CSV, montants                                |
+| Unitaire     | `apps/web/src/lib/outbox.test.ts` | file d'attente hors ligne : ordre, rejeu, abandon d'une saisie refusée, reprise après panne                                                                                                                                                          |
+| Intégration  | `apps/api/src/api.test.ts`        | 37 tests sur une vraie base : inscription, **courriels transactionnels**, **rôles et permissions**, **isolation RLS**, trigger `ltree`, filtres, lot, duplication, rotations, génération et recalage des tâches, commandes CSV, statistiques, export |
+| Bout en bout | `e2e/parcours.spec.ts`            | 3 parcours joués au **smartphone** et au **bureau** sur le build de production                                                                                                                                                                       |
 
 ```bash
 npm test          # unitaires + intégration (PostgreSQL requis)
@@ -444,9 +479,9 @@ en SVG et en CSS : aucune bibliothèque de visualisation n'est téléchargée.
 
 ## Ce qui reste à faire
 
-- **Courriels** : les invitations créent bien un jeton, mais aucun message n'est envoyé —
-  l'interface propose le lien à copier. Confirmation d'adresse et réinitialisation de mot de
-  passe restent à brancher.
+- **File d'envoi** : les courriels partent aujourd'hui dans la requête qui les déclenche.
+  Un serveur SMTP lent ralentit donc l'invitation ou l'inscription. Le passage par BullMQ
+  ne demandera pas de toucher aux routes : `Mailer` est déjà une dépendance injectée.
 - **Tâches de fond** (BullMQ + Redis) : exports volumineux, envoi des courriels, régénération
   massive des tâches. Le service Redis est déjà dans `docker-compose.yml`.
 - **Stockage objet S3** : `apps/api/src/storage.ts` définit l'interface et une implémentation

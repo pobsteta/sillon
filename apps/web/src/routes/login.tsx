@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { useState, type FormEvent } from 'react';
-import { useNavigate } from '@tanstack/react-router';
+import { Link, useNavigate } from '@tanstack/react-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useLocale } from '../lib/locale.js';
@@ -104,6 +104,12 @@ export function LoginPage() {
         >
           {mode === 'signIn' ? t('auth.noAccount') : t('auth.hasAccount')}
         </button>
+
+        {mode === 'signIn' ? (
+          <Link to="/mot-de-passe-oublie" className="btn-ghost w-full">
+            {t('auth.forgotten.link')}
+          </Link>
+        ) : null}
       </form>
 
       <div className="flex items-center justify-between gap-3 text-xs text-earth-700 dark:text-earth-200">

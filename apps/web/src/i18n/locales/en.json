@@ -71,7 +71,28 @@
     "invalid": "Wrong address or password",
     "passwordHint": "At least 10 characters",
     "welcome": "Plan your crops, follow your tasks and harvests.",
-    "credits": "Free rewrite of Brinjel, © André Hoarau, licensed under AGPL v3."
+    "credits": "Free rewrite of Brinjel, © André Hoarau, licensed under AGPL v3.",
+    "backToSignIn": "Back to sign in",
+    "forgotten": {
+      "link": "Forgot your password?",
+      "title": "Forgotten password",
+      "intro": "Enter your address: if an account matches, a reset link goes out straight away.",
+      "submit": "Send the link",
+      "sent": "If an account matches this address, a link has just been sent. It is valid for 24 hours and can be used once. Check your spam folder."
+    },
+    "reset": {
+      "title": "Choose a new password",
+      "newPassword": "New password",
+      "submit": "Save and sign in"
+    },
+    "confirm": {
+      "title": "Address confirmation",
+      "done": "Your address is confirmed. You can sign in.",
+      "failed": "This link is invalid or expired. Ask for a new one from the app.",
+      "banner": "Your address is not confirmed yet.",
+      "resend": "Resend the email",
+      "resent": "Email sent"
+    }
   },
   "dashboard": {
     "title": "Dashboard",

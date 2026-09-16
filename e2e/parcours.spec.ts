@@ -23,6 +23,10 @@ test('inscription, série, tâches', async ({ page }, testInfo) => {
     await page.getByLabel('Nom de la ferme').fill('Ferme de bout en bout');
     await page.getByRole('button', { name: 'Créer un compte', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Tableau de bord' })).toBeVisible();
+
+    // L'adresse n'est pas confirmée d'emblée : le bandeau le dit et propose le renvoi.
+    await expect(page.getByText('Votre adresse n’est pas encore confirmée.')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Renvoyer le courriel' })).toBeVisible();
   });
 
   await test.step('créer une série de tomates', async () => {
@@ -85,4 +89,18 @@ test('la fiche de série calcule les semences sans réseau', async ({ page }, te
   // 20 m / 4 cm × 5 rangs = 2500 poquets, 3 graines chacun = 7500 graines. La marge de
   // sécurité n'entre pas ici : dans Brinjel elle ne s'applique qu'à la liste de commande.
   await expect(page.getByText('7 500').or(page.getByText('7500'))).toBeVisible();
+});
+
+test('le mot de passe oublié ne dit pas qui a un compte', async ({ page }) => {
+  await page.goto('/connexion');
+  await page.getByRole('link', { name: 'Mot de passe oublié ?' }).click();
+  await expect(page.getByRole('heading', { name: 'Sillon' })).toBeVisible();
+
+  // Une adresse qui n'existe pas doit donner exactement la même réponse qu'une autre :
+  // c'est ce que la route prend soin de taire, l'écran ne doit pas le trahir.
+  await page.getByLabel('Adresse électronique').fill('personne-ici@example.org');
+  await page.getByRole('button', { name: 'Envoyer le lien' }).click();
+
+  await expect(page.getByRole('status')).toContainText('Si un compte correspond à cette adresse');
+  await expect(page.getByRole('status')).not.toContainText('inconnu');
 });
