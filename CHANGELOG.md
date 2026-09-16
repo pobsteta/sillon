@@ -34,5 +34,4 @@
 ### Documentation
 
 * ajoute les badges et le réglage de dépôt qu'exige release-please ([52c65a9](https://github.com/pobsteta/sillon/commit/52c65a970ccf3d063cde017ef3b953de08db2c9e))
-* badges et réglage de dépôt qu'exige release-please ([#3](https://github.com/pobsteta/sillon/issues/3)) ([91cc72e](https://github.com/pobsteta/sillon/commit/91cc72e70895a488adaa0a0250a2353ff10418e9))
 * corrige les compteurs de tests du README ([f44e482](https://github.com/pobsteta/sillon/commit/f44e482a404d752bda7f42c31abc85a0020692e4))
