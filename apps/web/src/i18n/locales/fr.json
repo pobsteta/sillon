@@ -71,7 +71,28 @@
     "invalid": "Adresse ou mot de passe incorrect",
     "passwordHint": "Au moins 10 caractères",
     "welcome": "Planifiez vos cultures, suivez vos tâches et vos récoltes.",
-    "credits": "Réécriture libre de Brinjel, © André Hoarau, sous licence AGPL v3."
+    "credits": "Réécriture libre de Brinjel, © André Hoarau, sous licence AGPL v3.",
+    "backToSignIn": "Retour à la connexion",
+    "forgotten": {
+      "link": "Mot de passe oublié ?",
+      "title": "Mot de passe oublié",
+      "intro": "Indiquez votre adresse : si un compte lui correspond, un lien de réinitialisation part immédiatement.",
+      "submit": "Envoyer le lien",
+      "sent": "Si un compte correspond à cette adresse, un lien vient de partir. Il est valable 24 heures et ne sert qu’une fois. Pensez aux indésirables."
+    },
+    "reset": {
+      "title": "Choisir un nouveau mot de passe",
+      "newPassword": "Nouveau mot de passe",
+      "submit": "Enregistrer et se connecter"
+    },
+    "confirm": {
+      "title": "Confirmation d’adresse",
+      "done": "Votre adresse est confirmée. Vous pouvez vous connecter.",
+      "failed": "Ce lien est invalide ou périmé. Demandez-en un nouveau depuis l’application.",
+      "banner": "Votre adresse n’est pas encore confirmée.",
+      "resend": "Renvoyer le courriel",
+      "resent": "Courriel renvoyé"
+    }
   },
   "dashboard": {
     "title": "Tableau de bord",

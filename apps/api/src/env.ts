@@ -15,6 +15,19 @@ const EnvSchema = z.object({
     .transform((value) => value === 'true'),
   /** Durée de vie d'une session, en jours. */
   SESSION_DAYS: z.coerce.number().int().positive().default(60),
+
+  /**
+   * Serveur SMTP, par exemple `smtps://utilisateur:motdepasse@serveur:465`. Absent, les
+   * courriels s'affichent dans la console : de quoi dérouler un parcours en
+   * développement sans rien configurer.
+   */
+  SMTP_URL: z.string().min(1).optional(),
+  /** Expéditeur des courriels transactionnels. */
+  MAIL_FROM: z.string().default('Sillon <ne-pas-repondre@localhost>'),
+  /** Adresse publique de l'interface, pour fabriquer les liens des courriels. */
+  APP_URL: z.string().default('http://localhost:5173'),
+  /** Validité des liens de confirmation et de réinitialisation, en heures. */
+  TOKEN_HOURS: z.coerce.number().int().positive().default(24),
 });
 
 export type Env = z.infer<typeof EnvSchema> & { corsOrigins: string[] };

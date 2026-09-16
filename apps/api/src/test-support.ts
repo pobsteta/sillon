@@ -7,6 +7,7 @@
 import type { FastifyInstance } from 'fastify';
 import { buildApp } from './app.js';
 import { getPrisma } from './db.js';
+import { CaptureMailer } from './mail.js';
 
 /** Toutes les tables, ordonnées pour un TRUNCATE ... CASCADE unique. */
 const TABLES = ['users', 'farms'];
@@ -20,10 +21,30 @@ export async function resetDatabase(): Promise<void> {
   );
 }
 
+/**
+ * Transport de capture partagé par les tests : rien ne part, tout s'inspecte.
+ * `app.mailer` pointe dessus, donc `mailbox.sent` reflète exactement ce que l'API
+ * a demandé d'envoyer.
+ */
+export const mailbox = new CaptureMailer();
+
 export async function createTestApp(): Promise<FastifyInstance> {
-  const app = await buildApp({ NODE_ENV: 'test' });
+  const app = await buildApp(
+    { NODE_ENV: 'test', APP_URL: 'https://sillon.example', TOKEN_HOURS: 24 },
+    { mailer: mailbox },
+  );
   await app.ready();
   return app;
+}
+
+/** Extrait le jeton d'un lien reçu par courriel. */
+export function tokenFromUrl(url: string): string {
+  return decodeURIComponent(url.split('/').at(-1) ?? '');
+}
+
+/** Premier lien https du corps en texte brut. */
+export function urlFromMail(text: string): string {
+  return /https:\/\/\S+/.exec(text)?.[0] ?? '';
 }
 
 export interface TestAccount {

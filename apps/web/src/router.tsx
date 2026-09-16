@@ -16,6 +16,11 @@ import { AppShell } from './components/AppShell.js';
 import { Loading } from './components/ui.js';
 import { SessionProvider, useCurrentSession } from './lib/session.js';
 import { LoginPage } from './routes/login.js';
+import {
+  EmailConfirmationPage,
+  PasswordForgottenPage,
+  PasswordResetPage,
+} from './routes/password.js';
 import { DashboardPage } from './routes/dashboard.js';
 import { PlanPage } from './routes/plan.js';
 import { PlantingDetailPage } from './routes/plantingDetail.js';
@@ -50,6 +55,30 @@ const loginRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/connexion',
   component: LoginPage,
+});
+
+const forgottenRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/mot-de-passe-oublie',
+  component: PasswordForgottenPage,
+});
+
+const resetRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/mot-de-passe/$token',
+  component: function ResetRoute() {
+    const { token } = resetRoute.useParams();
+    return <PasswordResetPage token={token} />;
+  },
+});
+
+const confirmationRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/confirmation/$token',
+  component: function ConfirmationRoute() {
+    const { token } = confirmationRoute.useParams();
+    return <EmailConfirmationPage token={token} />;
+  },
 });
 
 const protectedRoute = createRoute({
@@ -123,6 +152,9 @@ const notFoundRoute = createRoute({
 
 const routeTree = rootRoute.addChildren([
   loginRoute,
+  forgottenRoute,
+  resetRoute,
+  confirmationRoute,
   protectedRoute.addChildren([
     dashboardRoute,
     planRoute,

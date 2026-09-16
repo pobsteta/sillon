@@ -76,6 +76,16 @@ export function AppShell({ children }: { children: ReactNode }) {
   const isActive = (to: string) => (to === '/' ? path === '/' : path.startsWith(to));
   const navigation = NAVIGATION.filter((entry) => !entry.permission || can(...entry.permission));
 
+  // Renvoi du courriel de confirmation : une seule fois par visite, l'API limitant
+  // de toute façon le débit.
+  const [renvoi, setRenvoi] = useState<'idle' | 'sending' | 'sent'>('idle');
+  const renvoyerConfirmation = () => {
+    setRenvoi('sending');
+    void api('/api/auth/confirm/resend', { method: 'POST' })
+      .then(() => setRenvoi('sent'))
+      .catch(() => setRenvoi('sent'));
+  };
+
   const signOut = async () => {
     // La session locale est fermée même si l'appel échoue : sans réseau, rester connecté
     // à l'écran serait pire que de perdre la confirmation du serveur.
@@ -181,6 +191,23 @@ export function AppShell({ children }: { children: ReactNode }) {
             className="no-print bg-amber-200 px-3 py-2 text-center text-sm text-amber-950 dark:bg-amber-800 dark:text-amber-50"
           >
             {online ? t('app.pending', { count: pending.length }) : t('app.offline')}
+          </p>
+        ) : null}
+
+        {session?.user && !session.user.confirmedAt ? (
+          <p
+            role="status"
+            className="no-print flex flex-wrap items-center justify-center gap-2 bg-sillon-100 px-3 py-2 text-center text-sm text-earth-900 dark:bg-earth-700 dark:text-earth-50"
+          >
+            {t('auth.confirm.banner')}
+            <button
+              type="button"
+              className="underline underline-offset-2 disabled:no-underline disabled:opacity-60"
+              disabled={renvoi !== 'idle'}
+              onClick={renvoyerConfirmation}
+            >
+              {renvoi === 'sent' ? t('auth.confirm.resent') : t('auth.confirm.resend')}
+            </button>
           </p>
         ) : null}
 
