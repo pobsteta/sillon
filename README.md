@@ -1,5 +1,15 @@
 # Sillon — planification maraîchère libre
 
+<!-- badges: start -->
+
+[![CI](https://github.com/pobsteta/sillon/actions/workflows/ci.yml/badge.svg)](https://github.com/pobsteta/sillon/actions/workflows/ci.yml)
+[![Release](https://github.com/pobsteta/sillon/actions/workflows/release.yml/badge.svg)](https://github.com/pobsteta/sillon/actions/workflows/release.yml)
+[![Version](https://img.shields.io/github/v/release/pobsteta/sillon?sort=semver&logo=github&label=version&color=blue)](https://github.com/pobsteta/sillon/releases/latest)
+[![REUSE](https://api.reuse.software/badge/github.com/pobsteta/sillon)](https://api.reuse.software/info/github.com/pobsteta/sillon)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPLv3-blue.svg?logo=gnu)](https://www.gnu.org/licenses/agpl-3.0)
+
+<!-- badges: end -->
+
 Sillon est une application libre de **planification et de suivi des cultures maraîchères** :
 plan de culture, tâches de la semaine, assolement et rotations, commandes de semences,
 récoltes et statistiques. Elle s'utilise au champ depuis un smartphone (PWA installable,
@@ -323,12 +333,12 @@ fichier Elixir dont la formule est tirée.
 
 ## Tests
 
-| Niveau       | Où                                | Contenu                                                                                                                                                                                            |
-| ------------ | --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Unitaire     | `packages/core/src/*.test.ts`     | 90 tests : dates et semaines ISO, chaîne des dates d'une série, semences et plaques, itinéraires techniques, disponibilité des planches, rotations, rendements, commandes, CSV, montants           |
-| Unitaire     | `apps/web/src/lib/outbox.test.ts` | file d'attente hors ligne : ordre, rejeu, abandon d'une saisie refusée, reprise après panne                                                                                                        |
-| Intégration  | `apps/api/src/api.test.ts`        | 26 tests sur une vraie base : inscription, rôles, **isolation RLS**, trigger `ltree`, filtres, lot, duplication, rotations, génération et recalage des tâches, commandes CSV, statistiques, export |
-| Bout en bout | `e2e/parcours.spec.ts`            | parcours complet joué au **smartphone** et au **bureau** sur le build de production                                                                                                                |
+| Niveau       | Où                                | Contenu                                                                                                                                                                                                               |
+| ------------ | --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Unitaire     | `packages/core/src/*.test.ts`     | 99 tests : dates et semaines ISO, chaîne des dates d'une série, semences et plaques, **matrice des permissions**, itinéraires techniques, disponibilité des planches, rotations, rendements, commandes, CSV, montants |
+| Unitaire     | `apps/web/src/lib/outbox.test.ts` | file d'attente hors ligne : ordre, rejeu, abandon d'une saisie refusée, reprise après panne                                                                                                                           |
+| Intégration  | `apps/api/src/api.test.ts`        | 30 tests sur une vraie base : inscription, **rôles et permissions**, **isolation RLS**, trigger `ltree`, filtres, lot, duplication, rotations, génération et recalage des tâches, commandes CSV, statistiques, export |
+| Bout en bout | `e2e/parcours.spec.ts`            | parcours complet joué au **smartphone** et au **bureau** sur le build de production                                                                                                                                   |
 
 ```bash
 npm test          # unitaires + intégration (PostgreSQL requis)
@@ -389,13 +399,34 @@ docker pull ghcr.io/pobsteta/sillon-web:0.2      # ou :0.2.0, ou :0
 Elles sont construites depuis le tag, pas depuis la pointe de `main` : l'image correspond
 exactement au code publié.
 
+### Réglage indispensable du dépôt
+
+Par défaut, GitHub interdit à ses propres Actions d'ouvrir une pull request. Sans ce
+réglage, `release.yml` fait tout son travail — il calcule la version, écrit le CHANGELOG,
+crée la branche `release-please--branches--main--components--sillon` et son commit — puis
+échoue à la dernière ligne :
+
+```
+##[error] GitHub Actions is not permitted to create or approve pull requests.
+```
+
+Il faut donc cocher une case, **une seule fois**, dans
+**Settings → Actions → General → Workflow permissions** :
+
+> ☑ Allow GitHub Actions to create and approve pull requests
+
+Puis relancer le workflow Release, ou pousser n'importe quoi sur `main`. Si vous préférez
+ne pas l'autoriser globalement, l'alternative est un jeton personnel en
+`secrets.RELEASE_PLEASE_TOKEN`, passé à l'action via son entrée `token` — il règle du même
+coup le point suivant.
+
 ### Deux points à connaître
 
 - Les PR ouvertes par `release.yml` utilisent le `GITHUB_TOKEN` intégré, et **GitHub ne
   déclenche pas de workflow depuis un workflow** : la CI ne tourne pas sur la PR de release.
   Ce n'est pas gênant — elle ne change que le CHANGELOG et des numéros de version — mais si
-  une règle de protection de branche exige des checks, il faut un jeton personnel
-  (`secrets.RELEASE_PLEASE_TOKEN`) à la place.
+  une règle de protection de branche exige des checks, il faut le jeton personnel évoqué
+  ci-dessus.
 - Le premier passage crée la release `0.2.0` depuis la version `0.1.0` déclarée dans
   `.release-please-manifest.json`. Ce fichier est la source de vérité : ne l'éditez pas à la
   main, release-please le met à jour lui-même.
