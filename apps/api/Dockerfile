@@ -6,6 +6,10 @@ COPY package.json package-lock.json ./
 COPY packages/core/package.json packages/core/
 COPY apps/api/package.json apps/api/
 COPY apps/web/package.json apps/web/
+# `npm ci` déclenche le postinstall de @sillon/api, qui lance `prisma generate` : le
+# schéma doit donc être là AVANT, sinon l'installation échoue sur « Could not find
+# Prisma Schema ». Ce dossier bouge rarement, la couche reste en cache.
+COPY apps/api/prisma apps/api/prisma
 RUN npm ci --workspace @sillon/api --workspace @sillon/core --include-workspace-root
 COPY tsconfig.base.json ./
 COPY packages/core packages/core
