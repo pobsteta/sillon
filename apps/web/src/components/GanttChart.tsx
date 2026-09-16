@@ -93,7 +93,7 @@ export function GanttChart({
           const y = HEADER_HEIGHT + index * ROW_HEIGHT;
           const growing = segment(bar.growing);
           const nursery = bar.nursery ? segment(bar.nursery) : null;
-          const harvest = bar.harvest ? segment(bar.harvest) : null;
+          const harvests = bar.harvest.map((period) => segment(period));
           const label = bar.varietyName ? `${bar.cropName} — ${bar.varietyName}` : bar.cropName;
 
           return (
@@ -103,7 +103,8 @@ export function GanttChart({
               className={onSelect ? 'cursor-pointer' : undefined}
             >
               <title>
-                {label} · {bar.growing.begin} → {bar.harvest?.end ?? bar.growing.end}
+                {label} · {bar.growing.begin} →{' '}
+                {bar.harvest[bar.harvest.length - 1]?.end ?? bar.growing.end}
               </title>
               <rect
                 x={0}
@@ -141,8 +142,9 @@ export function GanttChart({
                 fill={bar.color}
                 fillOpacity={0.75}
               />
-              {harvest ? (
+              {harvests.map((harvest, periodIndex) => (
                 <rect
+                  key={periodIndex}
                   x={harvest.x}
                   y={y + 6}
                   width={harvest.width}
@@ -151,7 +153,7 @@ export function GanttChart({
                   fill={bar.color}
                   stroke={readableTextColor(bar.color) === '#ffffff' ? '#00000033' : '#ffffff66'}
                 />
-              ) : null}
+              ))}
             </g>
           );
         })}

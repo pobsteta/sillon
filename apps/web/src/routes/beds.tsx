@@ -23,6 +23,7 @@ import {
   Select,
   Toggle,
 } from '../components/ui.js';
+import { parseLengthMeters } from '@sillon/core';
 import { formatDate, formatLength } from '../lib/format.js';
 
 export function BedsPage() {
@@ -148,8 +149,8 @@ export function BedsPage() {
                 {
                   name: draft.name,
                   parentId: draft.parentId ? Number(draft.parentId) : null,
-                  bedLength: Math.round(Number(draft.lengthMeters.replace(',', '.')) * 100),
-                  bedWidth: draft.widthCm ? Number(draft.widthCm) : null,
+                  bedLength: parseLengthMeters(draft.lengthMeters) ?? 0,
+                  bedWidth: draft.widthCm ? Math.round(Number(draft.widthCm) * 10) : null,
                   greenhouse: draft.greenhouse,
                 },
                 {

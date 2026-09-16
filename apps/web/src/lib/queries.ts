@@ -91,7 +91,7 @@ export const useNotes = (farmId: number, params: Record<string, unknown> = {}) =
 
 export const useOrders = (farmId: number, params: Record<string, unknown> = {}) =>
   useQuery(
-    farmList<{ lines: OrderLine[]; totals: { seedCount: number; plantsToBuy: number } }>(
+    farmList<{ lines: OrderLine[]; totals: { seedsNumber: number; transplantsToBuy: number } }>(
       farmId,
       'orders',
       params,

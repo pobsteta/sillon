@@ -7,11 +7,29 @@ import {
   formatIsoWeek,
   formatLaborTime,
   formatLength,
-  formatSeedMass,
+  formatSeedWeight,
+  formatSpacing,
+  thousandthsToUnits,
   type IsoDate,
 } from '@sillon/core';
 
-export { formatIsoWeek, formatLaborTime, formatLength, formatSeedMass };
+export { formatIsoWeek, formatLaborTime, formatLength, formatSeedWeight, formatSpacing };
+
+/**
+ * Quantité stockée en millièmes d'unité → affichage dans l'unité de la série.
+ * Deux décimales suffisent : c'est la précision d'une balance de ferme.
+ */
+export function formatQuantity(
+  thousandths: number | null | undefined,
+  locale: string,
+  unit?: string | null,
+): string {
+  if (thousandths === null || thousandths === undefined) return '—';
+  const value = thousandthsToUnits(thousandths).toLocaleString(locale, {
+    maximumFractionDigits: 2,
+  });
+  return unit ? `${value} ${unit}` : value;
+}
 
 export function formatDate(date: IsoDate | null | undefined, locale: string): string {
   if (!date) return '—';

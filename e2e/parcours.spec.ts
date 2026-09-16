@@ -33,12 +33,14 @@ test('inscription, série, tâches', async ({ page }, testInfo) => {
     await page.getByLabel('Longueur de planche (m)').fill('30');
     await page.getByLabel('Rangs').fill('2');
     await page.getByLabel('Espacement sur le rang (cm)').fill('50');
-    // Saisie par numéro de semaine, comme au bureau en hiver.
-    await page.getByLabel('Date de départ').fill('S10');
+    // Saisie par numéro de semaine, comme au bureau en hiver. Comme dans Brinjel, tout
+    // part de la date de semis : plantation et récolte s'en déduisent.
+    await page.getByLabel('Date de semis').fill('S10');
 
     // L'aperçu des dates se met à jour sans aller-retour serveur.
-    await expect(page.getByText('Semis en pépinière')).toBeVisible();
-    await expect(page.getByText('Plants').first()).toBeVisible();
+    await expect(page.getByText('Période de récolte')).toBeVisible();
+    // ...et le compte de plants se calcule dans le navigateur.
+    await expect(page.getByText('Plants', { exact: true })).toBeVisible();
 
     await page.getByRole('button', { name: 'Enregistrer' }).click();
     await expect(page.getByRole('heading', { name: 'Modifier la série' })).toBeVisible();
@@ -73,13 +75,14 @@ test('la fiche de série calcule les semences sans réseau', async ({ page }, te
 
   await page.goto('/plan/nouvelle');
   await page.getByLabel('Espèce', { exact: true }).selectOption({ label: 'Carotte' });
-  await page.getByLabel('Mode d’implantation').selectOption('direct_seed');
+  await page.getByLabel('Mode d’implantation').selectOption('direct_seeded');
   await page.getByLabel('Longueur de planche (m)').fill('20');
   await page.getByLabel('Rangs').fill('5');
   await page.getByLabel('Espacement sur le rang (cm)').fill('4');
   await page.getByLabel('Graines par poquet').fill('3');
   await page.getByLabel('Marge de sécurité (%)').fill('20');
 
-  // 20 m / 4 cm × 5 rangs = 2500 poquets, 3 graines chacun, +20 % = 9000 graines.
-  await expect(page.getByText('9 000').or(page.getByText('9000'))).toBeVisible();
+  // 20 m / 4 cm × 5 rangs = 2500 poquets, 3 graines chacun = 7500 graines. La marge de
+  // sécurité n'entre pas ici : dans Brinjel elle ne s'applique qu'à la liste de commande.
+  await expect(page.getByText('7 500').or(page.getByText('7500'))).toBeVisible();
 });

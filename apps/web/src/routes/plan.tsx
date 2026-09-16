@@ -29,6 +29,7 @@ import {
   Toggle,
 } from '../components/ui.js';
 import { GanttChart } from '../components/GanttChart.js';
+import { firstHarvestDate, mainDate } from '../lib/planting.js';
 import { formatDate, formatLength, formatMoney } from '../lib/format.js';
 import type { Planting } from '../lib/types.js';
 
@@ -194,7 +195,7 @@ export function PlanPage() {
                       {planting.inGreenhouse ? t('planting.underCover') : t('planting.openField')}
                     </p>
                     <p className="mt-1 text-sm tabular-nums">
-                      {formatDate(planting.anchorDate, locale)} ·{' '}
+                      {formatDate(mainDate(planting), locale)} ·{' '}
                       {formatLength(planting.length ?? 0, locale)}
                     </p>
                     <p className="mt-1 text-xs text-earth-700 dark:text-earth-200">
@@ -227,16 +228,16 @@ export function PlanPage() {
                   <th className="p-2">{t('planting.type')}</th>
                   <th className="p-2">
                     <button type="button" onClick={() => setSort('date')}>
-                      {t('planting.anchorDate')}
+                      {t('planting.fieldDate')}
                     </button>
                   </th>
-                  <th className="p-2">{t('planting.dateTypes.harvest_begin')}</th>
+                  <th className="p-2">{t('planting.firstHarvest')}</th>
                   <th className="p-2 text-right">
                     <button type="button" onClick={() => setSort('length')}>
                       {t('planting.length')}
                     </button>
                   </th>
-                  <th className="p-2 text-right">{t('planting.plantCount')}</th>
+                  <th className="p-2 text-right">{t('planting.seedlings')}</th>
                   <th className="p-2 text-right">{t('planting.expectedRevenue')}</th>
                   <th className="p-2">{t('beds.title')}</th>
                 </tr>
@@ -301,9 +302,10 @@ export function PlanPage() {
             onChange={(e) => setPlantingType(e.target.value)}
           >
             <option value="">{t('common.all')}</option>
-            <option value="direct_seed">{t('planting.types.direct_seed')}</option>
+            <option value="direct_seeded">{t('planting.types.direct_seeded')}</option>
             <option value="transplant_raised">{t('planting.types.transplant_raised')}</option>
             <option value="transplant_bought">{t('planting.types.transplant_bought')}</option>
+            <option value="seedling">{t('planting.types.seedling')}</option>
           </Select>
           <Select
             label={t('planting.underCover')}
@@ -420,12 +422,12 @@ function PlantingRow({
       </td>
       <td className="p-2">{planting.variety?.name ?? '—'}</td>
       <td className="p-2">{t(`planting.types.${planting.plantingType}`)}</td>
-      <td className="p-2 tabular-nums">{formatDate(planting.anchorDate, locale)}</td>
-      <td className="p-2 tabular-nums">
-        {formatDate(planting.dates.harvest_begin?.planned, locale)}
-      </td>
+      <td className="p-2 tabular-nums">{formatDate(mainDate(planting), locale)}</td>
+      <td className="p-2 tabular-nums">{formatDate(firstHarvestDate(planting), locale)}</td>
       <td className="p-2 text-right tabular-nums">{formatLength(planting.length ?? 0, locale)}</td>
-      <td className="p-2 text-right tabular-nums">{planting.computed.plantCount}</td>
+      <td className="p-2 text-right tabular-nums">
+        {Math.round(planting.computed.seedlings).toLocaleString(locale)}
+      </td>
       <td className="p-2 text-right tabular-nums">
         {formatMoney(planting.computed.expectedRevenue, locale)}
       </td>

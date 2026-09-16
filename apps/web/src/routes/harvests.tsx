@@ -7,12 +7,13 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocale } from '../lib/locale.js';
-import { today } from '@sillon/core';
+import { minutesToSeconds, today, unitsToThousandths } from '@sillon/core';
 import { useFarmId } from '../lib/session.js';
 import { useFarmMutation, useHarvests, usePlantings } from '../lib/queries.js';
 import { api, QueuedOfflineError } from '../lib/api.js';
 import { EmptyState, Field, Loading, PageHeader, Select, StatTile } from '../components/ui.js';
-import { formatDate, formatLaborTime } from '../lib/format.js';
+import { mainDate } from '../lib/planting.js';
+import { formatDate, formatLaborTime, formatQuantity } from '../lib/format.js';
 
 export function HarvestsPage() {
   const { t, i18n } = useTranslation();
@@ -37,9 +38,10 @@ export function HarvestsPage() {
     record.mutate(
       {
         plantingId: Number(plantingId),
-        quantity: Number(quantity),
+        // Saisie dans l'unité de récolte, stockage en millièmes ; temps en secondes.
+        quantity: unitsToThousandths(Number(quantity.replace(',', '.'))),
         date,
-        laborTime: laborTime ? Number(laborTime) : null,
+        laborTime: laborTime ? minutesToSeconds(Number(laborTime)) : null,
       },
       {
         onSuccess: () => {
@@ -70,7 +72,7 @@ export function HarvestsPage() {
             <option key={planting.id} value={planting.id}>
               {planting.crop.name}
               {planting.variety ? ` — ${planting.variety.name}` : ''}
-              {planting.anchorDate ? ` (${formatDate(planting.anchorDate, locale)})` : ''}
+              {mainDate(planting) ? ` (${formatDate(mainDate(planting), locale)})` : ''}
             </option>
           ))}
         </Select>
@@ -112,7 +114,7 @@ export function HarvestsPage() {
       </section>
 
       <div className="mb-4 grid grid-cols-2 gap-3">
-        <StatTile label={t('harvests.total')} value={total.toLocaleString(locale)} />
+        <StatTile label={t('harvests.total')} value={formatQuantity(total, locale)} />
         <StatTile
           label={t('harvests.laborTime')}
           value={formatLaborTime(
@@ -140,8 +142,7 @@ export function HarvestsPage() {
                 </p>
               </div>
               <p className="shrink-0 text-lg font-semibold tabular-nums">
-                {harvest.quantity.toLocaleString(locale)}
-                {harvest.planting?.unit ? ` ${harvest.planting.unit.name}` : ''}
+                {formatQuantity(harvest.quantity, locale, harvest.planting?.unit?.name)}
               </p>
             </li>
           ))}

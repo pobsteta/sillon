@@ -11,10 +11,17 @@ import { useLocale } from '../lib/locale.js';
 import {
   deriveDates,
   formatIsoWeek,
+  millimetersToMeters,
   parseDateInput,
   parseLengthMeters,
+  parseSpacingCentimeters,
   seedRequirement,
+  seedsPerGramToStorage,
+  storageToSeedsPerGram,
+  tenthsOfMillimeterToCentimeters,
+  thousandthsToUnits,
   today,
+  unitsToThousandths,
   type PlantingDateType,
   type PlantingType,
 } from '@sillon/core';
@@ -32,7 +39,13 @@ import {
 } from '../lib/queries.js';
 import { api } from '../lib/api.js';
 import { Field, Loading, PageHeader, Select, StatTile, Toggle } from '../components/ui.js';
-import { formatDate, formatLength, formatMoney, formatSeedMass } from '../lib/format.js';
+import {
+  formatDate,
+  formatLength,
+  formatMoney,
+  formatQuantity,
+  formatSeedWeight,
+} from '../lib/format.js';
 
 interface FormState {
   cropId: string;
@@ -51,10 +64,10 @@ interface FormState {
   seedsPerHoleDirect: string;
   seedsExtraPercentage: string;
   estimatedGreenhouseLoss: string;
-  anchorInput: string;
-  greenhouseDuration: string;
-  toHarvestDuration: string;
-  harvestDuration: string;
+  sowingInput: string;
+  daysToTransplant: string;
+  daysToMaturity: string;
+  harvestWindow: string;
   tagIds: number[];
   finished: boolean;
 }
@@ -76,10 +89,10 @@ const EMPTY: FormState = {
   seedsPerHoleDirect: '3',
   seedsExtraPercentage: '10',
   estimatedGreenhouseLoss: '10',
-  anchorInput: today(),
-  greenhouseDuration: '35',
-  toHarvestDuration: '60',
-  harvestDuration: '30',
+  sowingInput: today(),
+  daysToTransplant: '35',
+  daysToMaturity: '60',
+  harvestWindow: '30',
   tagIds: [],
   finished: false,
 };
@@ -119,12 +132,19 @@ export function PlantingDetailPage({ plantingId }: { plantingId: number | null }
       containerId: planting.containerId ? String(planting.containerId) : '',
       plantingType: planting.plantingType,
       inGreenhouse: planting.inGreenhouse ?? false,
-      lengthMeters: String((planting.length ?? 0) / 100),
+      lengthMeters: String(millimetersToMeters(planting.length ?? 0)),
       rows: String(planting.rows ?? ''),
-      spacingPlants: String(planting.spacingPlants ?? ''),
-      yieldPerBedMeter: planting.yieldPerBedMeter === null ? '' : String(planting.yieldPerBedMeter),
+      spacingPlants:
+        planting.spacingPlants === null
+          ? ''
+          : String(tenthsOfMillimeterToCentimeters(planting.spacingPlants)),
+      yieldPerBedMeter:
+        planting.yieldPerBedMeter === null
+          ? ''
+          : String(thousandthsToUnits(planting.yieldPerBedMeter)),
       priceEuros: planting.pricePerUnit === null ? '' : String(planting.pricePerUnit / 100),
-      seedsPerGram: planting.seedsPerGram === null ? '' : String(planting.seedsPerGram),
+      seedsPerGram:
+        planting.seedsPerGram === null ? '' : String(storageToSeedsPerGram(planting.seedsPerGram)),
       seedsPerHoleSeedling:
         planting.seedsPerHoleSeedling === null ? '' : String(planting.seedsPerHoleSeedling),
       seedsPerHoleDirect:
@@ -133,31 +153,43 @@ export function PlantingDetailPage({ plantingId }: { plantingId: number | null }
         planting.seedsExtraPercentage === null ? '' : String(planting.seedsExtraPercentage),
       estimatedGreenhouseLoss:
         planting.estimatedGreenhouseLoss === null ? '' : String(planting.estimatedGreenhouseLoss),
-      anchorInput: planting.anchorDate ?? today(),
-      greenhouseDuration: String(planting.durations.greenhouse ?? ''),
-      toHarvestDuration: String(planting.durations.to_harvest ?? ''),
-      harvestDuration: String(planting.durations.harvest ?? ''),
+      sowingInput: planting.dates.sowing?.planned ?? today(),
+      daysToTransplant: String(planting.durations.days_to_transplant ?? ''),
+      daysToMaturity: String(planting.durations.days_to_maturity ?? ''),
+      harvestWindow: String(planting.durations.harvest_window ?? ''),
       tagIds: planting.tags.map((tag) => tag.id),
       finished: planting.finished,
     });
   }, [existing.data]);
 
   const referenceYear = Number(today().slice(0, 4));
-  const anchorDate = parseDateInput(form.anchorInput, referenceYear);
+  // Brinjel part toujours de la date de semis : le reste (plantation, récolte) s'en déduit.
+  const sowingDate = parseDateInput(form.sowingInput, referenceYear);
   const durations = {
-    greenhouse: Number(form.greenhouseDuration || 0),
-    to_harvest: Number(form.toHarvestDuration || 0),
-    harvest: Number(form.harvestDuration || 0),
+    days_to_transplant: Number(form.daysToTransplant || 0),
+    days_to_maturity: Number(form.daysToMaturity || 0),
+    harvest_window: Number(form.harvestWindow || 0),
   };
-  const preview = anchorDate ? deriveDates(anchorDate, form.plantingType, durations) : null;
+  const preview = sowingDate ? deriveDates(sowingDate, form.plantingType, durations) : null;
 
-  const lengthCm = parseLengthMeters(form.lengthMeters) ?? 0;
+  // La saisie est en mètres et en centimètres, le stockage en millimètres et en
+  // dixièmes de millimètre : la conversion a lieu ici, au bord.
+  const lengthMm = parseLengthMeters(form.lengthMeters) ?? 0;
+  const spacingTenths = parseSpacingCentimeters(form.spacingPlants) ?? 0;
+  const seedsPerGramStored =
+    numberOrNull(form.seedsPerGram) === null
+      ? null
+      : seedsPerGramToStorage(numberOrNull(form.seedsPerGram)!);
+  const yieldStored =
+    numberOrNull(form.yieldPerBedMeter) === null
+      ? null
+      : unitsToThousandths(numberOrNull(form.yieldPerBedMeter)!);
   const computed = seedRequirement({
     plantingType: form.plantingType,
-    length: lengthCm,
+    length: lengthMm,
     rows: Number(form.rows || 0),
-    spacingPlants: Number(form.spacingPlants || 0),
-    seedsPerGram: numberOrNull(form.seedsPerGram),
+    spacingPlants: spacingTenths,
+    seedsPerGram: seedsPerGramStored,
     seedsPerHoleSeedling: numberOrNull(form.seedsPerHoleSeedling),
     seedsPerHoleDirect: numberOrNull(form.seedsPerHoleDirect),
     seedsExtraPercentage: numberOrNull(form.seedsExtraPercentage),
@@ -195,7 +227,7 @@ export function PlantingDetailPage({ plantingId }: { plantingId: number | null }
   if (plantingId !== null && existing.isLoading) return <Loading />;
 
   const submit = () => {
-    if (!form.cropId || !anchorDate) return;
+    if (!form.cropId || !sowingDate) return;
     save.mutate(
       {
         cropId: Number(form.cropId),
@@ -204,21 +236,21 @@ export function PlantingDetailPage({ plantingId }: { plantingId: number | null }
         containerId: form.containerId ? Number(form.containerId) : null,
         plantingType: form.plantingType,
         inGreenhouse: form.inGreenhouse,
-        length: lengthCm,
+        length: lengthMm,
         rows: Number(form.rows || 0),
-        spacingPlants: Number(form.spacingPlants || 0),
-        yieldPerBedMeter: numberOrNull(form.yieldPerBedMeter),
+        spacingPlants: spacingTenths,
+        yieldPerBedMeter: yieldStored,
         pricePerUnit:
           form.priceEuros.trim() === ''
             ? null
             : Math.round(Number(form.priceEuros.replace(',', '.')) * 100),
-        seedsPerGram: numberOrNull(form.seedsPerGram),
+        seedsPerGram: seedsPerGramStored,
         seedsPerHoleSeedling: numberOrNull(form.seedsPerHoleSeedling),
         seedsPerHoleDirect: numberOrNull(form.seedsPerHoleDirect),
         seedsExtraPercentage: numberOrNull(form.seedsExtraPercentage),
         estimatedGreenhouseLoss: numberOrNull(form.estimatedGreenhouseLoss),
         finished: form.finished,
-        anchorDate,
+        sowingDate,
         durations,
         tagIds: form.tagIds,
       },
@@ -280,9 +312,10 @@ export function PlantingDetailPage({ plantingId }: { plantingId: number | null }
               value={form.plantingType}
               onChange={(event) => update('plantingType', event.target.value as PlantingType)}
             >
-              <option value="direct_seed">{t('planting.types.direct_seed')}</option>
+              <option value="direct_seeded">{t('planting.types.direct_seeded')}</option>
               <option value="transplant_raised">{t('planting.types.transplant_raised')}</option>
               <option value="transplant_bought">{t('planting.types.transplant_bought')}</option>
+              <option value="seedling">{t('planting.types.seedling')}</option>
             </Select>
             <Select
               label={t('planting.unit')}
@@ -344,38 +377,40 @@ export function PlantingDetailPage({ plantingId }: { plantingId: number | null }
             <legend className="text-sm font-semibold">{t('planting.dates')}</legend>
             <div className="grid gap-4 sm:grid-cols-2">
               <Field
-                label={t('planting.anchorDate')}
+                label={t('planting.sowingDate')}
                 hint={t('planting.dateHint')}
-                value={form.anchorInput}
-                onChange={(event) => update('anchorInput', event.target.value)}
-                error={anchorDate ? undefined : t('common.required')}
+                value={form.sowingInput}
+                onChange={(event) => update('sowingInput', event.target.value)}
+                error={sowingDate ? undefined : t('common.required')}
               />
               <Field
-                label={`${t('planting.greenhouseDuration')} (${t('common.days')})`}
+                label={`${t('planting.durationTypes.days_to_transplant')} (${t('common.days')})`}
                 type="number"
                 inputMode="numeric"
-                disabled={form.plantingType !== 'transplant_raised'}
-                value={form.greenhouseDuration}
-                onChange={(event) => update('greenhouseDuration', event.target.value)}
+                disabled={form.plantingType === 'direct_seeded' || form.plantingType === 'seedling'}
+                value={form.daysToTransplant}
+                onChange={(event) => update('daysToTransplant', event.target.value)}
               />
               <Field
-                label={`${t('planting.toHarvestDuration')} (${t('common.days')})`}
+                label={`${t('planting.durationTypes.days_to_maturity')} (${t('common.days')})`}
                 type="number"
                 inputMode="numeric"
-                value={form.toHarvestDuration}
-                onChange={(event) => update('toHarvestDuration', event.target.value)}
+                disabled={form.plantingType === 'seedling'}
+                value={form.daysToMaturity}
+                onChange={(event) => update('daysToMaturity', event.target.value)}
               />
               <Field
-                label={`${t('planting.harvestDuration')} (${t('common.days')})`}
+                label={`${t('planting.durationTypes.harvest_window')} (${t('common.days')})`}
                 type="number"
                 inputMode="numeric"
-                value={form.harvestDuration}
-                onChange={(event) => update('harvestDuration', event.target.value)}
+                disabled={form.plantingType === 'seedling'}
+                value={form.harvestWindow}
+                onChange={(event) => update('harvestWindow', event.target.value)}
               />
             </div>
             {preview ? (
               <ul className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
-                {Object.entries(preview).map(([type, date]) => (
+                {Object.entries(preview.dates).map(([type, date]) => (
                   <li
                     key={type}
                     className="flex justify-between gap-2 rounded-lg bg-earth-100 px-3 py-2 dark:bg-earth-700"
@@ -386,6 +421,15 @@ export function PlantingDetailPage({ plantingId }: { plantingId: number | null }
                     </span>
                   </li>
                 ))}
+                {preview.harvestPeriod ? (
+                  <li className="flex justify-between gap-2 rounded-lg bg-earth-100 px-3 py-2 dark:bg-earth-700">
+                    <span>{t('planting.harvestPeriod')}</span>
+                    <span className="tabular-nums">
+                      {formatDate(preview.harvestPeriod.begin, locale)} →{' '}
+                      {formatDate(preview.harvestPeriod.end, locale)}
+                    </span>
+                  </li>
+                ) : null}
               </ul>
             ) : null}
           </fieldset>
@@ -476,22 +520,35 @@ export function PlantingDetailPage({ plantingId }: { plantingId: number | null }
 
         <aside className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
-            <StatTile label={t('planting.plantCount')} value={computed.plantCount} />
-            <StatTile label={t('planting.holes')} value={computed.holesToSow} />
             <StatTile
-              label={t('planting.seedCount')}
-              value={computed.seedCount}
-              hint={computed.seedMassMg === null ? undefined : formatSeedMass(computed.seedMassMg)}
+              label={t('planting.seedlings')}
+              value={Math.round(computed.seedlings).toLocaleString(locale)}
             />
-            <StatTile label={t('planting.trays')} value={computed.trays ?? '—'} />
+            <StatTile
+              label={t('planting.holes')}
+              value={Math.round(computed.holes).toLocaleString(locale)}
+            />
+            <StatTile
+              label={t('planting.seedsNumber')}
+              value={Math.round(computed.seedsNumber).toLocaleString(locale)}
+              hint={
+                computed.seedsWeightGrams === null
+                  ? undefined
+                  : formatSeedWeight(computed.seedsWeightGrams, locale)
+              }
+            />
+            <StatTile label={t('planting.containers')} value={computed.containers ?? '—'} />
           </div>
 
           {existing.data ? (
             <div className="card space-y-2">
               <p className="text-sm font-semibold">{t('planting.expectedYield')}</p>
               <p className="text-2xl font-semibold tabular-nums">
-                {existing.data.computed.expectedYield}
-                {existing.data.unit ? ` ${existing.data.unit.name}` : ''}
+                {formatQuantity(
+                  existing.data.computed.expectedYield,
+                  locale,
+                  existing.data.unit?.name,
+                )}
               </p>
               <p className="text-sm text-earth-700 dark:text-earth-200">
                 {formatMoney(existing.data.computed.expectedRevenue, locale)}

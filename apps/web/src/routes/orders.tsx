@@ -9,7 +9,7 @@ import { useFarmId } from '../lib/session.js';
 import { useOrders, useProviders } from '../lib/queries.js';
 import { queryString } from '../lib/api.js';
 import { EmptyState, Loading, PageHeader, Select, StatTile, Toggle } from '../components/ui.js';
-import { formatDate, formatSeedMass } from '../lib/format.js';
+import { formatDate, formatSeedWeight } from '../lib/format.js';
 
 const PERIODS = ['year', 'h1', 'h2', 'q1', 'q2', 'q3', 'q4'] as const;
 
@@ -90,11 +90,11 @@ export function OrdersPage() {
           <div className="mb-4 grid grid-cols-2 gap-3">
             <StatTile
               label={t('orders.seeds')}
-              value={orders.data.totals.seedCount.toLocaleString(locale)}
+              value={orders.data.totals.seedsNumber.toLocaleString(locale)}
             />
             <StatTile
               label={t('orders.plants')}
-              value={orders.data.totals.plantsToBuy.toLocaleString(locale)}
+              value={orders.data.totals.transplantsToBuy.toLocaleString(locale)}
             />
           </div>
 
@@ -119,11 +119,15 @@ export function OrdersPage() {
                     <td className="p-2 font-medium">{line.cropName}</td>
                     <td className="p-2">{line.varietyName ?? '—'}</td>
                     <td className="p-2 text-right tabular-nums">{line.plantingCount}</td>
-                    <td className="p-2 text-right tabular-nums">{line.seedCount}</td>
                     <td className="p-2 text-right tabular-nums">
-                      {line.seedMassMg === null ? '—' : formatSeedMass(line.seedMassMg, locale)}
+                      {Math.round(line.seedsNumber).toLocaleString(locale)}
                     </td>
-                    <td className="p-2 text-right tabular-nums">{line.plantsToBuy || '—'}</td>
+                    <td className="p-2 text-right tabular-nums">
+                      {line.seedsQuantityGrams === null
+                        ? '—'
+                        : formatSeedWeight(line.seedsQuantityGrams, locale)}
+                    </td>
+                    <td className="p-2 text-right tabular-nums">{line.transplantsToBuy || '—'}</td>
                     <td className="p-2 tabular-nums">{formatDate(line.firstNeededOn, locale)}</td>
                   </tr>
                 ))}

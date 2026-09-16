@@ -10,7 +10,7 @@ export interface Farm {
   id: number;
   name: string;
   slug: string;
-  role: 'owner' | 'manager' | 'member';
+  role: 'owner' | 'manager' | 'employee' | 'seasonal' | 'consultant';
   countryCode?: string;
 }
 
@@ -85,15 +85,20 @@ export interface LocationNode {
 }
 
 export interface SeedComputation {
-  plantCount: number;
-  holesToSow: number;
-  trays: number | null;
-  spareCells: number | null;
-  seedCount: number;
-  seedMassMg: number | null;
-  plantsToBuy: number | null;
+  /** Poquets ou alvéoles, valeur non arrondie comme dans Brinjel. */
+  holes: number;
+  /** Plants attendus en place, pertes de pépinière comprises. */
+  seedlings: number;
+  /** Plaques de pépinière, à deux décimales. */
+  containers: number | null;
+  seedsNumber: number;
+  /** Masse de semences, en grammes. */
+  seedsWeightGrams: number | null;
+  /** Rendement escompté, en millièmes d'unité. */
   expectedYield: number;
+  /** Produit escompté, en centimes. */
   expectedRevenue: number;
+  /** Longueur déjà posée sur l'assolement, en millimètres. */
   assignedLength: number;
 }
 
@@ -123,7 +128,9 @@ export interface Planting {
   tags: Tag[];
   dates: PlantingDates;
   durations: PlantingDurations;
-  anchorDate: IsoDate | null;
+  harvestPeriods: { begin: IsoDate; end: IsoDate }[];
+  /** Mise en place au champ ; `null` pour une production de plants. */
+  fieldDate: IsoDate | null;
   occupation: { begin: IsoDate; end: IsoDate } | null;
   computed: SeedComputation;
   assignments: { locationId: number; length: number; location: LocationNode }[];
@@ -140,7 +147,8 @@ export interface GanttBar {
   placed: boolean;
   nursery: { begin: IsoDate; end: IsoDate } | null;
   growing: { begin: IsoDate; end: IsoDate };
-  harvest: { begin: IsoDate; end: IsoDate } | null;
+  /** Une série peut compter plusieurs fenêtres de récolte. */
+  harvest: { begin: IsoDate; end: IsoDate }[];
 }
 
 export interface Task {
@@ -149,7 +157,7 @@ export interface Task {
   type: TaskType | null;
   method: Named | null;
   implement: Named | null;
-  defaultType: 'sowing' | 'planting' | 'other';
+  defaultType: 'direct_sow' | 'greenhouse_sow' | 'transplant' | 'custom';
   plannedDate: IsoDate;
   effectiveDate: IsoDate;
   done: boolean;
@@ -170,7 +178,8 @@ export interface TaskTemplate {
     typeId: number;
     type?: TaskType;
     linkDays: number;
-    templateDateType: keyof PlantingDates;
+    templateDateType:
+      'field_sowing_planting' | 'greenhouse_sowing' | 'first_harvest' | 'last_harvest';
     daysInField: number;
     plannedLaborTime: number | null;
     description: string | null;
@@ -202,9 +211,10 @@ export interface OrderLine {
   varietyName: string | null;
   providerName: string | null;
   plantingCount: number;
-  seedCount: number;
-  seedMassMg: number | null;
-  plantsToBuy: number;
+  seedsNumber: number;
+  /** Masse de semences, en grammes. */
+  seedsQuantityGrams: number | null;
+  transplantsToBuy: number;
   firstNeededOn: IsoDate | null;
 }
 

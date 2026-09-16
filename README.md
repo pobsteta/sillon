@@ -145,11 +145,25 @@ itinéraire technique, disponibilité des planches, délai de retour d'une famil
 rendements. L'API et l'interface appliquent **les mêmes fonctions** — l'aperçu des dates et
 le calcul des semences s'affichent donc sans aller-retour serveur, et restent justes hors ligne.
 
-### Tout est entier
+### Tout est entier, dans les unités de Brinjel
 
-Comme dans Brinjel : longueurs en **centimètres**, prix en **centimes**, durées en **jours**,
-temps de travail en **minutes**. Aucun flottant n'approche la base ; la conversion en mètres
-ou en euros n'a lieu qu'à l'affichage (`packages/core/src/money.ts`).
+Les unités de stockage sont reprises telles quelles des types Ecto de Brinjel
+(`lib/brinjel/ecto_types/`), pour qu'une base Brinjel ou Qrop se reprenne sans arrondi :
+
+| Grandeur                     | Unité de stockage         | Type Brinjel   |
+| ---------------------------- | ------------------------- | -------------- |
+| Longueur de planche          | **millimètre**            | `BedLength`    |
+| Espacement sur le rang       | **dixième de millimètre** | `Distance`     |
+| Rendement, quantité récoltée | **millième d'unité**      | `Yield`        |
+| Densité de semences          | **graine par kilogramme** | `SeedsPerGram` |
+| Prix, produit                | **centime**               | `Money`        |
+| Durée de culture             | **jour**                  | —              |
+| Temps de travail             | **seconde**               | —              |
+
+Aucun flottant n'approche la base. La conversion n'a lieu qu'aux bords — à la saisie et à
+l'affichage — dans `packages/core/src/units.ts` (`metersToMillimeters`,
+`centimetersToTenthsOfMillimeter`, `unitsToThousandths`, `minutesToSeconds`…). Le
+formulaire d'une série se saisit donc toujours en mètres, en centimètres et en minutes.
 
 ### Isolation des fermes : `farm_id` + RLS
 
@@ -197,26 +211,39 @@ ont besoin d'une réponse du serveur (identifiants, contrôles de rotation).
 
 ---
 
-## Portage depuis Brinjel : ce qui a été décidé
+## Portage depuis Brinjel : ce qui a été vérifié
 
-Le dépôt Elixir n'était pas joignable depuis l'environnement de développement (Framagit filtre
-les accès automatisés). Le portage s'appuie donc sur `specs/sillon-modele-de-donnees.md` et
-`specs/schema.prisma`. Les points que ce document marquait « à confirmer » ont reçu une
-valeur explicite, isolée pour être facile à corriger :
+La première version de Sillon a été écrite sans le code Elixir sous la main (Framagit filtre
+les accès automatisés) : huit points du modèle avaient reçu une valeur explicite, marquée
+« à confirmer ». Le code de Brinjel a depuis été lu ligne à ligne. **Six de ces huit
+hypothèses étaient fausses** ; elles ont été corrigées, et la migration
+`20260916090000_align_sur_brinjel` convertit les données existantes.
 
-| Point                    | Choix retenu                                                                   | Où le corriger                                                 |
-| ------------------------ | ------------------------------------------------------------------------------ | -------------------------------------------------------------- |
-| `families.interval`      | délai de retour en **années**                                                  | `packages/core/src/rotation.ts` (`DAYS_PER_ROTATION_INTERVAL`) |
-| Unité de `BedLength`     | **centimètres**                                                                | `packages/core/src/types.ts`                                   |
-| `labor_time`             | **minutes**                                                                    | `packages/core/src/stats.ts`                                   |
-| Plants par rang          | `floor(longueur / espacement)`, sans plant en bout de planche                  | `packages/core/src/seeds.ts`                                   |
-| Perte en pépinière       | augmente le nombre d'alvéoles semées (`plants / (1 − perte)`)                  | `packages/core/src/seeds.ts`                                   |
-| Marge de sécurité        | augmente la quantité de **graines**, pas d'alvéoles                            | `packages/core/src/seeds.ts`                                   |
-| Rôles `farm_memberships` | `owner`, `manager`, `member`                                                   | `apps/api/prisma/schema.prisma`                                |
-| Occupation d'une planche | de la mise en place à la fin de récolte (la pépinière n'occupe pas la planche) | `packages/core/src/planting.ts`                                |
+| Point                    | Hypothèse initiale                      | Ce que fait Brinjel                                                                                            | Où                              |
+| ------------------------ | --------------------------------------- | -------------------------------------------------------------------------------------------------------------- | ------------------------------- |
+| Unité de `BedLength`     | centimètres                             | **millimètres** ; l'espacement est en **dixièmes de millimètre**                                               | `packages/core/src/units.ts`    |
+| `labor_time`             | minutes                                 | **secondes**                                                                                                   | `packages/core/src/units.ts`    |
+| Poquets par planche      | `floor(longueur / espacement)`, arrondi | `longueur × 10 / espacement × rangs`, **sans arrondi** — le flottant se propage jusqu'à la commande            | `packages/core/src/seeds.ts`    |
+| Perte en pépinière       | augmente le nombre d'alvéoles semées    | **divise** les graines par alvéole et le nombre de plants (`/ (1 − perte)`), le nombre de poquets ne bouge pas | `packages/core/src/seeds.ts`    |
+| Marge de sécurité        | s'applique à toute série                | n'entre **que dans la commande**, et **seulement en semis direct**                                             | `packages/core/src/seeds.ts`    |
+| Rôles `farm_memberships` | `owner`, `manager`, `member`            | **cinq** rôles : `owner`, `manager`, `employee`, `seasonal`, `consultant`                                      | `apps/api/prisma/schema.prisma` |
+| `families.interval`      | délai de retour en années               | confirmé — années, comparées en jours (`365`)                                                                  | `packages/core/src/rotation.ts` |
+| Occupation d'une planche | de la mise en place à la fin de récolte | confirmé — la pépinière n'occupe pas la planche                                                                | `packages/core/src/planting.ts` |
 
-Chacun de ces choix est couvert par des tests : si une lecture du code Elixir les contredit,
-le test dira exactement ce qui change.
+Le modèle des dates a changé de la même façon. Une série ne porte plus une « date de
+départ » et deux dates de récolte, mais :
+
+- trois dates possibles — `sowing`, `planting`, `potting` — dont celle qui vaut mise en
+  place au champ dépend du type de série (`fieldDate`) ;
+- trois durées — `days_to_transplant`, `days_to_maturity`, `harvest_window` ;
+- **une liste** de fenêtres de récolte (`harvest_periods`) : une série peut en compter
+  plusieurs, ce qu'une paire début/fin ne savait pas représenter.
+
+Le type de série compte désormais quatre valeurs, `seedling` (production de plants, qui
+n'occupe pas de planche et ne produit pas de récolte) s'ajoutant aux trois premières.
+
+Chacune de ces corrections est couverte par des tests : ils citent en commentaire le
+fichier Elixir dont la formule est tirée.
 
 ---
 
@@ -224,9 +251,9 @@ le test dira exactement ce qui change.
 
 | Niveau       | Où                                | Contenu                                                                                                                                                                                            |
 | ------------ | --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Unitaire     | `packages/core/src/*.test.ts`     | 61 tests : dates et semaines ISO, chaîne des dates d'une série, semences et plaques, itinéraires techniques, disponibilité des planches, rotations, rendements, commandes, CSV, montants           |
+| Unitaire     | `packages/core/src/*.test.ts`     | 90 tests : dates et semaines ISO, chaîne des dates d'une série, semences et plaques, itinéraires techniques, disponibilité des planches, rotations, rendements, commandes, CSV, montants           |
 | Unitaire     | `apps/web/src/lib/outbox.test.ts` | file d'attente hors ligne : ordre, rejeu, abandon d'une saisie refusée, reprise après panne                                                                                                        |
-| Intégration  | `apps/api/src/api.test.ts`        | 21 tests sur une vraie base : inscription, rôles, **isolation RLS**, trigger `ltree`, filtres, lot, duplication, rotations, génération et recalage des tâches, commandes CSV, statistiques, export |
+| Intégration  | `apps/api/src/api.test.ts`        | 26 tests sur une vraie base : inscription, rôles, **isolation RLS**, trigger `ltree`, filtres, lot, duplication, rotations, génération et recalage des tâches, commandes CSV, statistiques, export |
 | Bout en bout | `e2e/parcours.spec.ts`            | parcours complet joué au **smartphone** et au **bureau** sur le build de production                                                                                                                |
 
 ```bash
