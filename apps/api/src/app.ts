@@ -4,6 +4,7 @@
 // Assemblage de l'API. `buildApp` sert aussi bien au serveur qu'aux tests d'intégration.
 
 import './json.js';
+import { createRequire } from 'node:module';
 import Fastify, { type FastifyInstance } from 'fastify';
 import cookie from '@fastify/cookie';
 import cors from '@fastify/cors';
@@ -18,8 +19,10 @@ import {
   validatorCompiler,
 } from 'fastify-type-provider-zod';
 import { loadEnv, type Env } from './env.js';
+import type { Mailer } from './mail.js';
 import { registerErrorHandler } from './errors.js';
 import { authPlugin } from './plugins/auth.js';
+import { mailPlugin } from './plugins/mail.js';
 import { authRoutes } from './routes/auth.js';
 import { farmRoutes } from './routes/farms.js';
 import { referenceRoutes } from './routes/reference.js';
@@ -30,7 +33,21 @@ import { recordRoutes } from './routes/records.js';
 import { orderRoutes } from './routes/orders.js';
 import { statsRoutes } from './routes/stats.js';
 
-export async function buildApp(overrides: Partial<Env> = {}): Promise<FastifyInstance> {
+/**
+ * Version publiée, lue dans le package.json que release-please tient à jour : `/health`
+ * et la documentation OpenAPI suivent les releases sans qu'on y pense.
+ */
+const VERSION = (createRequire(import.meta.url)('../package.json') as { version: string }).version;
+
+export interface BuildOptions {
+  /** Transport de courriels ; sans lui, il est choisi d'après la configuration. */
+  mailer?: Mailer | undefined;
+}
+
+export async function buildApp(
+  overrides: Partial<Env> = {},
+  options: BuildOptions = {},
+): Promise<FastifyInstance> {
   const env = { ...loadEnv(), ...overrides };
 
   const app = Fastify({
@@ -61,9 +78,12 @@ export async function buildApp(overrides: Partial<Env> = {}): Promise<FastifyIns
         title: 'Sillon — API',
         description:
           'API de planification et de suivi des cultures maraîchères. ' +
-          'Toutes les mesures sont des entiers : longueurs en centimètres, prix en centimes, ' +
-          'durées en jours, temps de travail en minutes.',
-        version: '0.1.0',
+          'Toutes les mesures sont des entiers, aux unités de stockage de Brinjel : ' +
+          'longueurs de planche en millimètres, espacements en dixièmes de millimètre, ' +
+          'rendements et quantités récoltées en millièmes d’unité, densité de semences en ' +
+          'graines par kilogramme, montants en centimes, durées de culture en jours, ' +
+          'temps de travail en secondes.',
+        version: VERSION,
         license: { name: 'AGPL-3.0-or-later', url: 'https://www.gnu.org/licenses/agpl-3.0.html' },
       },
       servers: [{ url: '/' }],
@@ -73,13 +93,14 @@ export async function buildApp(overrides: Partial<Env> = {}): Promise<FastifyIns
   await app.register(swaggerUi, { routePrefix: '/docs' });
 
   await app.register(authPlugin, { env });
+  await app.register(mailPlugin, { env, mailer: options.mailer });
 
   app.get(
     '/health',
     { schema: { tags: ['infrastructure'], summary: 'État du service' } },
     async () => ({
       status: 'ok',
-      version: '0.1.0',
+      version: VERSION,
     }),
   );
 

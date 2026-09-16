@@ -5,7 +5,15 @@
 
 import type { FastifyInstance } from 'fastify';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { createTestApp, registerAccount, resetDatabase, type TestAccount } from './test-support.js';
+import {
+  createTestApp,
+  mailbox,
+  registerAccount,
+  resetDatabase,
+  tokenFromUrl,
+  urlFromMail,
+  type TestAccount,
+} from './test-support.js';
 import { disconnectPrisma, getPrisma } from './db.js';
 
 let app: FastifyInstance;
@@ -22,6 +30,7 @@ afterAll(async () => {
 
 beforeEach(async () => {
   await resetDatabase();
+  mailbox.clear();
   account = await registerAccount(app);
 });
 
@@ -815,5 +824,165 @@ describe('commandes, récoltes et statistiques', () => {
     expect(response.headers['content-disposition']).toContain('sillon-ferme-');
     expect(response.json().plantings).toHaveLength(1);
     expect(response.json().families.length).toBeGreaterThan(0);
+  });
+});
+
+describe('courriels transactionnels', () => {
+  const adresse = () => `courriel-${Math.random().toString(36).slice(2, 10)}@example.org`;
+
+  async function demanderReinitialisation(email: string) {
+    return app.inject({
+      method: 'POST',
+      url: '/api/auth/password-reset',
+      payload: { email },
+    });
+  }
+
+  it("envoie un lien de confirmation à l'inscription", async () => {
+    const email = adresse();
+    await registerAccount(app, { email });
+
+    const message = mailbox.lastTo(email);
+    expect(message, 'un courriel doit partir').toBeDefined();
+    expect(message!.subject).toContain('Confirmez');
+    // Le lien figure en clair dans le texte brut, pour être copié à la main au besoin.
+    const url = urlFromMail(message!.text);
+    expect(url).toMatch(/^https:\/\/sillon\.example\/confirmation\//);
+
+    const avant = await getPrisma().user.findUniqueOrThrow({ where: { email } });
+    expect(avant.confirmedAt, "l'adresse n'est pas confirmée d'emblée").toBeNull();
+
+    const confirme = await app.inject({
+      method: 'POST',
+      url: '/api/auth/confirm',
+      payload: { token: tokenFromUrl(url) },
+    });
+    expect(confirme.statusCode).toBe(204);
+
+    const apres = await getPrisma().user.findUniqueOrThrow({ where: { email } });
+    expect(apres.confirmedAt).not.toBeNull();
+  });
+
+  it('un lien de confirmation ne sert qu’une fois', async () => {
+    const email = adresse();
+    await registerAccount(app, { email });
+    const token = tokenFromUrl(urlFromMail(mailbox.lastTo(email)!.text));
+
+    const premier = await app.inject({
+      method: 'POST',
+      url: '/api/auth/confirm',
+      payload: { token },
+    });
+    expect(premier.statusCode).toBe(204);
+
+    const second = await app.inject({
+      method: 'POST',
+      url: '/api/auth/confirm',
+      payload: { token },
+    });
+    expect(second.statusCode, 'le jeton est détruit après usage').toBe(400);
+  });
+
+  it('réinitialise un mot de passe et ferme les sessions ouvertes', async () => {
+    const email = adresse();
+    const compte = await registerAccount(app, { email });
+    mailbox.clear();
+
+    expect((await demanderReinitialisation(email)).statusCode).toBe(204);
+    const message = mailbox.lastTo(email);
+    expect(message!.subject).toContain('Réinitialiser');
+    const token = tokenFromUrl(urlFromMail(message!.text));
+
+    const nouveau = 'nouveau-mot-de-passe-2026';
+    const change = await app.inject({
+      method: 'POST',
+      url: '/api/auth/password-reset/confirm',
+      payload: { token, password: nouveau },
+    });
+    expect(change.statusCode).toBe(204);
+
+    // La session d'avant ne vaut plus rien : reprendre la main déloge l'occupant.
+    const ancienne = await app.inject({
+      method: 'GET',
+      url: '/api/auth/me',
+      headers: { cookie: compte.cookie },
+    });
+    expect(ancienne.statusCode, 'les sessions tombent').toBe(401);
+
+    const connexion = await app.inject({
+      method: 'POST',
+      url: '/api/auth/login',
+      payload: { email, password: nouveau },
+    });
+    expect(connexion.statusCode, 'le nouveau mot de passe fonctionne').toBe(200);
+  });
+
+  it('ne dit pas si une adresse est inscrite', async () => {
+    const inconnue = adresse();
+    const reponse = await demanderReinitialisation(inconnue);
+    expect(reponse.statusCode, 'même réponse que pour un compte connu').toBe(204);
+    expect(mailbox.lastTo(inconnue), 'et aucun courriel ne part').toBeUndefined();
+  });
+
+  it('une nouvelle demande annule le lien précédent', async () => {
+    const email = adresse();
+    await registerAccount(app, { email });
+    mailbox.clear();
+
+    await demanderReinitialisation(email);
+    const premier = tokenFromUrl(urlFromMail(mailbox.lastTo(email)!.text));
+    await demanderReinitialisation(email);
+    const second = tokenFromUrl(urlFromMail(mailbox.lastTo(email)!.text));
+    expect(second).not.toBe(premier);
+
+    const perime = await app.inject({
+      method: 'POST',
+      url: '/api/auth/password-reset/confirm',
+      payload: { token: premier, password: 'un-autre-mot-de-passe-2026' },
+    });
+    expect(perime.statusCode, 'le premier lien est mort').toBe(400);
+  });
+
+  it('un lien périmé est refusé', async () => {
+    const email = adresse();
+    await registerAccount(app, { email });
+    mailbox.clear();
+    await demanderReinitialisation(email);
+    const token = tokenFromUrl(urlFromMail(mailbox.lastTo(email)!.text));
+
+    // On vieillit le jeton au-delà de TOKEN_HOURS plutôt que d'attendre.
+    const user = await getPrisma().user.findUniqueOrThrow({ where: { email } });
+    await getPrisma().userToken.updateMany({
+      where: { userId: user.id, context: 'reset_password' },
+      data: { insertedAt: new Date(Date.now() - 25 * 3_600_000) },
+    });
+
+    const reponse = await app.inject({
+      method: 'POST',
+      url: '/api/auth/password-reset/confirm',
+      payload: { token, password: 'encore-un-mot-de-passe-2026' },
+    });
+    expect(reponse.statusCode).toBe(400);
+  });
+
+  it("envoie l'invitation à la personne conviée", async () => {
+    const invitee = adresse();
+    mailbox.clear();
+    const reponse = await app.inject({
+      method: 'POST',
+      url: farmUrl('/invitations'),
+      headers: headers(),
+      payload: { email: invitee, role: 'employee' },
+    });
+    expect(reponse.statusCode).toBe(201);
+
+    const message = mailbox.lastTo(invitee);
+    expect(message, 'le courriel part vraiment').toBeDefined();
+    expect(message!.subject).toContain('Rejoindre la ferme');
+    // Le lien porte le jeton de l'invitation, pas celui d'un compte.
+    expect(urlFromMail(message!.text)).toBe(
+      `https://sillon.example/invitation/${reponse.json().invitationId}`,
+    );
+    expect(message!.text, "l'invitant est nommé").toContain(account.email);
   });
 });

@@ -12,6 +12,7 @@ import { badRequest, conflict, forbidden, notFound } from '../errors.js';
 import { withFarm, withoutFarmScope } from '../tenant.js';
 import { createFarm } from '../farm-setup.js';
 import { farmContext } from '../scope.js';
+import { invitationMail } from '../mail-templates.js';
 
 const FarmParams = z.object({ farmId: z.coerce.number().int().positive() });
 const role = z.enum(['owner', 'manager', 'employee', 'seasonal', 'consultant']);
@@ -274,8 +275,19 @@ export async function farmRoutes(app: FastifyInstance): Promise<void> {
           },
         });
       });
-      // L'envoi du courriel est fait par le travailleur de fond ; l'API renvoie le jeton
-      // pour que l'interface puisse proposer un lien à copier en attendant.
+      const farm = await withoutFarmScope((db) =>
+        db.farm.findUniqueOrThrow({ where: { id: farmId }, select: { name: true } }),
+      );
+      await app.mailer.send(
+        invitationMail({
+          to: address,
+          farmName: farm.name,
+          inviterEmail: request.currentUser!.email,
+          url: `${app.appUrl}/invitation/${invitation.invitationId}`,
+        }),
+      );
+      // Le jeton reste dans la réponse : l'interface propose le lien à copier, ce qui
+      // dépanne quand le courriel se perd ou que SMTP n'est pas configuré.
       return reply.status(201).send(invitation);
     },
   );

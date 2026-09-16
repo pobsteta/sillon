@@ -7,13 +7,20 @@ import type { FastifyInstance, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import {
+  CONFIRM_CONTEXT,
+  RESET_CONTEXT,
   SESSION_COOKIE,
+  SESSION_CONTEXT,
+  consumeUserToken,
   createSession,
+  createUserToken,
   deleteSession,
+  forgetUserTokens,
   hashPassword,
   verifyPassword,
 } from '../auth.js';
-import { conflict, unauthorized } from '../errors.js';
+import { confirmationMail, passwordResetMail } from '../mail-templates.js';
+import { badRequest, conflict, unauthorized } from '../errors.js';
 import { withoutFarmScope } from '../tenant.js';
 import { createFarm } from '../farm-setup.js';
 import type { Env } from '../env.js';
@@ -32,6 +39,31 @@ function decoy(): Promise<string> {
 export async function authRoutes(app: FastifyInstance, options: { env: Env }): Promise<void> {
   const typed = app.withTypeProvider<ZodTypeProvider>();
   const tags = ['authentification'];
+  const { TOKEN_HOURS } = options.env;
+
+  /** Lien public vers l'interface, `app.appUrl` faisant foi. */
+  const lien = (chemin: string, token: string) =>
+    `${app.appUrl}${chemin}/${encodeURIComponent(token)}`;
+
+  /** Fabrique et envoie un lien de confirmation. Silencieux si l'adresse est déjà confirmée. */
+  const envoyerConfirmation = async (user: {
+    id: number;
+    email: string;
+    locale: string;
+  }): Promise<void> => {
+    const token = await withoutFarmScope(async (db) => {
+      await forgetUserTokens(db, user.id, CONFIRM_CONTEXT);
+      return createUserToken(db, user.id, CONFIRM_CONTEXT, user.email);
+    });
+    await app.mailer.send(
+      confirmationMail({
+        to: user.email,
+        locale: user.locale,
+        url: lien('/confirmation', token),
+        validityHours: TOKEN_HOURS,
+      }),
+    );
+  };
 
   const setSessionCookie = (reply: FastifyReply, token: string) => {
     reply.setCookie(SESSION_COOKIE, token, {
@@ -73,6 +105,7 @@ export async function authRoutes(app: FastifyInstance, options: { env: Env }): P
       });
 
       setSessionCookie(reply, result.token);
+      await envoyerConfirmation(result.user);
       return reply.status(201).send({
         user: { id: result.user.id, email: result.user.email, locale: result.user.locale },
         farm: { id: result.farm.id, name: result.farm.name, slug: result.farm.slug },
@@ -186,6 +219,112 @@ export async function authRoutes(app: FastifyInstance, options: { env: Env }): P
         const updated = await db.user.update({ where: { id: user.id }, data });
         return { id: updated.id, email: updated.email, locale: updated.locale };
       });
+    },
+  );
+
+  // ─────────────────── Confirmation d'adresse ───────────────────
+
+  typed.post(
+    '/api/auth/confirm',
+    {
+      config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
+      schema: {
+        tags,
+        summary: 'Confirmer une adresse depuis le lien reçu',
+        body: z.object({ token: z.string().min(1) }),
+      },
+    },
+    async (request, reply) => {
+      const consumed = await withoutFarmScope((db) =>
+        consumeUserToken(db, request.body.token, CONFIRM_CONTEXT, TOKEN_HOURS),
+      );
+      if (!consumed) throw badRequest('Ce lien de confirmation est invalide ou périmé');
+      await withoutFarmScope((db) =>
+        db.user.update({ where: { id: consumed.userId }, data: { confirmedAt: new Date() } }),
+      );
+      return reply.status(204).send();
+    },
+  );
+
+  typed.post(
+    '/api/auth/confirm/resend',
+    {
+      onRequest: app.requireUser,
+      config: { rateLimit: { max: 3, timeWindow: '10 minutes' } },
+      schema: { tags, summary: 'Renvoyer le courriel de confirmation' },
+    },
+    async (request, reply) => {
+      const user = request.currentUser!;
+      // Une adresse déjà confirmée ne redemande pas de lien ; la réponse reste la même,
+      // pour que l'interface n'ait pas à traiter deux cas.
+      if (!user.confirmedAt) await envoyerConfirmation(user);
+      return reply.status(204).send();
+    },
+  );
+
+  // ─────────────────── Mot de passe oublié ───────────────────
+
+  typed.post(
+    '/api/auth/password-reset',
+    {
+      config: { rateLimit: { max: 5, timeWindow: '10 minutes' } },
+      schema: {
+        tags,
+        summary: 'Demander un lien de réinitialisation',
+        body: z.object({ email }),
+      },
+    },
+    async (request, reply) => {
+      const address = request.body.email;
+      const user = await withoutFarmScope((db) =>
+        db.user.findUnique({ where: { email: address } }),
+      );
+      if (user) {
+        const token = await withoutFarmScope(async (db) => {
+          // Une nouvelle demande annule la précédente : un seul lien vivant à la fois.
+          await forgetUserTokens(db, user.id, RESET_CONTEXT);
+          return createUserToken(db, user.id, RESET_CONTEXT, user.email);
+        });
+        await app.mailer.send(
+          passwordResetMail({
+            to: user.email,
+            locale: user.locale,
+            url: lien('/mot-de-passe', token),
+            validityHours: TOKEN_HOURS,
+          }),
+        );
+      }
+      // Toujours 204, compte ou pas : la réponse ne doit pas dire qui est inscrit.
+      return reply.status(204).send();
+    },
+  );
+
+  typed.post(
+    '/api/auth/password-reset/confirm',
+    {
+      config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
+      schema: {
+        tags,
+        summary: 'Choisir un nouveau mot de passe depuis le lien reçu',
+        body: z.object({ token: z.string().min(1), password }),
+      },
+    },
+    async (request, reply) => {
+      const { token, password: secret } = request.body;
+      const result = await withoutFarmScope(async (db) => {
+        const consumed = await consumeUserToken(db, token, RESET_CONTEXT, TOKEN_HOURS);
+        if (!consumed) return null;
+        await db.user.update({
+          where: { id: consumed.userId },
+          data: { hashedPassword: await hashPassword(secret) },
+        });
+        // Qui reprend la main sur un compte doit déloger celui qui l'occupait : toutes
+        // les sessions tombent, y compris celles ouvertes ailleurs.
+        await forgetUserTokens(db, consumed.userId, SESSION_CONTEXT);
+        return consumed;
+      });
+      if (!result) throw badRequest('Ce lien de réinitialisation est invalide ou périmé');
+      return reply.status(204).send();
     },
   );
 }

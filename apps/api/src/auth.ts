@@ -83,6 +83,58 @@ export async function userFromSessionToken(
   };
 }
 
+/**
+ * Jeton à usage unique pour la confirmation d'adresse et la réinitialisation de mot de
+ * passe. Même principe que la session : le client reçoit le jeton en clair, la base n'en
+ * garde que le condensé.
+ *
+ * `sentTo` retient l'adresse visée au moment de l'envoi : un lien reste ainsi lié à
+ * l'adresse qui l'a demandé, même si le compte en change entre-temps.
+ */
+export async function createUserToken(
+  db: Tx,
+  userId: number,
+  context: string,
+  sentTo: string,
+): Promise<string> {
+  const token = generateToken();
+  await db.userToken.create({ data: { userId, token: digestToken(token), context, sentTo } });
+  return token;
+}
+
+export interface ConsumedToken {
+  userId: number;
+  sentTo: string | null;
+}
+
+/**
+ * Valide un jeton et le détruit dans la foulée : un lien de réinitialisation ne doit
+ * servir qu'une fois. Renvoie `null` si le jeton est inconnu, d'un autre contexte, ou
+ * périmé — l'appelant ne distingue pas ces cas, et c'est voulu.
+ */
+export async function consumeUserToken(
+  db: Tx,
+  token: string,
+  context: string,
+  maxAgeHours: number,
+): Promise<ConsumedToken | null> {
+  const record = await db.userToken.findFirst({
+    where: {
+      token: digestToken(token),
+      context,
+      insertedAt: { gte: new Date(Date.now() - maxAgeHours * 3_600_000) },
+    },
+  });
+  if (!record) return null;
+  await db.userToken.delete({ where: { id: record.id } });
+  return { userId: record.userId, sentTo: record.sentTo };
+}
+
+/** Oublie les jetons d'un contexte pour un compte — une nouvelle demande annule les précédentes. */
+export async function forgetUserTokens(db: Tx, userId: number, context: string): Promise<void> {
+  await db.userToken.deleteMany({ where: { userId, context } });
+}
+
 export async function deleteSession(db: Tx, token: string): Promise<void> {
   await db.userToken.deleteMany({
     where: { token: digestToken(token), context: SESSION_CONTEXT },
