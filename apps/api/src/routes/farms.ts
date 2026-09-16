@@ -14,7 +14,7 @@ import { createFarm } from '../farm-setup.js';
 import { farmContext } from '../scope.js';
 
 const FarmParams = z.object({ farmId: z.coerce.number().int().positive() });
-const role = z.enum(['owner', 'manager', 'member']);
+const role = z.enum(['owner', 'manager', 'employee', 'seasonal', 'consultant']);
 
 export async function farmRoutes(app: FastifyInstance): Promise<void> {
   const typed = app.withTypeProvider<ZodTypeProvider>();
@@ -49,7 +49,7 @@ export async function farmRoutes(app: FastifyInstance): Promise<void> {
   typed.get(
     '/api/farms/:farmId',
     {
-      onRequest: app.requireFarm('member'),
+      onRequest: app.requireFarm('employee'),
       schema: { tags, summary: 'Détail d’une ferme', params: FarmParams },
     },
     async (request) => {
@@ -124,7 +124,7 @@ export async function farmRoutes(app: FastifyInstance): Promise<void> {
   typed.get(
     '/api/farms/:farmId/members',
     {
-      onRequest: app.requireFarm('member'),
+      onRequest: app.requireFarm('employee'),
       schema: { tags, summary: 'Membres de la ferme', params: FarmParams },
     },
     async (request) => {
@@ -250,7 +250,10 @@ export async function farmRoutes(app: FastifyInstance): Promise<void> {
         tags,
         summary: 'Inviter quelqu’un par courriel',
         params: FarmParams,
-        body: z.object({ email: z.email(), role: z.enum(['manager', 'member']).default('member') }),
+        body: z.object({
+          email: z.email(),
+          role: z.enum(['manager', 'employee', 'seasonal', 'consultant']).default('employee'),
+        }),
       },
     },
     async (request, reply) => {

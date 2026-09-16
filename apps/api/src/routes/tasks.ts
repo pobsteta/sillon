@@ -17,6 +17,7 @@ import {
   today,
   weekRange,
   type GeneratedTask,
+  type PlantingSchedule,
   type PlantingType as PlantingTypeValue,
   type TemplateStep,
 } from '@sillon/core';
@@ -24,7 +25,7 @@ import { inFarm } from '../scope.js';
 import { notFound } from '../errors.js';
 import { assertReferences } from '../references.js';
 import type { Tx } from '../db.js';
-import { datesFromRows, isoDate, toDbDate } from '../planting-io.js';
+import { datesFromRows, harvestPeriodsFromRows, isoDate, toDbDate } from '../planting-io.js';
 import { defaultTaskTypeIds } from '../farm-setup.js';
 
 const FarmParams = z.object({ farmId: z.coerce.number().int().positive() });
@@ -38,6 +39,19 @@ const taskInclude = {
   locations: { include: { location: true } },
   templateLink: true,
 } as const;
+
+/** Contexte temporel d'une série, tel que l'attendent les fonctions d'itinéraire. */
+function scheduleOf(planting: {
+  plantingType: string;
+  dates: { type: string; planned: Date; effective: Date | null }[];
+  harvestPeriods: { begin: Date; end: Date }[];
+}): PlantingSchedule {
+  return {
+    plantingType: planting.plantingType as PlantingTypeValue,
+    dates: datesFromRows(planting.dates),
+    harvestPeriods: harvestPeriodsFromRows(planting.harvestPeriods),
+  };
+}
 
 /** Insère une tâche générée et, le cas échéant, le lien vers l'étape d'itinéraire. */
 async function insertGeneratedTask(
@@ -94,7 +108,7 @@ export async function taskRoutes(app: FastifyInstance): Promise<void> {
   typed.get(
     '/api/farms/:farmId/tasks',
     {
-      onRequest: app.requireFarm('member'),
+      onRequest: app.requireFarm('employee'),
       schema: {
         tags,
         summary: 'Lister les tâches',
@@ -169,7 +183,7 @@ export async function taskRoutes(app: FastifyInstance): Promise<void> {
   typed.post(
     '/api/farms/:farmId/tasks',
     {
-      onRequest: app.requireFarm('member'),
+      onRequest: app.requireFarm('employee'),
       schema: {
         tags,
         summary: 'Créer une tâche',
@@ -201,7 +215,7 @@ export async function taskRoutes(app: FastifyInstance): Promise<void> {
           data: {
             ...fields,
             farmId,
-            defaultType: 'other',
+            defaultType: 'custom',
             plannedDate: toDbDate(plannedDate),
             effectiveDate: toDbDate(plannedDate),
             done: false,
@@ -219,7 +233,7 @@ export async function taskRoutes(app: FastifyInstance): Promise<void> {
   typed.patch(
     '/api/farms/:farmId/tasks/:id',
     {
-      onRequest: app.requireFarm('member'),
+      onRequest: app.requireFarm('employee'),
       schema: {
         tags,
         summary: 'Modifier une tâche',
@@ -285,7 +299,7 @@ export async function taskRoutes(app: FastifyInstance): Promise<void> {
   typed.post(
     '/api/farms/:farmId/tasks/complete',
     {
-      onRequest: app.requireFarm('member'),
+      onRequest: app.requireFarm('employee'),
       schema: {
         tags,
         summary: 'Valider des tâches (§7.3 : deux touches au champ)',
@@ -316,7 +330,7 @@ export async function taskRoutes(app: FastifyInstance): Promise<void> {
   typed.delete(
     '/api/farms/:farmId/tasks/:id',
     {
-      onRequest: app.requireFarm('member'),
+      onRequest: app.requireFarm('employee'),
       schema: { tags, summary: 'Supprimer une tâche', params: IdParams },
     },
     async (request, reply) => {
@@ -346,28 +360,24 @@ export async function taskRoutes(app: FastifyInstance): Promise<void> {
       const created = await inFarm(request, async (db, { farmId }) => {
         const planting = await db.planting.findFirst({
           where: { id: request.params.id, farmId },
-          include: { dates: true },
+          include: { dates: true, harvestPeriods: true },
         });
         if (!planting) throw notFound('Série introuvable');
 
         if (request.body.replace) {
-          // On ne supprime que les tâches générées non faites : le travail déjà réalisé reste.
+          // On ne supprime que les tâches engendrées non faites : le travail déjà réalisé reste.
           await db.task.deleteMany({
             where: {
               farmId,
               done: false,
-              defaultType: { in: ['sowing', 'planting'] },
+              defaultType: { in: ['direct_sow', 'greenhouse_sow', 'transplant'] },
               plantings: { some: { plantingId: planting.id } },
             },
           });
         }
 
         const typeIds = await defaultTaskTypeIds(db, farmId);
-        const tasks = defaultTasksForPlanting(
-          planting.plantingType as PlantingTypeValue,
-          datesFromRows(planting.dates),
-          typeIds,
-        );
+        const tasks = defaultTasksForPlanting(scheduleOf(planting), typeIds);
         const ids: number[] = [];
         for (const task of tasks)
           ids.push(await insertGeneratedTask(db, farmId, planting.id, task));
@@ -392,7 +402,7 @@ export async function taskRoutes(app: FastifyInstance): Promise<void> {
       const created = await inFarm(request, async (db, { farmId }) => {
         const planting = await db.planting.findFirst({
           where: { id: request.params.id, farmId },
-          include: { dates: true },
+          include: { dates: true, harvestPeriods: true },
         });
         if (!planting) throw notFound('Série introuvable');
 
@@ -414,7 +424,7 @@ export async function taskRoutes(app: FastifyInstance): Promise<void> {
           templateDateType: step.templateDateType as TemplateStep['templateDateType'],
         }));
 
-        const tasks = generateTasksFromTemplate(steps, datesFromRows(planting.dates));
+        const tasks = generateTasksFromTemplate(steps, scheduleOf(planting));
         const ids: number[] = [];
         for (const task of tasks)
           ids.push(await insertGeneratedTask(db, farmId, planting.id, task));
@@ -438,10 +448,10 @@ export async function taskRoutes(app: FastifyInstance): Promise<void> {
       inFarm(request, async (db, { farmId }) => {
         const planting = await db.planting.findFirst({
           where: { id: request.params.id, farmId },
-          include: { dates: true },
+          include: { dates: true, harvestPeriods: true },
         });
         if (!planting) throw notFound('Série introuvable');
-        const dates = datesFromRows(planting.dates);
+        const schedule = scheduleOf(planting);
 
         const links = await db.plantingTask.findMany({
           where: { plantingId: planting.id, task: { done: false } },
@@ -457,16 +467,13 @@ export async function taskRoutes(app: FastifyInstance): Promise<void> {
                   linkDays: templateLink.linkDays,
                   templateDateType: templateLink.templateDateType as any,
                 },
-                dates,
+                schedule,
               )
-            : link.task.defaultType === 'sowing'
-              ? (dates[
-                  planting.plantingType === 'transplant_raised'
-                    ? 'greenhouse_sowing'
-                    : 'sowing_planting'
-                ]?.planned ?? null)
-              : link.task.defaultType === 'planting'
-                ? (dates.sowing_planting?.planned ?? null)
+            : // Une tâche engendrée depuis le plan suit le semis, ou la mise en place.
+              link.task.defaultType === 'greenhouse_sow' || link.task.defaultType === 'direct_sow'
+              ? (schedule.dates.sowing?.planned ?? null)
+              : link.task.defaultType === 'transplant'
+                ? (schedule.dates.planting?.planned ?? null)
                 : null;
           if (!plannedDate) continue;
           await db.task.update({
@@ -482,16 +489,16 @@ export async function taskRoutes(app: FastifyInstance): Promise<void> {
   // ─────────────────── Itinéraires techniques ───────────────────
 
   const templateDateType = z.enum([
+    'field_sowing_planting',
     'greenhouse_sowing',
-    'sowing_planting',
-    'harvest_begin',
-    'harvest_end',
+    'first_harvest',
+    'last_harvest',
   ]);
 
   typed.get(
     '/api/farms/:farmId/task-templates',
     {
-      onRequest: app.requireFarm('member'),
+      onRequest: app.requireFarm('employee'),
       schema: { tags, summary: 'Lister les itinéraires techniques', params: FarmParams },
     },
     async (request) =>

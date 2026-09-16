@@ -11,9 +11,12 @@ import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import {
   expectedRevenue,
   expectedYield,
+  fieldDate,
   occupationRange,
   seedRequirement,
+  shiftHarvestPeriods,
   shiftPlantingDates,
+  type HarvestPeriod,
   type PlantingType as PlantingTypeValue,
 } from '@sillon/core';
 import { inFarm } from '../scope.js';
@@ -23,18 +26,24 @@ import type { Tx } from '../db.js';
 import {
   DatesInput,
   DurationsInput,
-  anchorDateType,
+  HarvestPeriodsInput,
   datesFromRows,
   durationsFromRows,
+  harvestPeriodsFromRows,
   isoDate,
-  resolveDates,
+  resolveSchedule,
   toDbDate,
 } from '../planting-io.js';
 
 const FarmParams = z.object({ farmId: z.coerce.number().int().positive() });
 const IdParams = FarmParams.extend({ id: z.coerce.number().int().positive() });
 
-const plantingType = z.enum(['direct_seed', 'transplant_raised', 'transplant_bought']);
+const plantingType = z.enum([
+  'direct_seeded',
+  'transplant_bought',
+  'transplant_raised',
+  'seedling',
+]);
 
 /** Champs communs à la création, à la modification et au traitement par lot. */
 const plantingFields = {
@@ -55,14 +64,18 @@ const plantingFields = {
   seedsExtraPercentage: z.number().int().min(0).max(1000).nullish(),
   estimatedGreenhouseLoss: z.number().int().min(0).max(99).nullish(),
   finished: z.boolean().optional(),
-  finishReason: z.enum(['harvested', 'failed', 'other']).nullish(),
+  finishReason: z
+    .enum(['harvesting_finished', 'crop_failure', 'crop_never_seeded', 'crop_never_planted'])
+    .nullish(),
 };
 
 const CreateBody = z.object({
   ...plantingFields,
   dates: DatesInput.optional(),
-  anchorDate: isoDate.optional(),
+  /** Date de semis : de là se déduisent plantation et fenêtre de récolte. */
+  sowingDate: isoDate.optional(),
   durations: DurationsInput.optional(),
+  harvestPeriods: HarvestPeriodsInput.optional(),
   tagIds: z.array(z.number().int().positive()).optional(),
 });
 
@@ -71,8 +84,9 @@ const UpdateBody = z.object({
     Object.entries(plantingFields).map(([key, schema]) => [key, (schema as z.ZodType).optional()]),
   ),
   dates: DatesInput.optional(),
-  anchorDate: isoDate.optional(),
+  sowingDate: isoDate.optional(),
   durations: DurationsInput.optional(),
+  harvestPeriods: HarvestPeriodsInput.optional(),
   tagIds: z.array(z.number().int().positive()).optional(),
 }) as z.ZodType<Record<string, unknown>>;
 
@@ -104,12 +118,14 @@ const plantingInclude = {
   assignments: { include: { location: true } },
 } as const;
 
-/** Forme renvoyée à l'interface : dates et durées repliées, calculs métier joints. */
+/** Forme renvoyée à l'interface : dates, durées et récoltes repliées, calculs joints. */
 export function serializePlanting(row: any) {
   const dates = datesFromRows(row.dates ?? []);
   const durations = durationsFromRows(row.durations ?? []);
+  const harvestPeriods = harvestPeriodsFromRows(row.harvestPeriods ?? []);
+  const plantingType = row.plantingType as PlantingTypeValue;
   const spec = {
-    plantingType: row.plantingType as PlantingTypeValue,
+    plantingType,
     length: Number(row.length ?? 0),
     rows: row.rows ?? 0,
     spacingPlants: Number(row.spacingPlants ?? 0),
@@ -127,9 +143,11 @@ export function serializePlanting(row: any) {
     ...row,
     dates,
     durations,
+    harvestPeriods,
     tags: (row.tags ?? []).map((link: any) => link.tag),
-    anchorDate: dates[anchorDateType(spec.plantingType)]?.planned ?? null,
-    occupation: occupationRange(dates),
+    /** Date de mise en place au champ : `null` pour une production de plants. */
+    fieldDate: fieldDate(dates, plantingType),
+    occupation: occupationRange(dates, plantingType, harvestPeriods),
     computed: {
       ...seedRequirement(spec),
       expectedYield: expectedYield(spec),
@@ -142,22 +160,29 @@ export function serializePlanting(row: any) {
   };
 }
 
-async function writeDatesAndDurations(
+async function writeSchedule(
   db: Tx,
   plantingId: number,
-  body: { dates?: any; anchorDate?: string; durations?: any; plantingType: PlantingTypeValue },
+  body: {
+    dates?: any;
+    sowingDate?: string;
+    durations?: any;
+    harvestPeriods?: HarvestPeriod[];
+    plantingType: PlantingTypeValue;
+  },
 ): Promise<void> {
-  const dates = resolveDates({
+  const schedule = resolveSchedule({
     plantingType: body.plantingType,
     dates: body.dates,
-    anchorDate: body.anchorDate,
+    sowingDate: body.sowingDate,
     durations: body.durations,
+    harvestPeriods: body.harvestPeriods,
   });
 
-  if (Object.keys(dates).length > 0) {
+  if (Object.keys(schedule.dates).length > 0) {
     await db.plantingDate.deleteMany({ where: { plantingId } });
     await db.plantingDate.createMany({
-      data: Object.entries(dates).map(([type, value]) => ({
+      data: Object.entries(schedule.dates).map(([type, value]) => ({
         plantingId,
         type: type as any,
         planned: toDbDate(value!.planned),
@@ -176,6 +201,19 @@ async function writeDatesAndDurations(
       })),
     });
   }
+
+  if (schedule.harvestPeriods) {
+    await db.harvestPeriod.deleteMany({ where: { plantingId } });
+    if (schedule.harvestPeriods.length > 0) {
+      await db.harvestPeriod.createMany({
+        data: schedule.harvestPeriods.map((period) => ({
+          plantingId,
+          begin: toDbDate(period.begin),
+          end: toDbDate(period.end),
+        })),
+      });
+    }
+  }
 }
 
 export async function plantingRoutes(app: FastifyInstance): Promise<void> {
@@ -185,7 +223,7 @@ export async function plantingRoutes(app: FastifyInstance): Promise<void> {
   typed.get(
     '/api/farms/:farmId/plantings',
     {
-      onRequest: app.requireFarm('member'),
+      onRequest: app.requireFarm('employee'),
       schema: { tags, summary: 'Lister les séries', params: FarmParams, querystring: ListQuery },
     },
     async (request) =>
@@ -225,9 +263,11 @@ export async function plantingRoutes(app: FastifyInstance): Promise<void> {
           const to = `${query.year}-12-31`;
           series = series.filter((planting) => {
             const range = planting.occupation;
-            const anchor = planting.anchorDate;
             if (range) return range.begin <= to && from <= range.end;
-            return anchor ? anchor >= from && anchor <= to : false;
+            // Une production de plants n'occupe aucune planche : on la retient sur son
+            // semis, faute de période au champ.
+            const sowing = planting.dates.sowing?.planned ?? null;
+            return sowing ? sowing >= from && sowing <= to : false;
           });
         }
 
@@ -242,8 +282,12 @@ export async function plantingRoutes(app: FastifyInstance): Promise<void> {
               return direction * (Number(a.length ?? 0) - Number(b.length ?? 0));
             case 'inserted':
               return direction * (a.id - b.id);
-            default:
-              return direction * (a.anchorDate ?? '9999').localeCompare(b.anchorDate ?? '9999');
+            default: {
+              // Tri chronologique : mise en place au champ, ou semis si la série n'en a pas.
+              const left = a.fieldDate ?? a.dates.sowing?.planned ?? '9999';
+              const right = b.fieldDate ?? b.dates.sowing?.planned ?? '9999';
+              return direction * left.localeCompare(right);
+            }
           }
         });
         return series;
@@ -253,7 +297,7 @@ export async function plantingRoutes(app: FastifyInstance): Promise<void> {
   typed.get(
     '/api/farms/:farmId/plantings/:id',
     {
-      onRequest: app.requireFarm('member'),
+      onRequest: app.requireFarm('employee'),
       schema: { tags, summary: 'Détail d’une série', params: IdParams },
     },
     async (request) =>
@@ -282,7 +326,7 @@ export async function plantingRoutes(app: FastifyInstance): Promise<void> {
     },
     async (request, reply) => {
       const created = await inFarm(request, async (db, { farmId }) => {
-        const { dates, anchorDate, durations, tagIds, ...fields } = request.body;
+        const { dates, sowingDate, durations, harvestPeriods, tagIds, ...fields } = request.body;
         await assertReferences(db, {
           crop: fields.cropId,
           variety: fields.varietyId,
@@ -291,10 +335,11 @@ export async function plantingRoutes(app: FastifyInstance): Promise<void> {
           tag: tagIds,
         });
         const planting = await db.planting.create({ data: { ...fields, farmId } });
-        await writeDatesAndDurations(db, planting.id, {
+        await writeSchedule(db, planting.id, {
           dates,
-          anchorDate,
+          sowingDate,
           durations,
+          harvestPeriods,
           plantingType: fields.plantingType,
         });
         if (tagIds?.length) {
@@ -324,7 +369,7 @@ export async function plantingRoutes(app: FastifyInstance): Promise<void> {
         if (!existing) throw notFound('Série introuvable');
 
         const body = request.body as any;
-        const { dates, anchorDate, durations, tagIds, ...fields } = body;
+        const { dates, sowingDate, durations, harvestPeriods, tagIds, ...fields } = body;
         await assertReferences(db, {
           crop: fields.cropId,
           variety: fields.varietyId,
@@ -335,10 +380,11 @@ export async function plantingRoutes(app: FastifyInstance): Promise<void> {
         if (Object.keys(fields).length > 0) {
           await db.planting.update({ where: { id }, data: fields });
         }
-        await writeDatesAndDurations(db, id, {
+        await writeSchedule(db, id, {
           dates,
-          anchorDate,
+          sowingDate,
           durations,
+          harvestPeriods,
           plantingType: (fields.plantingType ?? existing.plantingType) as PlantingTypeValue,
         });
         if (tagIds) {
@@ -381,6 +427,7 @@ export async function plantingRoutes(app: FastifyInstance): Promise<void> {
 
         const { id: _id, insertedAt: _i, updatedAt: _u, ...fields } = source as any;
         const sourceDates = datesFromRows(source.dates);
+        const sourcePeriods = harvestPeriodsFromRows(source.harvestPeriods);
         const created = [];
 
         for (let index = 1; index <= request.body.count; index += 1) {
@@ -409,6 +456,19 @@ export async function plantingRoutes(app: FastifyInstance): Promise<void> {
               duration: duration.duration,
             })),
           });
+          const shiftedPeriods = shiftHarvestPeriods(
+            sourcePeriods,
+            index * request.body.intervalDays,
+          );
+          if (shiftedPeriods.length > 0) {
+            await db.harvestPeriod.createMany({
+              data: shiftedPeriods.map((period) => ({
+                plantingId: copy.id,
+                begin: toDbDate(period.begin),
+                end: toDbDate(period.end),
+              })),
+            });
+          }
           if (source.tags.length > 0) {
             await db.plantingTag.createMany({
               data: source.tags.map((link) => ({ plantingId: copy.id, tagId: link.tagId })),
@@ -468,7 +528,7 @@ export async function plantingRoutes(app: FastifyInstance): Promise<void> {
         });
         const owned = await db.planting.findMany({
           where: { id: { in: ids }, farmId },
-          include: { dates: true },
+          include: { dates: true, harvestPeriods: true },
         });
         if (owned.length === 0) throw notFound('Aucune série correspondante');
 
@@ -483,6 +543,21 @@ export async function plantingRoutes(app: FastifyInstance): Promise<void> {
               await db.plantingDate.update({
                 where: { plantingId_type: { plantingId: planting.id, type: type as any } },
                 data: { planned: toDbDate(value!.planned) },
+              });
+            }
+            // Les fenêtres de récolte suivent : elles sont accrochées aux mêmes dates.
+            for (const period of planting.harvestPeriods) {
+              const [shiftedPeriod] = shiftHarvestPeriods(
+                harvestPeriodsFromRows([period]),
+                shiftDays,
+              );
+              if (!shiftedPeriod) continue;
+              await db.harvestPeriod.update({
+                where: { id: period.id },
+                data: {
+                  begin: toDbDate(shiftedPeriod.begin),
+                  end: toDbDate(shiftedPeriod.end),
+                },
               });
             }
           }
@@ -545,7 +620,7 @@ export async function plantingRoutes(app: FastifyInstance): Promise<void> {
   typed.get(
     '/api/farms/:farmId/gantt',
     {
-      onRequest: app.requireFarm('member'),
+      onRequest: app.requireFarm('employee'),
       schema: {
         tags,
         summary: 'Données du diagramme de Gantt',
@@ -566,6 +641,7 @@ export async function plantingRoutes(app: FastifyInstance): Promise<void> {
             crop: { include: { family: true } },
             variety: true,
             dates: true,
+            harvestPeriods: true,
             assignments: true,
           },
         });
@@ -573,8 +649,15 @@ export async function plantingRoutes(app: FastifyInstance): Promise<void> {
         const bars = rows
           .map((row) => {
             const dates = datesFromRows(row.dates);
-            const range = occupationRange(dates);
+            const plantingType = row.plantingType as PlantingTypeValue;
+            const periods = harvestPeriodsFromRows(row.harvestPeriods);
+            const range = occupationRange(dates, plantingType, periods);
             if (!range) return null;
+
+            const sowing = dates.sowing;
+            const planting = dates.planting;
+            const firstHarvest = periods[0]?.begin ?? null;
+
             return {
               plantingId: row.id,
               cropName: row.crop.name,
@@ -584,34 +667,27 @@ export async function plantingRoutes(app: FastifyInstance): Promise<void> {
               familyName: row.crop.family.name,
               inGreenhouse: row.inGreenhouse ?? false,
               placed: row.assignments.length > 0,
+              // La pépinière s'étend du semis à la plantation : elle n'occupe pas la planche.
               nursery:
-                dates.greenhouse_sowing && dates.sowing_planting
+                sowing && planting
                   ? {
-                      begin: dates.greenhouse_sowing.effective ?? dates.greenhouse_sowing.planned,
-                      end: dates.sowing_planting.effective ?? dates.sowing_planting.planned,
+                      begin: sowing.effective ?? sowing.planned,
+                      end: planting.effective ?? planting.planned,
                     }
                   : null,
-              growing: {
-                begin: range.begin,
-                end: dates.harvest_begin
-                  ? (dates.harvest_begin.effective ?? dates.harvest_begin.planned)
-                  : range.end,
-              },
-              harvest:
-                dates.harvest_begin && dates.harvest_end
-                  ? {
-                      begin: dates.harvest_begin.effective ?? dates.harvest_begin.planned,
-                      end: dates.harvest_end.effective ?? dates.harvest_end.planned,
-                    }
-                  : null,
+              growing: { begin: range.begin, end: firstHarvest ?? range.end },
+              // Une série peut compter plusieurs fenêtres de récolte.
+              harvest: periods,
             };
           })
           .filter((bar): bar is NonNullable<typeof bar> => bar !== null)
-          .filter(
-            (bar) =>
+          .filter((bar) => {
+            const last = bar.harvest[bar.harvest.length - 1]?.end ?? bar.growing.end;
+            return (
               (!from || bar.growing.begin <= (to ?? '9999-12-31')) &&
-              (!to || (bar.harvest?.end ?? bar.growing.end) >= (from ?? '0000-01-01')),
-          )
+              (!to || last >= (from ?? '0000-01-01'))
+            );
+          })
           .sort((a, b) => a.growing.begin.localeCompare(b.growing.begin));
 
         return bars;

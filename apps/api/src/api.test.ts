@@ -42,17 +42,19 @@ async function createPlanting(overrides: Record<string, unknown> = {}) {
     payload: {
       cropId: crop.id,
       plantingType: 'transplant_raised',
-      length: 3000,
+      // 30 m de planche, 50 cm sur le rang, 2,5 kg au mètre, 300 graines par gramme —
+      // exprimés dans les unités de stockage de Brinjel.
+      length: 30_000,
       rows: 2,
-      spacingPlants: 50,
-      yieldPerBedMeter: 250,
+      spacingPlants: 5_000,
+      yieldPerBedMeter: 2_500,
       pricePerUnit: 320,
-      seedsPerGram: 300,
+      seedsPerGram: 300_000,
       seedsPerHoleSeedling: 1,
       seedsExtraPercentage: 10,
       estimatedGreenhouseLoss: 10,
-      anchorDate: '2026-03-01',
-      durations: { greenhouse: 35, to_harvest: 60, harvest: 45 },
+      sowingDate: '2026-03-01',
+      durations: { days_to_transplant: 35, days_to_maturity: 60, harvest_window: 45 },
       ...overrides,
     },
   });
@@ -194,11 +196,11 @@ describe('isolation entre fermes', () => {
       headers: headers(),
       payload: {
         cropId: foreignCrop.id,
-        plantingType: 'direct_seed',
+        plantingType: 'direct_seeded',
         length: 1000,
         rows: 1,
         spacingPlants: 25,
-        anchorDate: '2026-04-01',
+        sowingDate: '2026-04-01',
       },
     });
     expect(refused.statusCode).toBe(400);
@@ -226,18 +228,23 @@ describe('isolation entre fermes', () => {
 });
 
 describe('plan de culture', () => {
-  it('déroule les dates depuis l’ancre et les durées, et calcule les semences', async () => {
+  it('déroule les dates depuis le semis et les durées, récolte comprise', async () => {
     const planting = await createPlanting();
+    // Trois dates seulement : la récolte n'en est pas une, elle devient une fenêtre.
     expect(planting.dates).toEqual({
-      greenhouse_sowing: { planned: '2026-03-01', effective: null },
-      sowing_planting: { planned: '2026-04-05', effective: null },
-      harvest_begin: { planned: '2026-06-04', effective: null },
-      harvest_end: { planned: '2026-07-19', effective: null },
+      sowing: { planned: '2026-03-01', effective: null },
+      planting: { planned: '2026-04-05', effective: null },
     });
-    expect(planting.computed.plantCount).toBe(120);
-    expect(planting.computed.seedCount).toBe(148);
-    expect(planting.computed.expectedYield).toBe(7500);
-    expect(planting.computed.expectedRevenue).toBe(2_400_000);
+    expect(planting.harvestPeriods).toEqual([{ begin: '2026-06-04', end: '2026-07-19' }]);
+    expect(planting.fieldDate).toBe('2026-04-05');
+
+    // 30000 mm × 10 / 5000 × 2 rangs = 120 alvéoles, 10 % de perte en pépinière.
+    expect(planting.computed.holes).toBe(120);
+    expect(planting.computed.seedlings).toBe(133);
+    expect(planting.computed.seedsNumber).toBe(133);
+    // 2,5 kg/m × 30 m = 75 kg, en millièmes d'unité ; 75 × 3,20 € = 240 €.
+    expect(planting.computed.expectedYield).toBe(75_000);
+    expect(planting.computed.expectedRevenue).toBe(24_000);
   });
 
   it('filtre, trie et cherche les séries', async () => {
@@ -245,8 +252,8 @@ describe('plan de culture', () => {
     await createPlanting();
     await createPlanting({
       cropId: carotte.id,
-      plantingType: 'direct_seed',
-      anchorDate: '2026-05-01',
+      plantingType: 'direct_seeded',
+      sowingDate: '2026-05-01',
     });
 
     const all = await app.inject({ method: 'GET', url: farmUrl('/plantings'), headers: headers() });
@@ -254,7 +261,7 @@ describe('plan de culture', () => {
 
     const direct = await app.inject({
       method: 'GET',
-      url: farmUrl('/plantings?plantingType=direct_seed'),
+      url: farmUrl('/plantings?plantingType=direct_seeded'),
       headers: headers(),
     });
     expect(direct.json()).toHaveLength(1);
@@ -271,7 +278,7 @@ describe('plan de culture', () => {
       url: farmUrl('/plantings?sort=date&order=desc'),
       headers: headers(),
     });
-    expect(sorted.json()[0].anchorDate).toBe('2026-05-01');
+    expect(sorted.json()[0].fieldDate).toBe('2026-05-01');
   });
 
   it('duplique une série en décalant les dates', async () => {
@@ -283,11 +290,13 @@ describe('plan de culture', () => {
       payload: { count: 3, intervalDays: 7 },
     });
     expect(response.statusCode).toBe(201);
-    expect(response.json().map((copy: { anchorDate: string }) => copy.anchorDate)).toEqual([
-      '2026-03-08',
-      '2026-03-15',
-      '2026-03-22',
+    // Les copies décalent semis, plantation et fenêtre de récolte du même pas.
+    expect(response.json().map((copy: { fieldDate: string }) => copy.fieldDate)).toEqual([
+      '2026-04-12',
+      '2026-04-19',
+      '2026-04-26',
     ]);
+    expect(response.json()[0].harvestPeriods).toEqual([{ begin: '2026-06-11', end: '2026-07-26' }]);
   });
 
   it('applique un traitement par lot (décalage et champs communs)', async () => {
@@ -307,7 +316,10 @@ describe('plan de culture', () => {
       headers: headers(),
     });
     for (const planting of list.json()) {
-      expect(planting.anchorDate).toBe('2026-03-15');
+      // Semis, plantation et fenêtre de récolte se décalent ensemble.
+      expect(planting.dates.sowing.planned).toBe('2026-03-15');
+      expect(planting.fieldDate).toBe('2026-04-19');
+      expect(planting.harvestPeriods[0]).toEqual({ begin: '2026-06-18', end: '2026-08-02' });
       expect(Number(planting.pricePerUnit)).toBe(500);
     }
   });
@@ -321,7 +333,8 @@ describe('plan de culture', () => {
     });
     const [bar] = response.json();
     expect(bar.nursery).toEqual({ begin: '2026-03-01', end: '2026-04-05' });
-    expect(bar.harvest).toEqual({ begin: '2026-06-04', end: '2026-07-19' });
+    expect(bar.growing).toEqual({ begin: '2026-04-05', end: '2026-06-04' });
+    expect(bar.harvest).toEqual([{ begin: '2026-06-04', end: '2026-07-19' }]);
   });
 
   it('interdit la modification à un membre en lecture', async () => {
@@ -329,7 +342,7 @@ describe('plan de culture', () => {
     const prisma = getPrisma();
     const guest = await registerAccount(app, { email: 'saisonnier@example.org' });
     await prisma.farmMembership.create({
-      data: { farmId: account.farmId, userId: guest.userId, role: 'member' },
+      data: { farmId: account.farmId, userId: guest.userId, role: 'employee' },
     });
     const crop = await firstCrop();
     const response = await app.inject({
@@ -338,7 +351,7 @@ describe('plan de culture', () => {
       headers: { cookie: guest.cookie },
       payload: {
         cropId: crop.id,
-        plantingType: 'direct_seed',
+        plantingType: 'direct_seeded',
         length: 100,
         rows: 1,
         spacingPlants: 10,
@@ -349,7 +362,8 @@ describe('plan de culture', () => {
 });
 
 describe('assolement', () => {
-  async function createBed(name: string, bedLength = 5000) {
+  /** Crée une planche ; `bedLength` est en millimètres, comme en base. */
+  async function createBed(name: string, bedLength = 50_000) {
     const response = await app.inject({
       method: 'POST',
       url: farmUrl('/locations'),
@@ -384,7 +398,7 @@ describe('assolement', () => {
       method: 'POST',
       url: farmUrl('/locations'),
       headers: headers(),
-      payload: { name: 'Planche A1', bedLength: 5000, parentId: garden.id },
+      payload: { name: 'Planche A1', bedLength: 50_000, parentId: garden.id },
     });
     const child = bed.json();
 
@@ -417,8 +431,9 @@ describe('assolement', () => {
 
   it('propose les emplacements disponibles et place la série', async () => {
     const planting = await createPlanting({ inGreenhouse: false });
-    const bed = await createBed('Planche A1', 4000);
-    await createBed('Planche A2', 2000);
+    // 40 m et 20 m : la série de 30 m tient sur la première, pas sur la seconde.
+    const bed = await createBed('Planche A1', 40_000);
+    await createBed('Planche A2', 20_000);
 
     const available = await app.inject({
       method: 'GET',
@@ -426,7 +441,7 @@ describe('assolement', () => {
       headers: headers(),
     });
     const body = available.json();
-    expect(body.requiredLength).toBe(3000);
+    expect(body.requiredLength).toBe(30_000);
     expect(body.locations[0].bed.name).toBe('Planche A1');
     expect(body.locations[0].fits).toBe(true);
     expect(body.locations[1].fits).toBe(false);
@@ -435,7 +450,7 @@ describe('assolement', () => {
       method: 'PUT',
       url: farmUrl(`/plantings/${planting.id}/assignments`),
       headers: headers(),
-      payload: { assignments: [{ locationId: bed.id, length: 3000 }] },
+      payload: { assignments: [{ locationId: bed.id, length: 30_000 }] },
     });
     expect(placed.statusCode).toBe(200);
     expect(placed.json().assignments).toHaveLength(1);
@@ -448,16 +463,16 @@ describe('assolement', () => {
       method: 'PUT',
       url: farmUrl(`/plantings/${first.id}/assignments`),
       headers: headers(),
-      payload: { assignments: [{ locationId: bed.id, length: 1000 }] },
+      payload: { assignments: [{ locationId: bed.id, length: 10_000 }] },
     });
 
     // Même famille (solanacées, délai 4 ans) l'année suivante sur la même planche.
-    const second = await createPlanting({ anchorDate: '2027-03-01' });
+    const second = await createPlanting({ sowingDate: '2027-03-01' });
     const refused = await app.inject({
       method: 'PUT',
       url: farmUrl(`/plantings/${second.id}/assignments`),
       headers: headers(),
-      payload: { assignments: [{ locationId: bed.id, length: 1000 }] },
+      payload: { assignments: [{ locationId: bed.id, length: 10_000 }] },
     });
     expect(refused.statusCode).toBe(400);
     expect(refused.json().details.warnings[0].type).toBe('rotation');
@@ -466,7 +481,7 @@ describe('assolement', () => {
       method: 'PUT',
       url: farmUrl(`/plantings/${second.id}/assignments`),
       headers: headers(),
-      payload: { assignments: [{ locationId: bed.id, length: 1000 }], force: true },
+      payload: { assignments: [{ locationId: bed.id, length: 10_000 }], force: true },
     });
     expect(forced.statusCode).toBe(200);
 
@@ -514,8 +529,9 @@ describe('tâches', () => {
           {
             typeId: weeding.id,
             linkDays: 20,
-            templateDateType: 'sowing_planting',
-            plannedLaborTime: 90,
+            // La mise en place au champ : plantation ici, semis pour un semis direct.
+            templateDateType: 'field_sowing_planting',
+            plannedLaborTime: 5400, // 1 h 30, en secondes
           },
         ],
       },
@@ -611,7 +627,8 @@ describe('commandes, récoltes et statistiques', () => {
 
     const orders = await app.inject({ method: 'GET', url: farmUrl('/orders'), headers: headers() });
     expect(orders.json().lines).toHaveLength(1);
-    expect(orders.json().lines[0].seedCount).toBe(148);
+    // 120 alvéoles, 1 graine chacune, 10 % de perte : 120 / 0,9 ≈ 133,3 graines.
+    expect(orders.json().lines[0].seedsNumber).toBeCloseTo(133.33, 1);
 
     const csv = await app.inject({
       method: 'GET',
@@ -624,7 +641,8 @@ describe('commandes, récoltes et statistiques', () => {
 
   it('saisit des récoltes et les compare au prévisionnel', async () => {
     const planting = await createPlanting();
-    for (const quantity of [2000, 2500]) {
+    // Quantités en millièmes d'unité : 20 kg puis 25 kg.
+    for (const quantity of [20_000, 25_000]) {
       const response = await app.inject({
         method: 'POST',
         url: farmUrl('/harvests'),
@@ -641,8 +659,8 @@ describe('commandes, récoltes et statistiques', () => {
     });
     const body = stats.json();
     expect(body.plantings.total).toBe(1);
-    expect(body.yields.expected).toBe(7500);
-    expect(body.yields.actual).toBe(4500);
+    expect(body.yields.expected).toBe(75_000);
+    expect(body.yields.actual).toBe(45_000);
     expect(body.crops[0].comparison.differencePercentage).toBe(-40);
   });
 

@@ -51,7 +51,7 @@ export const authPlugin = fp(async (app, options: { env: Env }) => {
    * Une ferme dont on n'est pas membre est signalée « introuvable » : on ne révèle pas
    * l'existence des fermes des autres.
    */
-  app.decorate('requireFarm', (minimumRole: Role = 'member') => {
+  app.decorate('requireFarm', (minimumRole: Role = 'employee') => {
     return async (request: FastifyRequest, _reply: FastifyReply) => {
       if (!request.currentUser) throw unauthorized();
       const { farmId } = FarmParams.parse(request.params);

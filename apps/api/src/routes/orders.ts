@@ -9,7 +9,7 @@ import { z } from 'zod';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import {
   buildOrderLines,
-  formatSeedMass,
+  formatSeedWeight,
   orderPeriod,
   toCsv,
   type OrderablePlanting,
@@ -24,7 +24,8 @@ const FarmParams = z.object({ farmId: z.coerce.number().int().positive() });
 const OrderQuery = z.object({
   year: z.coerce.number().int().min(1900).max(2200).optional(),
   period: z.enum(['year', 'h1', 'h2', 'q1', 'q2', 'q3', 'q4']).default('year'),
-  placedOnly: z.stringbool().default(false),
+  /** Ne retenir que la longueur réellement posée sur l'assolement. */
+  assignedPlantingsOnly: z.stringbool().default(false),
   providerId: z.coerce.number().int().positive().optional(),
   cropId: z.coerce.number().int().positive().optional(),
 });
@@ -37,7 +38,7 @@ async function collectOrderLines(db: Tx, farmId: number, query: z.infer<typeof O
       variety: { include: { provider: true } },
       container: true,
       dates: true,
-      assignments: { select: { plantingId: true } },
+      assignments: { select: { length: true } },
     },
   });
 
@@ -60,11 +61,11 @@ async function collectOrderLines(db: Tx, farmId: number, query: z.infer<typeof O
     providerId: row.variety?.providerId ?? null,
     providerName: row.variety?.provider?.name ?? null,
     dates: datesFromRows(row.dates),
-    placed: row.assignments.length > 0,
+    assignedLength: row.assignments.reduce((total, a) => total + a.length, 0),
   }));
 
   return buildOrderLines(plantings, {
-    placedOnly: query.placedOnly,
+    assignedPlantingsOnly: query.assignedPlantingsOnly,
     range: query.year ? orderPeriod(query.year, query.period) : null,
     providerIds: query.providerId ? [query.providerId] : null,
     cropIds: query.cropId ? [query.cropId] : null,
@@ -78,7 +79,7 @@ export async function orderRoutes(app: FastifyInstance): Promise<void> {
   typed.get(
     '/api/farms/:farmId/orders',
     {
-      onRequest: app.requireFarm('member'),
+      onRequest: app.requireFarm('employee'),
       schema: {
         tags,
         summary: 'Liste des semences et plants à commander',
@@ -93,8 +94,8 @@ export async function orderRoutes(app: FastifyInstance): Promise<void> {
           period: request.query.year ? orderPeriod(request.query.year, request.query.period) : null,
           lines,
           totals: {
-            seedCount: lines.reduce((total, line) => total + line.seedCount, 0),
-            plantsToBuy: lines.reduce((total, line) => total + line.plantsToBuy, 0),
+            seedsNumber: Math.round(lines.reduce((total, line) => total + line.seedsNumber, 0)),
+            transplantsToBuy: lines.reduce((total, line) => total + line.transplantsToBuy, 0),
           },
         };
       }),
@@ -103,7 +104,7 @@ export async function orderRoutes(app: FastifyInstance): Promise<void> {
   typed.get(
     '/api/farms/:farmId/orders.csv',
     {
-      onRequest: app.requireFarm('member'),
+      onRequest: app.requireFarm('employee'),
       schema: {
         tags,
         summary: 'Export CSV de la commande',
@@ -120,12 +121,13 @@ export async function orderRoutes(app: FastifyInstance): Promise<void> {
         { header: 'Espèce', value: (line) => line.cropName },
         { header: 'Variété', value: (line) => line.varietyName ?? '' },
         { header: 'Séries', value: (line) => line.plantingCount },
-        { header: 'Graines', value: (line) => line.seedCount },
+        { header: 'Graines', value: (line) => Math.round(line.seedsNumber) },
         {
           header: 'Masse',
-          value: (line) => (line.seedMassMg === null ? '' : formatSeedMass(line.seedMassMg)),
+          value: (line) =>
+            line.seedsQuantityGrams === null ? '' : formatSeedWeight(line.seedsQuantityGrams),
         },
-        { header: 'Plants à acheter', value: (line) => line.plantsToBuy },
+        { header: 'Plants à acheter', value: (line) => line.transplantsToBuy },
         { header: 'Première utilisation', value: (line) => line.firstNeededOn ?? '' },
       ]);
 

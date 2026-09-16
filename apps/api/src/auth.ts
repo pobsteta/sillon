@@ -89,8 +89,13 @@ export async function deleteSession(db: Tx, token: string): Promise<void> {
   });
 }
 
-/** Hiérarchie des rôles : le propriétaire peut tout ce que peut un chef de culture, etc. */
-const ROLE_RANK = { member: 1, manager: 2, owner: 3 } as const;
+/**
+ * Hiérarchie des rôles, reprise de `Brinjel.Admin.Role`. Brinjel attache à chacun un
+ * jeu de permissions par domaine ; Sillon garde l'ordre et le fait respecter route par
+ * route. Le consultant ne saisit rien, le saisonnier saisit récoltes et tâches,
+ * l'employé y ajoute les notes, le chef de culture touche au plan de culture.
+ */
+const ROLE_RANK = { consultant: 1, seasonal: 2, employee: 3, manager: 4, owner: 5 } as const;
 export type Role = keyof typeof ROLE_RANK;
 
 export function roleAtLeast(role: Role, required: Role): boolean {
