@@ -82,6 +82,43 @@ jobs:
           path: test-results/
           retention-days: 7
 
+  convention-commits:
+    name: Convention des messages de commit
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Vérifier les commits de la branche
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          # release-please engendre le CHANGELOG et le numéro de version à partir des
+          # commits conventionnels. Un message hors convention n'échoue nulle part : il
+          # disparaît simplement de la release. Ce contrôle le dit tout de suite.
+          motif='^(feat|fix|perf|refactor|docs|test|build|ci|chore|revert)(\([a-z0-9/._-]+\))?!?: .+'
+          fautifs=0
+          while IFS= read -r sujet; do
+            [ -z "$sujet" ] && continue
+            case "$sujet" in Revert\ *) continue ;; esac
+            if ! printf '%s' "$sujet" | grep -qE "$motif"; then
+              echo "::error::Message hors convention : $sujet"
+              fautifs=$((fautifs + 1))
+            fi
+          done < <(git log --no-merges --format=%s "$BASE..$HEAD")
+
+          if [ "$fautifs" -gt 0 ]; then
+            echo
+            echo "Format attendu : type(portée facultative): description"
+            echo "Types : feat, fix, perf, refactor, docs, test, build, ci, chore, revert"
+            echo "La description reste en français : « feat: aligne l'interface sur Brinjel »."
+            exit 1
+          fi
+          echo "Tous les commits suivent la convention."
+
   conformite-licences:
     runs-on: ubuntu-latest
     steps:
