@@ -14,7 +14,7 @@ import { formatDate, formatSeedWeight } from '../lib/format.js';
 const PERIODS = ['year', 'h1', 'h2', 'q1', 'q2', 'q3', 'q4'] as const;
 
 export function OrdersPage() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const locale = useLocale();
   const farmId = useFarmId();
   const [year, setYear] = useState(Number(today().slice(0, 4)));

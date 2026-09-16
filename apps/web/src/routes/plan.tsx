@@ -34,7 +34,7 @@ import { formatDate, formatLength, formatMoney } from '../lib/format.js';
 import type { Planting } from '../lib/types.js';
 
 export function PlanPage() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const locale = useLocale();
   const farmId = useFarmId();
   const { canEdit } = useCurrentSession();
@@ -396,7 +396,7 @@ function PlantingRow({
   selectable: boolean;
   onToggle: () => void;
 }) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const locale = useLocale();
   return (
     <tr className="border-b border-earth-100 hover:bg-earth-50 dark:border-earth-700 dark:hover:bg-earth-700/40">

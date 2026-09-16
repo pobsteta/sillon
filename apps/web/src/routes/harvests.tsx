@@ -16,7 +16,7 @@ import { mainDate } from '../lib/planting.js';
 import { formatDate, formatLaborTime, formatQuantity } from '../lib/format.js';
 
 export function HarvestsPage() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const locale = useLocale();
   const farmId = useFarmId();
   const year = Number(today().slice(0, 4));

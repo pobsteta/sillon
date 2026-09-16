@@ -38,6 +38,10 @@ export function PasswordForgottenPage() {
     setBusy(true);
     try {
       await api('/api/auth/password-reset', { method: 'POST', body: { email } });
+    } catch {
+      // Une panne réseau ne doit pas non plus distinguer les cas : on l'avale
+      // volontairement, mais explicitement — sans ce `catch`, la promesse était
+      // rejetée dans le vide.
     } finally {
       setBusy(false);
       // Le serveur répond pareil que l'adresse existe ou non ; l'écran fait de même,
@@ -58,7 +62,7 @@ export function PasswordForgottenPage() {
 
   return (
     <PublicCard title={t('auth.forgotten.title')}>
-      <form className="card space-y-4" onSubmit={submit}>
+      <form className="card space-y-4" onSubmit={(event) => void submit(event)}>
         <p className="text-sm text-earth-700 dark:text-earth-200">{t('auth.forgotten.intro')}</p>
         <Field
           label={t('auth.email')}
@@ -102,7 +106,7 @@ export function PasswordResetPage({ token }: { token: string }) {
 
   return (
     <PublicCard title={t('auth.reset.title')}>
-      <form className="card space-y-4" onSubmit={submit}>
+      <form className="card space-y-4" onSubmit={(event) => void submit(event)}>
         <Field
           label={t('auth.reset.newPassword')}
           type="password"

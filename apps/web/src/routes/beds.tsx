@@ -27,7 +27,7 @@ import { parseLengthMeters } from '@sillon/core';
 import { formatDate, formatLength } from '../lib/format.js';
 
 export function BedsPage() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const locale = useLocale();
   const farmId = useFarmId();
   const { canEdit } = useCurrentSession();

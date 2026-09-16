@@ -378,7 +378,14 @@ fichier Elixir dont la formule est tirée.
 ```bash
 npm test          # unitaires + intégration (PostgreSQL requis)
 npm run test:e2e  # Playwright ; PLAYWRIGHT_CHROMIUM_PATH permet d'utiliser un Chromium déjà installé
+npm run lint      # ESLint : peu de règles, mais qui attrapent de vraies fautes
 ```
+
+Le style est l'affaire de Prettier, pas d'ESLint : la configuration ne contient aucune
+règle de mise en forme. Elle vise les fautes que le typage ne voit pas — promesse oubliée,
+variable morte, règles des hooks React. Les `any` restants sont des avertissements, et
+`--max-warnings` fige leur nombre : la dette existante ne bloque personne, mais elle ne
+grandit pas sans qu'on s'en aperçoive.
 
 ---
 

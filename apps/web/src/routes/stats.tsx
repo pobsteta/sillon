@@ -15,7 +15,7 @@ import { EmptyState, Loading, PageHeader, Select, StatTile } from '../components
 import { formatLaborTime, formatLength, formatMoney, formatQuantity } from '../lib/format.js';
 
 export function StatsPage() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const locale = useLocale();
   const farmId = useFarmId();
   const currentYear = Number(today().slice(0, 4));
