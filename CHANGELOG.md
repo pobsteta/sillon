@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.1](https://github.com/pobsteta/sillon/compare/v0.2.0...v0.2.1) (2026-09-16)
+
+
+### Corrections
+
+* **ci:** exclut le CHANGELOG de la vérification Prettier ([970d16f](https://github.com/pobsteta/sillon/commit/970d16f8922bcf0907242f81c106df301a475b52))
+* **docker:** copie le schéma Prisma avant npm ci dans l'image de l'API ([dfa09a7](https://github.com/pobsteta/sillon/commit/dfa09a7ff7a9046173924a6ca944e8fe4ac771fe))
+
 ## [0.2.0](https://github.com/pobsteta/sillon/compare/v0.1.0...v0.2.0) (2026-09-16)
 
 
