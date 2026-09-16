@@ -49,7 +49,7 @@ export async function farmRoutes(app: FastifyInstance): Promise<void> {
   typed.get(
     '/api/farms/:farmId',
     {
-      onRequest: app.requireFarm('employee'),
+      onRequest: app.requireMember,
       schema: { tags, summary: 'Détail d’une ferme', params: FarmParams },
     },
     async (request) => {
@@ -124,7 +124,7 @@ export async function farmRoutes(app: FastifyInstance): Promise<void> {
   typed.get(
     '/api/farms/:farmId/members',
     {
-      onRequest: app.requireFarm('employee'),
+      onRequest: app.requirePermission('team', 'read'),
       schema: { tags, summary: 'Membres de la ferme', params: FarmParams },
     },
     async (request) => {

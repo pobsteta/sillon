@@ -45,7 +45,7 @@ export function useSession(options: Partial<UseQueryOptions<Session>> = {}) {
   });
 }
 
-function farmList<T>(farmId: number, resource: string, params: Record<string, unknown> = {}) {
+function farmList<T>(farmId: number, resource: string, params: object = {}) {
   return {
     queryKey: keys.list(farmId, resource, params),
     queryFn: () => api<T>(`${base(farmId)}/${resource}${queryString(params)}`),
@@ -89,7 +89,21 @@ export const useHarvests = (farmId: number, params: Record<string, unknown> = {}
 export const useNotes = (farmId: number, params: Record<string, unknown> = {}) =>
   useQuery(farmList<Note[]>(farmId, 'notes', params));
 
-export const useOrders = (farmId: number, params: Record<string, unknown> = {}) =>
+/**
+ * Paramètres de la liste de commande. Typés exprès : ils doivent coller au schéma zod de
+ * `GET /api/farms/:farmId/orders` — un nom qui ne correspond pas est silencieusement
+ * ignoré par le serveur, qui applique alors sa valeur par défaut.
+ */
+export interface OrderParams {
+  year?: number;
+  period?: 'year' | 'h1' | 'h2' | 'q1' | 'q2' | 'q3' | 'q4';
+  /** Ne retenir que la longueur réellement posée sur l'assolement. */
+  assignedPlantingsOnly?: boolean;
+  providerId?: string | number | undefined;
+  cropId?: number;
+}
+
+export const useOrders = (farmId: number, params: OrderParams = {}) =>
   useQuery(
     farmList<{ lines: OrderLine[]; totals: { seedsNumber: number; transplantsToBuy: number } }>(
       farmId,

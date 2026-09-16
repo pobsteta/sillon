@@ -284,16 +284,25 @@ les accès automatisés) : huit points du modèle avaient reçu une valeur expli
 hypothèses étaient fausses** ; elles ont été corrigées, et la migration
 `20260916090000_align_sur_brinjel` convertit les données existantes.
 
-| Point                    | Hypothèse initiale                      | Ce que fait Brinjel                                                                                            | Où                              |
-| ------------------------ | --------------------------------------- | -------------------------------------------------------------------------------------------------------------- | ------------------------------- |
-| Unité de `BedLength`     | centimètres                             | **millimètres** ; l'espacement est en **dixièmes de millimètre**                                               | `packages/core/src/units.ts`    |
-| `labor_time`             | minutes                                 | **secondes**                                                                                                   | `packages/core/src/units.ts`    |
-| Poquets par planche      | `floor(longueur / espacement)`, arrondi | `longueur × 10 / espacement × rangs`, **sans arrondi** — le flottant se propage jusqu'à la commande            | `packages/core/src/seeds.ts`    |
-| Perte en pépinière       | augmente le nombre d'alvéoles semées    | **divise** les graines par alvéole et le nombre de plants (`/ (1 − perte)`), le nombre de poquets ne bouge pas | `packages/core/src/seeds.ts`    |
-| Marge de sécurité        | s'applique à toute série                | n'entre **que dans la commande**, et **seulement en semis direct**                                             | `packages/core/src/seeds.ts`    |
-| Rôles `farm_memberships` | `owner`, `manager`, `member`            | **cinq** rôles : `owner`, `manager`, `employee`, `seasonal`, `consultant`                                      | `apps/api/prisma/schema.prisma` |
-| `families.interval`      | délai de retour en années               | confirmé — années, comparées en jours (`365`)                                                                  | `packages/core/src/rotation.ts` |
-| Occupation d'une planche | de la mise en place à la fin de récolte | confirmé — la pépinière n'occupe pas la planche                                                                | `packages/core/src/planting.ts` |
+| Point                    | Hypothèse initiale                      | Ce que fait Brinjel                                                                                                                    | Où                              |
+| ------------------------ | --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------- |
+| Unité de `BedLength`     | centimètres                             | **millimètres** ; l'espacement est en **dixièmes de millimètre**                                                                       | `packages/core/src/units.ts`    |
+| `labor_time`             | minutes                                 | **secondes**                                                                                                                           | `packages/core/src/units.ts`    |
+| Poquets par planche      | `floor(longueur / espacement)`, arrondi | `longueur × 10 / espacement × rangs`, **sans arrondi** — le flottant se propage jusqu'à la commande                                    | `packages/core/src/seeds.ts`    |
+| Perte en pépinière       | augmente le nombre d'alvéoles semées    | **divise** les graines par alvéole et le nombre de plants (`/ (1 − perte)`), le nombre de poquets ne bouge pas                         | `packages/core/src/seeds.ts`    |
+| Marge de sécurité        | s'applique à toute série                | n'entre **que dans la commande**, et **seulement en semis direct**                                                                     | `packages/core/src/seeds.ts`    |
+| Rôles `farm_memberships` | trois rôles sur une échelle             | **cinq** rôles, et une **matrice** de permissions : le saisonnier saisit des récoltes sans voir les commandes, le consultant l'inverse | `packages/core/src/roles.ts`    |
+| `families.interval`      | délai de retour en années               | confirmé — années, comparées en jours (`365`)                                                                                          | `packages/core/src/rotation.ts` |
+| Occupation d'une planche | de la mise en place à la fin de récolte | confirmé — la pépinière n'occupe pas la planche                                                                                        | `packages/core/src/planting.ts` |
+
+Les rôles méritent un mot : ce n'est **pas** une hiérarchie. Une première version rangeait
+les cinq rôles sur une échelle (consultant < saisonnier < employé < chef de culture <
+propriétaire), ce qui renvoyait 403 au saisonnier sur les tâches et les récoltes — le
+travail pour lequel le rôle existe. La matrice de `Brinjel.Admin.Role` est portée telle
+quelle dans `packages/core/src/roles.ts` ; l'API la fait respecter par
+`requirePermission(domaine, action)` sur les routes de terrain et de lecture, et garde
+`requireFarm(rôle)` là où la hiérarchie `owner > manager` est bien ce que décrit Brinjel
+(réglages, équipe, plan de culture en écriture).
 
 Le modèle des dates a changé de la même façon. Une série ne porte plus une « date de
 départ » et deux dates de récolte, mais :

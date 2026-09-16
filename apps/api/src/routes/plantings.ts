@@ -223,7 +223,7 @@ export async function plantingRoutes(app: FastifyInstance): Promise<void> {
   typed.get(
     '/api/farms/:farmId/plantings',
     {
-      onRequest: app.requireFarm('employee'),
+      onRequest: app.requirePermission('crop_plan', 'read'),
       schema: { tags, summary: 'Lister les séries', params: FarmParams, querystring: ListQuery },
     },
     async (request) =>
@@ -297,7 +297,7 @@ export async function plantingRoutes(app: FastifyInstance): Promise<void> {
   typed.get(
     '/api/farms/:farmId/plantings/:id',
     {
-      onRequest: app.requireFarm('employee'),
+      onRequest: app.requirePermission('crop_plan', 'read'),
       schema: { tags, summary: 'Détail d’une série', params: IdParams },
     },
     async (request) =>
@@ -620,7 +620,7 @@ export async function plantingRoutes(app: FastifyInstance): Promise<void> {
   typed.get(
     '/api/farms/:farmId/gantt',
     {
-      onRequest: app.requireFarm('employee'),
+      onRequest: app.requirePermission('crop_plan', 'read'),
       schema: {
         tags,
         summary: 'Données du diagramme de Gantt',

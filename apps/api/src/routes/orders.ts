@@ -79,7 +79,7 @@ export async function orderRoutes(app: FastifyInstance): Promise<void> {
   typed.get(
     '/api/farms/:farmId/orders',
     {
-      onRequest: app.requireFarm('employee'),
+      onRequest: app.requirePermission('orders', 'read'),
       schema: {
         tags,
         summary: 'Liste des semences et plants à commander',
@@ -104,7 +104,7 @@ export async function orderRoutes(app: FastifyInstance): Promise<void> {
   typed.get(
     '/api/farms/:farmId/orders.csv',
     {
-      onRequest: app.requireFarm('employee'),
+      onRequest: app.requirePermission('orders', 'read'),
       schema: {
         tags,
         summary: 'Export CSV de la commande',

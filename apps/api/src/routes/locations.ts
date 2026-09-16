@@ -79,7 +79,7 @@ export async function locationRoutes(app: FastifyInstance): Promise<void> {
   typed.get(
     '/api/farms/:farmId/locations',
     {
-      onRequest: app.requireFarm('employee'),
+      onRequest: app.requirePermission('locations', 'read'),
       schema: {
         tags,
         summary: 'Arbre du parcellaire',
@@ -211,7 +211,7 @@ export async function locationRoutes(app: FastifyInstance): Promise<void> {
   typed.get(
     '/api/farms/:farmId/locations/:id/history',
     {
-      onRequest: app.requireFarm('employee'),
+      onRequest: app.requirePermission('locations', 'read'),
       schema: { tags, summary: 'Historique des cultures d’une planche', params: IdParams },
     },
     async (request) =>
@@ -240,7 +240,7 @@ export async function locationRoutes(app: FastifyInstance): Promise<void> {
   typed.get(
     '/api/farms/:farmId/plantings/:id/available-locations',
     {
-      onRequest: app.requireFarm('employee'),
+      onRequest: app.requirePermission('locations', 'read'),
       schema: {
         tags,
         summary: 'Emplacements disponibles pour une série',
@@ -440,7 +440,7 @@ export async function locationRoutes(app: FastifyInstance): Promise<void> {
   typed.get(
     '/api/farms/:farmId/assignments',
     {
-      onRequest: app.requireFarm('employee'),
+      onRequest: app.requirePermission('locations', 'read'),
       schema: {
         tags,
         summary: 'Plan d’assolement sur une période',

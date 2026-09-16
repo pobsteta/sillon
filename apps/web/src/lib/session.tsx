@@ -3,6 +3,7 @@
 //
 // Ferme courante : mémorisée d'une visite à l'autre, et propagée à tout l'arbre.
 
+import { can, type Action, type Resource } from '@sillon/core';
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useSession } from './queries.js';
 import type { Farm, Session } from './types.js';
@@ -14,6 +15,8 @@ interface SessionContextValue {
   selectFarm: (farmId: number) => void;
   canEdit: boolean;
   canManageFarm: boolean;
+  /** Permission de la matrice `Brinjel.Admin.Role` pour le rôle courant. */
+  can: (resource: Resource, action: Action) => boolean;
 }
 
 const SessionContext = createContext<SessionContextValue | null>(null);
@@ -43,6 +46,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       selectFarm: setFarmId,
       canEdit: farm?.role === 'owner' || farm?.role === 'manager',
       canManageFarm: farm?.role === 'owner',
+      // La matrice de Brinjel fait foi : le saisonnier ne voit pas les commandes,
+      // le consultant si. Une échelle de rôles ne saurait pas l'exprimer.
+      can: (resource: Resource, action: Action) =>
+        farm ? can(farm.role, resource, action) : false,
     }),
     [session, isLoading, farm],
   );

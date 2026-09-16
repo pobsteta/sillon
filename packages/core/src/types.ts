@@ -99,9 +99,9 @@ export const ProviderType = {
 export type ProviderType = (typeof ProviderType)[keyof typeof ProviderType];
 
 /**
- * Rôles sur une ferme (`Brinjel.Admin.Role`), du plus au moins capable.
- * Brinjel attache à chacun un jeu de permissions par domaine ; Sillon garde la
- * hiérarchie et applique le détail dans l'API.
+ * Rôles sur une ferme (`Brinjel.Admin.Role`). Ce n'est pas une hiérarchie : le saisonnier
+ * saisit des récoltes mais ne voit pas les commandes, le consultant fait l'inverse. La
+ * matrice de permissions est dans `roles.ts`.
  */
 export const FarmRole = {
   owner: 'owner',

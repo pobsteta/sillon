@@ -175,8 +175,9 @@ async function main(): Promise<void> {
               farmId: farm.id,
               parentId: garden.id,
               name: `Planche A${index}`,
-              bedLength: 5000,
-              bedWidth: 80,
+              // 50 m sur 80 cm, en millimètres comme le reste du schéma.
+              bedLength: metersToMillimeters(50),
+              bedWidth: 800,
               greenhouse: false,
               position: index,
             },
@@ -191,8 +192,9 @@ async function main(): Promise<void> {
               farmId: farm.id,
               parentId: greenhouse.id,
               name: `Planche S${index}`,
-              bedLength: 3000,
-              bedWidth: 80,
+              // 30 m sur 80 cm.
+              bedLength: metersToMillimeters(30),
+              bedWidth: 800,
               greenhouse: true,
               position: index,
             },

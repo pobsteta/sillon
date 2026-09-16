@@ -28,7 +28,7 @@ export async function statsRoutes(app: FastifyInstance): Promise<void> {
   typed.get(
     '/api/farms/:farmId/stats',
     {
-      onRequest: app.requireFarm('employee'),
+      onRequest: app.requirePermission('charts', 'read'),
       schema: {
         tags,
         summary: 'Tableau de bord d’une saison',

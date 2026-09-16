@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { useLocale } from '../lib/locale.js';
 import { today } from '@sillon/core';
 import { useFarmId } from '../lib/session.js';
-import { useOrders, useProviders } from '../lib/queries.js';
+import { useOrders, useProviders, type OrderParams } from '../lib/queries.js';
 import { queryString } from '../lib/api.js';
 import { EmptyState, Loading, PageHeader, Select, StatTile, Toggle } from '../components/ui.js';
 import { formatDate, formatSeedWeight } from '../lib/format.js';
@@ -19,10 +19,15 @@ export function OrdersPage() {
   const farmId = useFarmId();
   const [year, setYear] = useState(Number(today().slice(0, 4)));
   const [period, setPeriod] = useState<(typeof PERIODS)[number]>('year');
-  const [placedOnly, setPlacedOnly] = useState(false);
+  const [assignedPlantingsOnly, setAssignedPlantingsOnly] = useState(false);
   const [providerId, setProviderId] = useState('');
 
-  const params = { year, period, placedOnly, providerId: providerId || undefined };
+  const params: OrderParams = {
+    year,
+    period,
+    assignedPlantingsOnly,
+    providerId: providerId || undefined,
+  };
   const orders = useOrders(farmId, params);
   const providers = useProviders(farmId);
 
@@ -77,7 +82,11 @@ export function OrdersPage() {
           ))}
         </Select>
         <div className="flex items-end">
-          <Toggle label={t('orders.placedOnly')} checked={placedOnly} onChange={setPlacedOnly} />
+          <Toggle
+            label={t('orders.placedOnly')}
+            checked={assignedPlantingsOnly}
+            onChange={setAssignedPlantingsOnly}
+          />
         </div>
       </div>
 

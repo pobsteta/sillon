@@ -108,7 +108,7 @@ export async function taskRoutes(app: FastifyInstance): Promise<void> {
   typed.get(
     '/api/farms/:farmId/tasks',
     {
-      onRequest: app.requireFarm('employee'),
+      onRequest: app.requirePermission('tasks', 'read'),
       schema: {
         tags,
         summary: 'Lister les tâches',
@@ -183,7 +183,7 @@ export async function taskRoutes(app: FastifyInstance): Promise<void> {
   typed.post(
     '/api/farms/:farmId/tasks',
     {
-      onRequest: app.requireFarm('employee'),
+      onRequest: app.requirePermission('tasks', 'create'),
       schema: {
         tags,
         summary: 'Créer une tâche',
@@ -233,7 +233,7 @@ export async function taskRoutes(app: FastifyInstance): Promise<void> {
   typed.patch(
     '/api/farms/:farmId/tasks/:id',
     {
-      onRequest: app.requireFarm('employee'),
+      onRequest: app.requirePermission('tasks', 'update'),
       schema: {
         tags,
         summary: 'Modifier une tâche',
@@ -299,7 +299,7 @@ export async function taskRoutes(app: FastifyInstance): Promise<void> {
   typed.post(
     '/api/farms/:farmId/tasks/complete',
     {
-      onRequest: app.requireFarm('employee'),
+      onRequest: app.requirePermission('tasks', 'update'),
       schema: {
         tags,
         summary: 'Valider des tâches (§7.3 : deux touches au champ)',
@@ -330,7 +330,7 @@ export async function taskRoutes(app: FastifyInstance): Promise<void> {
   typed.delete(
     '/api/farms/:farmId/tasks/:id',
     {
-      onRequest: app.requireFarm('employee'),
+      onRequest: app.requirePermission('tasks', 'delete'),
       schema: { tags, summary: 'Supprimer une tâche', params: IdParams },
     },
     async (request, reply) => {
@@ -498,7 +498,7 @@ export async function taskRoutes(app: FastifyInstance): Promise<void> {
   typed.get(
     '/api/farms/:farmId/task-templates',
     {
-      onRequest: app.requireFarm('employee'),
+      onRequest: app.requirePermission('task_templates', 'read'),
       schema: { tags, summary: 'Lister les itinéraires techniques', params: FarmParams },
     },
     async (request) =>

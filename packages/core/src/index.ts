@@ -5,6 +5,7 @@
 // Aucune dépendance à l'ORM ni au navigateur : tout est testable en isolation.
 
 export * from './types.js';
+export * from './roles.js';
 export * from './units.js';
 export * from './dates.js';
 export * from './planting.js';

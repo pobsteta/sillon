@@ -359,6 +359,77 @@ describe('plan de culture', () => {
     });
     expect(response.statusCode).toBe(403);
   });
+
+  /** Rattache un compte neuf à la ferme de l'essai avec le rôle demandé. */
+  async function memberWithRole(role: string, email: string) {
+    const guest = await registerAccount(app, { email });
+    await getPrisma().farmMembership.create({
+      data: { farmId: account.farmId, userId: guest.userId, role: role as never },
+    });
+    return guest;
+  }
+
+  it('laisse le saisonnier tenir le terrain : tâches et récoltes', async () => {
+    // Le rôle `seasonal` existe pour ça ; une hiérarchie linéaire le mettait en dessous
+    // de `employee` et lui renvoyait 403 sur tout (`Brinjel.Admin.Role`).
+    const guest = await memberWithRole('seasonal', 'terrain@example.org');
+    const cookie = { cookie: guest.cookie };
+
+    for (const url of ['/tasks', '/harvests', '/notes', '/plantings', '/locations']) {
+      const lecture = await app.inject({ method: 'GET', url: farmUrl(url), headers: cookie });
+      expect(lecture.statusCode, `lecture ${url}`).toBe(200);
+    }
+
+    const planting = await createPlanting();
+    const recolte = await app.inject({
+      method: 'POST',
+      url: farmUrl('/harvests'),
+      headers: cookie,
+      payload: { plantingId: planting.id, quantity: 12_000, date: '2026-07-01' },
+    });
+    expect(recolte.statusCode, 'saisie d’une récolte').toBe(201);
+
+    // Il lit sa ferme, comme tout membre.
+    const ferme = await app.inject({ method: 'GET', url: farmUrl(''), headers: cookie });
+    expect(ferme.statusCode).toBe(200);
+  });
+
+  it('refuse les commandes au saisonnier et les accorde au consultant', async () => {
+    // L'inversion exacte qu'une échelle de rôles ne sait pas exprimer.
+    const saisonnier = await memberWithRole('seasonal', 'saisonnier-cmd@example.org');
+    const consultant = await memberWithRole('consultant', 'consultant@example.org');
+
+    const refus = await app.inject({
+      method: 'GET',
+      url: farmUrl('/orders'),
+      headers: { cookie: saisonnier.cookie },
+    });
+    expect(refus.statusCode, 'le saisonnier ne voit pas les commandes').toBe(403);
+
+    const accord = await app.inject({
+      method: 'GET',
+      url: farmUrl('/orders'),
+      headers: { cookie: consultant.cookie },
+    });
+    expect(accord.statusCode, 'le consultant voit les commandes').toBe(200);
+  });
+
+  it('le consultant lit tout et ne saisit rien', async () => {
+    const guest = await memberWithRole('consultant', 'consultant-lecture@example.org');
+    const cookie = { cookie: guest.cookie };
+
+    const lecture = await app.inject({ method: 'GET', url: farmUrl('/tasks'), headers: cookie });
+    expect(lecture.statusCode).toBe(200);
+
+    const planting = await createPlanting();
+    const saisie = await app.inject({
+      method: 'POST',
+      url: farmUrl('/harvests'),
+      headers: cookie,
+      payload: { plantingId: planting.id, quantity: 1000, date: '2026-07-01' },
+    });
+    expect(saisie.statusCode, 'le consultant ne saisit pas de récolte').toBe(403);
+  });
 });
 
 describe('assolement', () => {
@@ -637,6 +708,35 @@ describe('commandes, récoltes et statistiques', () => {
     });
     expect(csv.headers['content-type']).toContain('text/csv');
     expect(csv.body).toContain('Marmande');
+  });
+
+  it('restreint la commande aux séries posées sur l’assolement', async () => {
+    // La page Commandes envoyait `placedOnly`, que zod ignorait au profit de sa valeur
+    // par défaut : la bascule « Séries placées uniquement » ne filtrait rien.
+    await createPlanting();
+
+    const complete = await app.inject({
+      method: 'GET',
+      url: farmUrl('/orders'),
+      headers: headers(),
+    });
+    expect(complete.json().lines).toHaveLength(1);
+
+    const posees = await app.inject({
+      method: 'GET',
+      url: farmUrl('/orders?assignedPlantingsOnly=true'),
+      headers: headers(),
+    });
+    // Rien n'est posé sur une planche : la liste restreinte est vide.
+    expect(posees.json().lines).toHaveLength(0);
+
+    // Le nom d'origine ne doit surtout pas passer pour un filtre valide.
+    const ancienNom = await app.inject({
+      method: 'GET',
+      url: farmUrl('/orders?placedOnly=true'),
+      headers: headers(),
+    });
+    expect(ancienNom.json().lines).toHaveLength(1);
   });
 
   it('saisit des récoltes et les compare au prévisionnel', async () => {
