@@ -31,7 +31,7 @@ export async function recordRoutes(app: FastifyInstance): Promise<void> {
   typed.get(
     '/api/farms/:farmId/harvests',
     {
-      onRequest: app.requireFarm('member'),
+      onRequest: app.requirePermission('harvests', 'read'),
       schema: {
         tags: harvestTags,
         summary: 'Lister les récoltes',
@@ -69,7 +69,7 @@ export async function recordRoutes(app: FastifyInstance): Promise<void> {
   typed.post(
     '/api/farms/:farmId/harvests',
     {
-      onRequest: app.requireFarm('member'),
+      onRequest: app.requirePermission('harvests', 'create'),
       schema: {
         tags: harvestTags,
         summary: 'Saisir une récolte',
@@ -100,7 +100,7 @@ export async function recordRoutes(app: FastifyInstance): Promise<void> {
   typed.patch(
     '/api/farms/:farmId/harvests/:id',
     {
-      onRequest: app.requireFarm('member'),
+      onRequest: app.requirePermission('harvests', 'update'),
       schema: {
         tags: harvestTags,
         summary: 'Modifier une récolte',
@@ -130,7 +130,7 @@ export async function recordRoutes(app: FastifyInstance): Promise<void> {
   typed.delete(
     '/api/farms/:farmId/harvests/:id',
     {
-      onRequest: app.requireFarm('member'),
+      onRequest: app.requirePermission('harvests', 'delete'),
       schema: { tags: harvestTags, summary: 'Supprimer une récolte', params: IdParams },
     },
     async (request, reply) => {
@@ -149,7 +149,7 @@ export async function recordRoutes(app: FastifyInstance): Promise<void> {
   typed.get(
     '/api/farms/:farmId/notes',
     {
-      onRequest: app.requireFarm('member'),
+      onRequest: app.requirePermission('notes', 'read'),
       schema: {
         tags: noteTags,
         summary: 'Lister les notes',
@@ -187,7 +187,7 @@ export async function recordRoutes(app: FastifyInstance): Promise<void> {
   typed.post(
     '/api/farms/:farmId/notes',
     {
-      onRequest: app.requireFarm('member'),
+      onRequest: app.requirePermission('notes', 'create'),
       schema: {
         tags: noteTags,
         summary: 'Écrire une note',
@@ -229,7 +229,7 @@ export async function recordRoutes(app: FastifyInstance): Promise<void> {
   typed.patch(
     '/api/farms/:farmId/notes/:id',
     {
-      onRequest: app.requireFarm('member'),
+      onRequest: app.requirePermission('notes', 'update'),
       schema: {
         tags: noteTags,
         summary: 'Modifier, épingler ou archiver une note',
@@ -274,7 +274,7 @@ export async function recordRoutes(app: FastifyInstance): Promise<void> {
   typed.delete(
     '/api/farms/:farmId/notes/:id',
     {
-      onRequest: app.requireFarm('member'),
+      onRequest: app.requirePermission('notes', 'delete'),
       schema: { tags: noteTags, summary: 'Supprimer une note', params: IdParams },
     },
     async (request, reply) => {
@@ -293,7 +293,7 @@ export async function recordRoutes(app: FastifyInstance): Promise<void> {
   app.post(
     '/api/farms/:farmId/photos',
     {
-      onRequest: app.requireFarm('member'),
+      onRequest: app.requireFarm('employee'),
       schema: { tags: photoTags, summary: 'Téléverser une photo' },
     },
     async (request, reply) => {
@@ -316,7 +316,7 @@ export async function recordRoutes(app: FastifyInstance): Promise<void> {
   typed.get(
     '/api/farms/:farmId/photos/:id/content',
     {
-      onRequest: app.requireFarm('member'),
+      onRequest: app.requirePermission('notes', 'read'),
       schema: { tags: photoTags, summary: 'Télécharger une photo', params: IdParams },
     },
     async (request, reply) => {
@@ -335,7 +335,7 @@ export async function recordRoutes(app: FastifyInstance): Promise<void> {
   typed.delete(
     '/api/farms/:farmId/photos/:id',
     {
-      onRequest: app.requireFarm('member'),
+      onRequest: app.requirePermission('notes', 'delete'),
       schema: { tags: photoTags, summary: 'Supprimer une photo', params: IdParams },
     },
     async (request, reply) => {

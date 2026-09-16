@@ -7,6 +7,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { Link, useRouterState } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
+import type { Action, Resource } from '@sillon/core';
 import { useCurrentSession } from '../lib/session.js';
 import { useAutoSynchronize, useOnlineStatus, usePendingWrites } from '../lib/online.js';
 import { api, clearApiCache } from '../lib/api.js';
@@ -17,6 +18,8 @@ interface NavEntry {
   labelKey: string;
   icon: string;
   primary: boolean;
+  /** Permission requise pour voir l'entrée ; absente = visible par tout membre. */
+  permission?: [Resource, Action];
 }
 
 const NAVIGATION: NavEntry[] = [
@@ -25,8 +28,21 @@ const NAVIGATION: NavEntry[] = [
   { to: '/taches', labelKey: 'nav.tasks', icon: '✓', primary: true },
   { to: '/assolement', labelKey: 'nav.beds', icon: '▦', primary: true },
   { to: '/recoltes', labelKey: 'nav.harvests', icon: '⚖', primary: false },
-  { to: '/commandes', labelKey: 'nav.orders', icon: '✉', primary: false },
-  { to: '/statistiques', labelKey: 'nav.stats', icon: '◫', primary: false },
+  // Le saisonnier ne voit pas les commandes ; l'employé ne voit pas les statistiques.
+  {
+    to: '/commandes',
+    labelKey: 'nav.orders',
+    icon: '✉',
+    primary: false,
+    permission: ['orders', 'read'],
+  },
+  {
+    to: '/statistiques',
+    labelKey: 'nav.stats',
+    icon: '◫',
+    primary: false,
+    permission: ['charts', 'read'],
+  },
   { to: '/parametres', labelKey: 'nav.settings', icon: '⚙', primary: false },
 ];
 
@@ -45,7 +61,7 @@ function useDarkMode(): [boolean, (value: boolean) => void] {
 
 export function AppShell({ children }: { children: ReactNode }) {
   const { t, i18n } = useTranslation();
-  const { session, farm, selectFarm } = useCurrentSession();
+  const { session, farm, selectFarm, can } = useCurrentSession();
   const online = useOnlineStatus();
   const pending = usePendingWrites();
   const queryClient = useQueryClient();
@@ -58,6 +74,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   });
 
   const isActive = (to: string) => (to === '/' ? path === '/' : path.startsWith(to));
+  const navigation = NAVIGATION.filter((entry) => !entry.permission || can(...entry.permission));
 
   const signOut = async () => {
     // La session locale est fermée même si l'appel échoue : sans réseau, rester connecté
@@ -89,7 +106,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <p className="text-xs text-earth-700 dark:text-earth-200">{t('app.tagline')}</p>
         </div>
         <ul className="space-y-1">
-          {NAVIGATION.map((entry) => (
+          {navigation.map((entry) => (
             <li key={entry.to}>
               <Link
                 to={entry.to}
@@ -170,18 +187,20 @@ export function AppShell({ children }: { children: ReactNode }) {
         {menuOpen ? (
           <nav className="no-print border-b border-earth-200 bg-white p-2 dark:border-earth-700 dark:bg-earth-800 lg:hidden">
             <ul className="grid grid-cols-2 gap-1">
-              {NAVIGATION.filter((entry) => !entry.primary).map((entry) => (
-                <li key={entry.to}>
-                  <Link
-                    to={entry.to}
-                    onClick={() => setMenuOpen(false)}
-                    className="flex min-h-11 items-center gap-2 rounded-lg px-3 text-sm hover:bg-earth-100 dark:hover:bg-earth-700"
-                  >
-                    <span aria-hidden>{entry.icon}</span>
-                    {t(entry.labelKey)}
-                  </Link>
-                </li>
-              ))}
+              {navigation
+                .filter((entry) => !entry.primary)
+                .map((entry) => (
+                  <li key={entry.to}>
+                    <Link
+                      to={entry.to}
+                      onClick={() => setMenuOpen(false)}
+                      className="flex min-h-11 items-center gap-2 rounded-lg px-3 text-sm hover:bg-earth-100 dark:hover:bg-earth-700"
+                    >
+                      <span aria-hidden>{entry.icon}</span>
+                      {t(entry.labelKey)}
+                    </Link>
+                  </li>
+                ))}
               <li>
                 <button
                   type="button"
@@ -215,22 +234,24 @@ export function AppShell({ children }: { children: ReactNode }) {
           aria-label={t('nav.menu')}
           className="no-print fixed inset-x-0 bottom-0 z-20 grid grid-cols-4 border-t border-earth-200 bg-white pb-[env(safe-area-inset-bottom,0px)] dark:border-earth-700 dark:bg-earth-800 lg:hidden"
         >
-          {NAVIGATION.filter((entry) => entry.primary).map((entry) => (
-            <Link
-              key={entry.to}
-              to={entry.to}
-              className={`flex min-h-14 flex-col items-center justify-center gap-0.5 text-[11px] ${
-                isActive(entry.to)
-                  ? 'font-semibold text-sillon-700 dark:text-sillon-300'
-                  : 'text-earth-700 dark:text-earth-200'
-              }`}
-            >
-              <span aria-hidden className="text-lg">
-                {entry.icon}
-              </span>
-              {t(entry.labelKey)}
-            </Link>
-          ))}
+          {navigation
+            .filter((entry) => entry.primary)
+            .map((entry) => (
+              <Link
+                key={entry.to}
+                to={entry.to}
+                className={`flex min-h-14 flex-col items-center justify-center gap-0.5 text-[11px] ${
+                  isActive(entry.to)
+                    ? 'font-semibold text-sillon-700 dark:text-sillon-300'
+                    : 'text-earth-700 dark:text-earth-200'
+                }`}
+              >
+                <span aria-hidden className="text-lg">
+                  {entry.icon}
+                </span>
+                {t(entry.labelKey)}
+              </Link>
+            ))}
         </nav>
       </div>
     </div>

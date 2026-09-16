@@ -15,6 +15,7 @@ import {
   totalLaborTime,
   type PlantingType as PlantingTypeValue,
 } from '@sillon/core';
+import { harvestPeriodsFromRows } from '../planting-io.js';
 import { inFarm } from '../scope.js';
 import { datesFromRows, toDbDate } from '../planting-io.js';
 
@@ -27,7 +28,7 @@ export async function statsRoutes(app: FastifyInstance): Promise<void> {
   typed.get(
     '/api/farms/:farmId/stats',
     {
-      onRequest: app.requireFarm('member'),
+      onRequest: app.requirePermission('charts', 'read'),
       schema: {
         tags,
         summary: 'Tableau de bord d’une saison',
@@ -49,14 +50,22 @@ export async function statsRoutes(app: FastifyInstance): Promise<void> {
             unit: true,
             container: true,
             dates: true,
+            harvestPeriods: true,
             harvests: true,
             assignments: true,
           },
         });
 
         const inSeason = plantings.filter((planting) => {
-          const range = occupationRange(datesFromRows(planting.dates));
-          return range ? range.begin <= to && from <= range.end : false;
+          const range = occupationRange(
+            datesFromRows(planting.dates),
+            planting.plantingType as PlantingTypeValue,
+            harvestPeriodsFromRows(planting.harvestPeriods),
+          );
+          if (range) return range.begin <= to && from <= range.end;
+          // Une production de plants n'occupe pas de planche : on la rattache à son semis.
+          const sowing = datesFromRows(planting.dates).sowing?.planned ?? null;
+          return sowing ? sowing >= from && sowing <= to : false;
         });
 
         // L'agrégat est tenu par espèce ET par unité : additionner des kilogrammes et des

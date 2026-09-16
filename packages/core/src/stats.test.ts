@@ -15,27 +15,31 @@ import {
 import { OverdueUnit } from './types.js';
 
 describe('rendements', () => {
+  // 30 m de planche (30 000 mm), 2,5 kg au mètre (2500 millièmes d'unité).
   it('rapporte le rendement au mètre à la longueur de planche', () => {
-    expect(expectedYield({ length: 3000, yieldPerBedMeter: 250 })).toBe(7500);
-    expect(expectedYield({ length: 3000, yieldPerBedMeter: null })).toBe(0);
+    // 2500 millièmes × 30 m = 75 000 millièmes, soit 75 unités.
+    expect(expectedYield({ length: 30_000, yieldPerBedMeter: 2_500 })).toBe(75_000);
+    expect(expectedYield({ length: 30_000, yieldPerBedMeter: null })).toBe(0);
   });
 
   it('calcule le produit escompté en centimes', () => {
-    expect(expectedRevenue({ length: 3000, yieldPerBedMeter: 250, pricePerUnit: 320 })).toBe(
-      2_400_000,
+    // 75 unités × 3,20 € = 240 €, soit 24 000 centimes.
+    expect(expectedRevenue({ length: 30_000, yieldPerBedMeter: 2_500, pricePerUnit: 320 })).toBe(
+      24_000,
     );
   });
 
   it('ramène le réalisé au mètre pour le comparer au prévu', () => {
-    expect(actualYieldPerBedMeter(6000, 3000)).toBe(200);
-    expect(actualYieldPerBedMeter(6000, 0)).toBe(0);
+    // 60 unités récoltées sur 30 m : 2 unités au mètre, en millièmes.
+    expect(actualYieldPerBedMeter(60_000, 30_000)).toBe(2_000);
+    expect(actualYieldPerBedMeter(60_000, 0)).toBe(0);
   });
 
   it('compare prévu et réalisé', () => {
-    expect(compareYield(7500, 6000)).toEqual({
-      expected: 7500,
-      actual: 6000,
-      difference: -1500,
+    expect(compareYield(75_000, 60_000)).toEqual({
+      expected: 75_000,
+      actual: 60_000,
+      difference: -15_000,
       differencePercentage: -20,
     });
     expect(compareYield(0, 500).differencePercentage).toBeNull();
@@ -76,16 +80,17 @@ describe('temps de travail', () => {
   it('additionne prévu et réalisé en ignorant les valeurs absentes', () => {
     expect(
       totalLaborTime([
-        { plannedLaborTime: 90, effectiveLaborTime: 120 },
-        { plannedLaborTime: null, effectiveLaborTime: 30 },
+        { plannedLaborTime: 5400, effectiveLaborTime: 7200 },
+        { plannedLaborTime: null, effectiveLaborTime: 1800 },
         {},
       ]),
-    ).toEqual({ planned: 90, effective: 150 });
+    ).toEqual({ planned: 5400, effective: 9000 });
   });
 
-  it('formate les minutes en heures', () => {
-    expect(formatLaborTime(45)).toBe('45 min');
-    expect(formatLaborTime(120)).toBe('2 h');
-    expect(formatLaborTime(200)).toBe('3 h 20');
+  it('formate les secondes en minutes et en heures', () => {
+    expect(formatLaborTime(30)).toBe('30 s');
+    expect(formatLaborTime(2700)).toBe('45 min');
+    expect(formatLaborTime(7200)).toBe('2 h');
+    expect(formatLaborTime(12_000)).toBe('3 h 20');
   });
 });

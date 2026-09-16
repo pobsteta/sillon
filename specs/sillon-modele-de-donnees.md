@@ -2,6 +2,17 @@
 
 *Extrait des migrations Brinjel (schéma `public` : 24 migrations, schéma ferme : 30 migrations, état au 15/09/2026). Source : https://framagit.org/brinjel/brinjel, © André Hoarau, AGPL-3.0-or-later.*
 
+> **Note de portage (16/09/2026) — ce document est dépassé sur plusieurs points.**
+>
+> Il a été rédigé sans accès au code Elixir, et laissait huit points « à confirmer ».
+> Le code de Brinjel a depuis été lu. Six de ces huit points étaient faux et ont été
+> corrigés dans Sillon ; la migration `20260916090000_align_sur_brinjel` convertit les
+> données. Ce document reste utile pour la structure des tables, mais **sur les unités,
+> les énumérations, les formules de semences et le modèle des dates, la référence est
+> désormais le code** : `packages/core/src/units.ts`, `types.ts`, `seeds.ts` et
+> `planting.ts`, dont les commentaires citent le fichier Elixir d'origine. Le tableau
+> « Portage depuis Brinjel : ce qui a été vérifié » du `README.md` récapitule les écarts.
+
 ---
 
 ## 1. Décision d'architecture : multi-tenant

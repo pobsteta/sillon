@@ -12,16 +12,18 @@ import {
   bedHistory,
   checkRotation,
   distributeOverBeds,
+  fieldDate,
   findAvailableBeds,
   occupationRange,
   type Bed,
   type Occupation,
+  type PlantingType as PlantingTypeValue,
 } from '@sillon/core';
 import { inFarm } from '../scope.js';
 import { badRequest, notFound } from '../errors.js';
 import { assertReferences } from '../references.js';
 import type { Tx } from '../db.js';
-import { datesFromRows, isoDate } from '../planting-io.js';
+import { datesFromRows, harvestPeriodsFromRows, isoDate } from '../planting-io.js';
 
 const FarmParams = z.object({ farmId: z.coerce.number().int().positive() });
 const IdParams = FarmParams.extend({ id: z.coerce.number().int().positive() });
@@ -33,19 +35,28 @@ const IdParams = FarmParams.extend({ id: z.coerce.number().int().positive() });
 export async function loadOccupations(db: Tx, farmId: number): Promise<Occupation[]> {
   const assignments = await db.locationAssignment.findMany({
     where: { location: { farmId } },
-    include: { planting: { include: { dates: true, crop: true } } },
+    include: { planting: { include: { dates: true, harvestPeriods: true, crop: true } } },
   });
 
   const occupations: Occupation[] = [];
   for (const assignment of assignments) {
-    const range = occupationRange(datesFromRows(assignment.planting.dates));
+    const planting = assignment.planting;
+    const plantingType = planting.plantingType as PlantingTypeValue;
+    const dates = datesFromRows(planting.dates);
+    const range = occupationRange(
+      dates,
+      plantingType,
+      harvestPeriodsFromRows(planting.harvestPeriods),
+    );
     if (!range) continue;
     occupations.push({
       plantingId: assignment.plantingId,
       locationId: assignment.locationId,
       length: assignment.length,
       range,
-      familyId: assignment.planting.crop.familyId,
+      familyId: planting.crop.familyId,
+      // C'est cette date que compare le délai de retour, pas les bornes d'occupation.
+      fieldDate: fieldDate(dates, plantingType),
     });
   }
   return occupations;
@@ -68,7 +79,7 @@ export async function locationRoutes(app: FastifyInstance): Promise<void> {
   typed.get(
     '/api/farms/:farmId/locations',
     {
-      onRequest: app.requireFarm('member'),
+      onRequest: app.requirePermission('locations', 'read'),
       schema: {
         tags,
         summary: 'Arbre du parcellaire',
@@ -200,7 +211,7 @@ export async function locationRoutes(app: FastifyInstance): Promise<void> {
   typed.get(
     '/api/farms/:farmId/locations/:id/history',
     {
-      onRequest: app.requireFarm('member'),
+      onRequest: app.requirePermission('locations', 'read'),
       schema: { tags, summary: 'Historique des cultures d’une planche', params: IdParams },
     },
     async (request) =>
@@ -229,7 +240,7 @@ export async function locationRoutes(app: FastifyInstance): Promise<void> {
   typed.get(
     '/api/farms/:farmId/plantings/:id/available-locations',
     {
-      onRequest: app.requireFarm('member'),
+      onRequest: app.requirePermission('locations', 'read'),
       schema: {
         tags,
         summary: 'Emplacements disponibles pour une série',
@@ -248,16 +259,26 @@ export async function locationRoutes(app: FastifyInstance): Promise<void> {
       inFarm(request, async (db, { farmId }) => {
         const planting = await db.planting.findFirst({
           where: { id: request.params.id, farmId },
-          include: { dates: true, crop: { include: { family: true } } },
+          include: { dates: true, harvestPeriods: true, crop: { include: { family: true } } },
         });
         if (!planting) throw notFound('Série introuvable');
 
+        const plantingType = planting.plantingType as PlantingTypeValue;
+        const plantingDates = datesFromRows(planting.dates);
         const range =
           request.query.from && request.query.to
             ? { begin: request.query.from, end: request.query.to }
-            : occupationRange(datesFromRows(planting.dates));
-        if (!range)
-          throw badRequest('La série n’a pas de dates : impossible de chercher une place');
+            : occupationRange(
+                plantingDates,
+                plantingType,
+                harvestPeriodsFromRows(planting.harvestPeriods),
+              );
+        if (!range) {
+          throw badRequest(
+            'La série n’occupe aucune planche : dates manquantes, ou production de plants',
+          );
+        }
+        const plantingFieldDate = fieldDate(plantingDates, plantingType) ?? range.begin;
 
         const required = request.query.length ?? Number(planting.length ?? 0);
         const rows = await db.location.findMany({
@@ -283,6 +304,7 @@ export async function locationRoutes(app: FastifyInstance): Promise<void> {
           rotation: checkRotation(
             entry.bed.id,
             planting.crop.familyId,
+            plantingFieldDate,
             range,
             planting.crop.family.interval,
             occupations,
@@ -331,11 +353,18 @@ export async function locationRoutes(app: FastifyInstance): Promise<void> {
         const { id } = request.params;
         const planting = await db.planting.findFirst({
           where: { id, farmId },
-          include: { dates: true, crop: { include: { family: true } } },
+          include: { dates: true, harvestPeriods: true, crop: { include: { family: true } } },
         });
         if (!planting) throw notFound('Série introuvable');
 
-        const range = occupationRange(datesFromRows(planting.dates));
+        const plantingType = planting.plantingType as PlantingTypeValue;
+        const plantingDates = datesFromRows(planting.dates);
+        const range = occupationRange(
+          plantingDates,
+          plantingType,
+          harvestPeriodsFromRows(planting.harvestPeriods),
+        );
+        const plantingFieldDate = fieldDate(plantingDates, plantingType);
         const occupations = await loadOccupations(db, farmId);
         const warnings: unknown[] = [];
 
@@ -371,14 +400,17 @@ export async function locationRoutes(app: FastifyInstance): Promise<void> {
               });
             }
 
-            const rotation = checkRotation(
-              location.id,
-              planting.crop.familyId,
-              range,
-              planting.crop.family.interval,
-              occupations,
-              [id],
-            );
+            const rotation = plantingFieldDate
+              ? checkRotation(
+                  location.id,
+                  planting.crop.familyId,
+                  plantingFieldDate,
+                  range,
+                  planting.crop.family.interval,
+                  occupations,
+                  [id],
+                )
+              : null;
             if (rotation) warnings.push({ type: 'rotation', ...rotation });
           }
         }
@@ -408,7 +440,7 @@ export async function locationRoutes(app: FastifyInstance): Promise<void> {
   typed.get(
     '/api/farms/:farmId/assignments',
     {
-      onRequest: app.requireFarm('member'),
+      onRequest: app.requirePermission('locations', 'read'),
       schema: {
         tags,
         summary: 'Plan d’assolement sur une période',

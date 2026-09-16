@@ -58,8 +58,8 @@ export async function createFarm(db: Tx, input: CreateFarmInput) {
       countryCode: input.countryCode ?? 'FR',
       trialExpiryDate: new Date(Date.now() + trialDays * 86_400_000),
       memberships: { create: { userId: input.ownerId, role: 'owner' } },
-      // Planches de 30 m sur 80 cm, passe-pied de 40 cm : valeurs de départ modifiables.
-      bedSettings: { create: { bedLength: 3000, bedWidth: 80, pathWidth: 40 } },
+      // Planches de 30 m sur 80 cm, passe-pied de 40 cm — en millimètres, comme Brinjel.
+      bedSettings: { create: { bedLength: 30_000, bedWidth: 800, pathWidth: 400 } },
     },
   });
 
@@ -73,7 +73,7 @@ export async function seedFarmReference(db: Tx, farmId: number, locale = 'fr'): 
   const label = (fr: string, en: string) => (english ? en : fr);
 
   const provider = await db.provider.create({
-    data: { farmId, name: label(DEFAULT_PROVIDER.name, DEFAULT_PROVIDER.nameEn), type: 'seeds' },
+    data: { farmId, name: label(DEFAULT_PROVIDER.name, DEFAULT_PROVIDER.nameEn), type: 'seed' },
   });
   await db.farm.update({ where: { id: farmId }, data: { defaultProviderId: provider.id } });
 
@@ -124,14 +124,19 @@ export async function seedFarmReference(db: Tx, farmId: number, locale = 'fr'): 
   }
 }
 
-/** Types de tâches « semis » et « plantation » d'une ferme, pour les tâches générées. */
+/**
+ * Types de tâches employés par la génération depuis le plan de culture. Brinjel
+ * distingue le semis en pépinière du semis direct ; le référentiel de départ n'a qu'un
+ * type « Semis », qui sert aux deux, et un type « Plantation » pour le repiquage.
+ */
 export async function defaultTaskTypeIds(
   db: Tx,
   farmId: number,
-): Promise<{ sowing: number | null; planting: number | null }> {
+): Promise<{ greenhouseSow: number | null; directSow: number | null; transplant: number | null }> {
   const types = await db.taskType.findMany({ where: { farmId } });
   const find = (names: string[]) =>
     types.find((type) => names.some((n) => type.name.toLowerCase().normalize('NFD').startsWith(n)))
       ?.id ?? null;
-  return { sowing: find(['semis', 'sowing']), planting: find(['plantation', 'planting']) };
+  const sowing = find(['semis', 'sowing']);
+  return { greenhouseSow: sowing, directSow: sowing, transplant: find(['plantation', 'planting']) };
 }

@@ -12,7 +12,7 @@ import { today } from '@sillon/core';
 import { useFarmId } from '../lib/session.js';
 import { useStats } from '../lib/queries.js';
 import { EmptyState, Loading, PageHeader, Select, StatTile } from '../components/ui.js';
-import { formatLaborTime, formatLength, formatMoney } from '../lib/format.js';
+import { formatLaborTime, formatLength, formatMoney, formatQuantity } from '../lib/format.js';
 
 export function StatsPage() {
   const { t, i18n } = useTranslation();
@@ -63,7 +63,7 @@ export function StatsPage() {
             />
             <StatTile
               label={t('stats.expected')}
-              value={data.yields.expected.toLocaleString(locale)}
+              value={formatQuantity(data.yields.expected, locale)}
             />
             <StatTile
               label={t('stats.revenue')}
@@ -79,9 +79,8 @@ export function StatsPage() {
                   <div className="mb-1 flex items-baseline justify-between gap-2 text-sm">
                     <span className="font-medium">{crop.cropName}</span>
                     <span className="tabular-nums text-earth-700 dark:text-earth-200">
-                      {crop.actualYield.toLocaleString(locale)} /{' '}
-                      {crop.expectedYield.toLocaleString(locale)}
-                      {crop.unitName ? ` ${crop.unitName}` : ''}
+                      {formatQuantity(crop.actualYield, locale)} /{' '}
+                      {formatQuantity(crop.expectedYield, locale, crop.unitName)}
                       {crop.comparison.differencePercentage === null
                         ? ''
                         : ` (${crop.comparison.differencePercentage > 0 ? '+' : ''}${crop.comparison.differencePercentage} %)`}

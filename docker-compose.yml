@@ -2,8 +2,9 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 #
 # Environnement de développement complet : `docker compose up`.
-# La base est créée avec les extensions citext, unaccent et ltree, et un rôle applicatif
-# distinct du propriétaire : c'est ce rôle qui subit les politiques RLS.
+# La base est créée avec les extensions citext, unaccent et ltree, puis un rôle applicatif
+# ordinaire (`sillon_app`) distinct du superutilisateur de l'image : c'est sous ce rôle que
+# l'API se connecte, donc c'est lui qui subit les politiques RLS. Voir infra/postgres-init.sql.
 
 services:
   db:
@@ -32,7 +33,7 @@ services:
       context: .
       dockerfile: apps/api/Dockerfile
     environment:
-      DATABASE_URL: postgresql://sillon:sillon@db:5432/sillon_dev?schema=public
+      DATABASE_URL: postgresql://sillon_app:sillon@db:5432/sillon_dev?schema=public
       REDIS_URL: redis://redis:6379
       SESSION_SECRET: ${SESSION_SECRET:-changez-moi-en-production-32-caracteres}
       CORS_ORIGINS: http://localhost:8080

@@ -6,10 +6,10 @@ import { useTranslation } from 'react-i18next';
 import { useLocale } from '../lib/locale.js';
 import { today } from '@sillon/core';
 import { useFarmId } from '../lib/session.js';
-import { useOrders, useProviders } from '../lib/queries.js';
+import { useOrders, useProviders, type OrderParams } from '../lib/queries.js';
 import { queryString } from '../lib/api.js';
 import { EmptyState, Loading, PageHeader, Select, StatTile, Toggle } from '../components/ui.js';
-import { formatDate, formatSeedMass } from '../lib/format.js';
+import { formatDate, formatSeedWeight } from '../lib/format.js';
 
 const PERIODS = ['year', 'h1', 'h2', 'q1', 'q2', 'q3', 'q4'] as const;
 
@@ -19,10 +19,15 @@ export function OrdersPage() {
   const farmId = useFarmId();
   const [year, setYear] = useState(Number(today().slice(0, 4)));
   const [period, setPeriod] = useState<(typeof PERIODS)[number]>('year');
-  const [placedOnly, setPlacedOnly] = useState(false);
+  const [assignedPlantingsOnly, setAssignedPlantingsOnly] = useState(false);
   const [providerId, setProviderId] = useState('');
 
-  const params = { year, period, placedOnly, providerId: providerId || undefined };
+  const params: OrderParams = {
+    year,
+    period,
+    assignedPlantingsOnly,
+    providerId: providerId || undefined,
+  };
   const orders = useOrders(farmId, params);
   const providers = useProviders(farmId);
 
@@ -77,7 +82,11 @@ export function OrdersPage() {
           ))}
         </Select>
         <div className="flex items-end">
-          <Toggle label={t('orders.placedOnly')} checked={placedOnly} onChange={setPlacedOnly} />
+          <Toggle
+            label={t('orders.placedOnly')}
+            checked={assignedPlantingsOnly}
+            onChange={setAssignedPlantingsOnly}
+          />
         </div>
       </div>
 
@@ -90,11 +99,11 @@ export function OrdersPage() {
           <div className="mb-4 grid grid-cols-2 gap-3">
             <StatTile
               label={t('orders.seeds')}
-              value={orders.data.totals.seedCount.toLocaleString(locale)}
+              value={orders.data.totals.seedsNumber.toLocaleString(locale)}
             />
             <StatTile
               label={t('orders.plants')}
-              value={orders.data.totals.plantsToBuy.toLocaleString(locale)}
+              value={orders.data.totals.transplantsToBuy.toLocaleString(locale)}
             />
           </div>
 
@@ -119,11 +128,15 @@ export function OrdersPage() {
                     <td className="p-2 font-medium">{line.cropName}</td>
                     <td className="p-2">{line.varietyName ?? '—'}</td>
                     <td className="p-2 text-right tabular-nums">{line.plantingCount}</td>
-                    <td className="p-2 text-right tabular-nums">{line.seedCount}</td>
                     <td className="p-2 text-right tabular-nums">
-                      {line.seedMassMg === null ? '—' : formatSeedMass(line.seedMassMg, locale)}
+                      {Math.round(line.seedsNumber).toLocaleString(locale)}
                     </td>
-                    <td className="p-2 text-right tabular-nums">{line.plantsToBuy || '—'}</td>
+                    <td className="p-2 text-right tabular-nums">
+                      {line.seedsQuantityGrams === null
+                        ? '—'
+                        : formatSeedWeight(line.seedsQuantityGrams, locale)}
+                    </td>
+                    <td className="p-2 text-right tabular-nums">{line.transplantsToBuy || '—'}</td>
                     <td className="p-2 tabular-nums">{formatDate(line.firstNeededOn, locale)}</td>
                   </tr>
                 ))}

@@ -71,7 +71,7 @@ export function registerResource(app: FastifyInstance, options: ResourceOptions)
   typed.get(
     base,
     {
-      onRequest: app.requireFarm('member'),
+      onRequest: app.requireFarm('employee'),
       schema: {
         tags,
         summary: `Lister : ${options.label}`,
@@ -162,7 +162,8 @@ export async function referenceRoutes(app: FastifyInstance): Promise<void> {
     path: 'families',
     label: 'Famille botanique',
     delegate: (db) => db.family as unknown as SimpleDelegate,
-    // `interval` est le délai de retour sur une même planche, en années (cf. rotation.ts).
+    // `interval` est le délai de retour sur une même planche, en années — vérifié dans
+    // `locations_live.ex`, qui compare `écart en jours / 365` à cette valeur.
     create: z.object({ name, color, interval: z.number().int().min(0).max(20).default(3) }),
     update: z.object({
       name: name.optional(),
@@ -196,8 +197,8 @@ export async function referenceRoutes(app: FastifyInstance): Promise<void> {
     path: 'providers',
     label: 'Fournisseur',
     delegate: (db) => db.provider as unknown as SimpleDelegate,
-    create: z.object({ name, type: z.enum(['seeds', 'plants']).default('seeds') }),
-    update: z.object({ name: name.optional(), type: z.enum(['seeds', 'plants']).optional() }),
+    create: z.object({ name, type: z.enum(['seed', 'transplant']).default('seed') }),
+    update: z.object({ name: name.optional(), type: z.enum(['seed', 'transplant']).optional() }),
   });
 
   registerResource(app, {

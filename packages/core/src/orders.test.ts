@@ -5,11 +5,12 @@ import { buildOrderLines, orderPeriod, type OrderablePlanting } from './orders.j
 import { toCsv } from './csv.js';
 import { PlantingType } from './types.js';
 
+// 10 m de planche, 2 rangs, 50 cm sur le rang → 40 poquets.
 const base = {
-  length: 1000,
+  length: 10_000,
   rows: 2,
-  spacingPlants: 50,
-  seedsPerGram: 300,
+  spacingPlants: 5_000,
+  seedsPerGram: 300_000,
   seedsPerHoleSeedling: 1,
   seedsPerHoleDirect: 2,
   seedsExtraPercentage: 0,
@@ -28,8 +29,8 @@ const plantings: OrderablePlanting[] = [
     varietyName: 'Marmande',
     providerId: 1,
     providerName: 'Germinance',
-    dates: { greenhouse_sowing: { planned: '2026-02-10' } },
-    placed: true,
+    dates: { sowing: { planned: '2026-02-10' }, planting: { planned: '2026-03-20' } },
+    assignedLength: 10_000,
   },
   {
     ...base,
@@ -41,21 +42,21 @@ const plantings: OrderablePlanting[] = [
     varietyName: 'Marmande',
     providerId: 1,
     providerName: 'Germinance',
-    dates: { greenhouse_sowing: { planned: '2026-03-10' } },
-    placed: false,
+    dates: { sowing: { planned: '2026-03-10' }, planting: { planned: '2026-04-20' } },
+    assignedLength: 0,
   },
   {
     ...base,
     id: 3,
-    plantingType: PlantingType.directSeed,
+    plantingType: PlantingType.directSeeded,
     cropId: 2,
     cropName: 'Carotte',
     varietyId: 2,
     varietyName: 'Nantaise',
     providerId: 2,
     providerName: 'Agrosemens',
-    dates: { sowing_planting: { planned: '2026-08-01' } },
-    placed: true,
+    dates: { sowing: { planned: '2026-08-01' } },
+    assignedLength: 10_000,
   },
 ];
 
@@ -65,12 +66,13 @@ describe('liste de commande', () => {
     expect(lines).toHaveLength(2);
     const tomate = lines.find((l) => l.cropName === 'Tomate');
     expect(tomate?.plantingCount).toBe(2);
-    expect(tomate?.seedCount).toBe(80); // 2 × 40 plants, 1 graine par alvéole
+    expect(tomate?.seedsNumber).toBe(80); // 2 × 40 alvéoles, 1 graine chacune
     expect(tomate?.firstNeededOn).toBe('2026-02-10');
   });
 
-  it('applique le filtre « séries placées uniquement »', () => {
-    const lines = buildOrderLines(plantings, { placedOnly: true });
+  it('retient la longueur posée sur l’assolement quand on le demande', () => {
+    // La seconde série de tomate n'est pas placée : sa longueur retenue est nulle.
+    const lines = buildOrderLines(plantings, { assignedPlantingsOnly: true });
     expect(lines.find((l) => l.cropName === 'Tomate')?.plantingCount).toBe(1);
   });
 

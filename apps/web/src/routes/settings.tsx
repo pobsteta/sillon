@@ -27,7 +27,7 @@ type ResourceKey =
 export function SettingsPage() {
   const { t, i18n } = useTranslation();
   const farmId = useFarmId();
-  const { farm, canEdit, canManageFarm } = useCurrentSession();
+  const { farm, canEdit, canManageFarm, can } = useCurrentSession();
   const [tab, setTab] = useState<ResourceKey>('families');
 
   const families = useFamilies(farmId);
@@ -234,42 +234,44 @@ export function SettingsPage() {
         </ul>
       </section>
 
-      <section className="card mb-6">
-        <h2 className="mb-3 text-lg font-semibold">{t('settings.team')}</h2>
-        <ul className="mb-4 divide-y divide-earth-100 dark:divide-earth-700">
-          {(members.data ?? []).map(
-            (member: { userId: number; role: string; user: { email: string } }) => (
-              <li
-                key={member.userId}
-                className="flex min-h-11 items-center justify-between gap-3 py-2"
+      {can('team', 'read') ? (
+        <section className="card mb-6">
+          <h2 className="mb-3 text-lg font-semibold">{t('settings.team')}</h2>
+          <ul className="mb-4 divide-y divide-earth-100 dark:divide-earth-700">
+            {(members.data ?? []).map(
+              (member: { userId: number; role: string; user: { email: string } }) => (
+                <li
+                  key={member.userId}
+                  className="flex min-h-11 items-center justify-between gap-3 py-2"
+                >
+                  <span className="truncate">{member.user.email}</span>
+                  <span className="chip bg-earth-100 dark:bg-earth-700">
+                    {t(`settings.roles.${member.role}`)}
+                  </span>
+                </li>
+              ),
+            )}
+          </ul>
+          {canManageFarm ? (
+            <div className="flex flex-wrap items-end gap-3">
+              <Field
+                label={t('settings.invite')}
+                type="email"
+                value={inviteEmail}
+                onChange={(event) => setInviteEmail(event.target.value)}
+              />
+              <button
+                type="button"
+                className="btn-primary"
+                disabled={!inviteEmail}
+                onClick={() => invite.mutate(inviteEmail, { onSuccess: () => setInviteEmail('') })}
               >
-                <span className="truncate">{member.user.email}</span>
-                <span className="chip bg-earth-100 dark:bg-earth-700">
-                  {t(`settings.roles.${member.role}`)}
-                </span>
-              </li>
-            ),
-          )}
-        </ul>
-        {canManageFarm ? (
-          <div className="flex flex-wrap items-end gap-3">
-            <Field
-              label={t('settings.invite')}
-              type="email"
-              value={inviteEmail}
-              onChange={(event) => setInviteEmail(event.target.value)}
-            />
-            <button
-              type="button"
-              className="btn-primary"
-              disabled={!inviteEmail}
-              onClick={() => invite.mutate(inviteEmail, { onSuccess: () => setInviteEmail('') })}
-            >
-              {t('common.add')}
-            </button>
-          </div>
-        ) : null}
-      </section>
+                {t('common.add')}
+              </button>
+            </div>
+          ) : null}
+        </section>
+      ) : null}
 
       <section className="card">
         <h2 className="mb-3 text-lg font-semibold">{t('settings.account')}</h2>

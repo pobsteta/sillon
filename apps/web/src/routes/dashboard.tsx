@@ -25,8 +25,10 @@ export function DashboardPage() {
   if (tasks.isLoading || stats.isLoading) return <Loading />;
 
   const late = (tasks.data ?? []).filter((task) => task.status === 'late');
+  // « Prochains semis » : la date de semis prévue, qu'il soit direct ou en pépinière.
   const nextSowings = (upcoming.data ?? [])
-    .filter((planting) => planting.anchorDate && planting.anchorDate >= today())
+    .map((planting) => ({ planting, sowing: planting.dates.sowing?.planned ?? null }))
+    .filter((entry) => entry.sowing !== null && entry.sowing >= today())
     .slice(0, 5);
 
   return (
@@ -68,7 +70,7 @@ export function DashboardPage() {
         <h2 className="mb-2 text-lg font-semibold">{t('dashboard.upcomingSowings')}</h2>
         {nextSowings.length > 0 ? (
           <ul className="space-y-2">
-            {nextSowings.map((planting) => (
+            {nextSowings.map(({ planting, sowing }) => (
               <li key={planting.id} className="card flex items-center justify-between gap-3 py-3">
                 <Link
                   to="/plan/$plantingId"
@@ -79,7 +81,7 @@ export function DashboardPage() {
                   {planting.variety ? ` — ${planting.variety.name}` : ''}
                 </Link>
                 <span className="text-sm tabular-nums text-earth-700 dark:text-earth-200">
-                  {formatDate(planting.anchorDate, locale)}
+                  {formatDate(sowing, locale)}
                 </span>
               </li>
             ))}

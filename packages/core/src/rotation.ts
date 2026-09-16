@@ -2,48 +2,54 @@
 // SPDX-FileCopyrightText: © 2026 Sillon contributors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Rotation des cultures : une même famille botanique ne doit pas revenir sur une planche
-// avant le délai propre à la famille (`families.interval`).
+// Rotation des cultures. Reprend `rotation_conflicting_plantings?` de
+// `lib/brinjel_web/live/locations_live.ex` :
 //
-// Hypothèse de portage : `families.interval` est exprimé en ANNÉES (valeur usuelle en
-// maraîchage : 3 à 5 ans pour les solanacées ou les crucifères). Le champ est marqué
-// « à confirmer » dans le modèle de données ; seule cette constante est à changer si
-// l'unité réelle est le mois.
+//   même famille botanique
+//   ET les deux séries ne se chevauchent pas au champ (sinon c'est un conflit de place)
+//   ET |date de mise en place 1 − date de mise en place 2| / 365 < intervalle de la famille
+//
+// Deux points vérifiés sur la source, contre-intuitifs au premier abord :
+//   * `families.interval` est bien exprimé en ANNÉES ;
+//   * l'écart se mesure de date de mise en place à date de mise en place, pas de la fin
+//     d'une culture au début de la suivante.
 
-import { addDays, daysBetween } from './dates.js';
+import { addDays, daysBetween, rangesOverlap } from './dates.js';
 import type { DateRange, IsoDate } from './types.js';
 import type { Occupation } from './beds.js';
 
-export const DAYS_PER_ROTATION_INTERVAL = 365;
+/** Diviseur employé par Brinjel pour convertir l'écart en années. */
+export const DAYS_PER_YEAR = 365;
 
 export interface RotationConflict {
   locationId: number;
   familyId: number;
   /** Série déjà présente qui provoque le conflit. */
   previousPlantingId: number;
-  /** Dernier jour où cette famille a occupé la planche. */
-  lastSeenOn: IsoDate;
-  /** Premier jour où la famille pourrait revenir. */
+  /** Date de mise en place de cette série. */
+  previousFieldDate: IsoDate;
+  /** Écart entre les deux mises en place, en années. */
+  intervalYears: number;
+  /** Première date de mise en place qui respecterait le délai. */
   availableFrom: IsoDate;
-  /** Nombre de jours manquants pour respecter le délai. */
-  missingDays: number;
 }
 
 /**
- * Vérifie qu'une série de la famille `familyId`, occupant la planche pendant `range`,
- * respecte le délai de retour. Les occupations passées ET futures sont examinées :
- * planter une crucifère juste avant une autre pose le même problème.
+ * Vérifie qu'une série de la famille `familyId`, mise en place le `fieldDate` et
+ * occupant la planche pendant `range`, respecte le délai de retour.
+ * Les occupations passées comme futures sont examinées : placer une crucifère juste
+ * avant une autre pose le même problème.
  */
 export function checkRotation(
   locationId: number,
   familyId: number,
+  fieldDate: IsoDate,
   range: DateRange,
   intervalYears: number,
   occupations: readonly Occupation[],
   ignorePlantingIds: readonly number[] = [],
 ): RotationConflict | null {
   if (intervalYears <= 0) return null;
-  const requiredDays = intervalYears * DAYS_PER_ROTATION_INTERVAL;
   const ignored = new Set(ignorePlantingIds);
 
   let worst: RotationConflict | null = null;
@@ -51,25 +57,23 @@ export function checkRotation(
     if (occupation.locationId !== locationId) continue;
     if (occupation.familyId !== familyId) continue;
     if (ignored.has(occupation.plantingId)) continue;
+    if (!occupation.fieldDate) continue;
+    // Deux séries qui se chevauchent au champ relèvent du conflit de place, pas de la
+    // rotation : Brinjel les écarte explicitement.
+    if (rangesOverlap(occupation.range, range)) continue;
 
-    // Écart entre les deux cultures, dans l'ordre chronologique.
-    const gap =
-      occupation.range.end < range.begin
-        ? daysBetween(occupation.range.end, range.begin)
-        : range.end < occupation.range.begin
-          ? daysBetween(range.end, occupation.range.begin)
-          : 0;
-    if (gap >= requiredDays) continue;
+    const gapYears = Math.abs(daysBetween(occupation.fieldDate, fieldDate)) / DAYS_PER_YEAR;
+    if (gapYears >= intervalYears) continue;
 
     const conflict: RotationConflict = {
       locationId,
       familyId,
       previousPlantingId: occupation.plantingId,
-      lastSeenOn: occupation.range.end,
-      availableFrom: addDays(occupation.range.end, requiredDays),
-      missingDays: requiredDays - gap,
+      previousFieldDate: occupation.fieldDate,
+      intervalYears: gapYears,
+      availableFrom: addDays(occupation.fieldDate, Math.ceil(intervalYears * DAYS_PER_YEAR)),
     };
-    if (!worst || conflict.missingDays > worst.missingDays) worst = conflict;
+    if (!worst || conflict.intervalYears < worst.intervalYears) worst = conflict;
   }
   return worst;
 }
@@ -77,6 +81,6 @@ export function checkRotation(
 /** Historique d'une planche, de la culture la plus récente à la plus ancienne. */
 export function bedHistory(locationId: number, occupations: readonly Occupation[]): Occupation[] {
   return occupations
-    .filter((o) => o.locationId === locationId)
+    .filter((occupation) => occupation.locationId === locationId)
     .sort((a, b) => b.range.begin.localeCompare(a.range.begin));
 }

@@ -49,7 +49,14 @@ docker compose up --build
 ```
 
 L'interface est sur <http://localhost:8080>, l'API sur <http://localhost:3000>,
-la documentation OpenAPI sur <http://localhost:3000/docs>.
+la documentation OpenAPI sur <http://localhost:3000/docs>. Les migrations sont appliquées
+au démarrage du conteneur ; la base part vide, on crée son compte et sa ferme depuis
+l'écran de connexion.
+
+L'API se connecte sous `sillon_app`, un rôle **ordinaire** créé par
+`infra/postgres-init.sql` — pas sous le superutilisateur de l'image PostgreSQL, qui
+ignorerait les politiques RLS et rendrait l'isolation des fermes inopérante sans rien
+signaler.
 
 ### Sans Docker
 
@@ -75,6 +82,63 @@ npm run db:seed        # compte : maraichere@example.org / sillon-demonstration
 
 # 3. API (port 3000) et interface (port 5173)
 npm run dev
+```
+
+### Sur Windows
+
+Les deux chemins ci-dessus marchent tels quels ; seules changent les commandes du shell.
+
+**Avec Docker Desktop** (le plus simple) — installez Docker Desktop avec le moteur WSL 2,
+puis dans PowerShell, à la racine du dépôt :
+
+```powershell
+copy .env.example .env
+docker compose up --build
+```
+
+L'interface répond sur <http://localhost:8080>. Pour tout arrêter : `docker compose down`
+(ajoutez `-v` pour effacer aussi la base).
+
+**Sans Docker** — Node 22+ et PostgreSQL 16, par exemple avec winget :
+
+```powershell
+winget install OpenJS.NodeJS.LTS
+winget install PostgreSQL.PostgreSQL.16
+```
+
+L'installateur PostgreSQL ajoute `psql` dans `C:\Program Files\PostgreSQL\16\bin` ;
+ouvrez un nouveau PowerShell pour que le `PATH` soit à jour. Créez ensuite le rôle et les
+bases (le mot de passe demandé est celui du superutilisateur `postgres` choisi à
+l'installation) :
+
+```powershell
+psql -U postgres -c "CREATE ROLE sillon LOGIN PASSWORD 'sillon' CREATEDB;"
+psql -U postgres -c "CREATE DATABASE sillon_dev OWNER sillon;"
+psql -U postgres -c "CREATE DATABASE sillon_test OWNER sillon;"
+psql -U postgres -d sillon_dev  -c "CREATE EXTENSION IF NOT EXISTS citext; CREATE EXTENSION IF NOT EXISTS unaccent; CREATE EXTENSION IF NOT EXISTS ltree;"
+psql -U postgres -d sillon_test -c "CREATE EXTENSION IF NOT EXISTS citext; CREATE EXTENSION IF NOT EXISTS unaccent; CREATE EXTENSION IF NOT EXISTS ltree;"
+```
+
+Puis le projet :
+
+```powershell
+npm install
+copy apps\api\.env.example apps\api\.env
+npm run build -w @sillon/core
+npm run db:migrate
+npm run db:seed        # compte : maraichere@example.org / sillon-demonstration
+npm run dev            # API sur 3000, interface sur http://localhost:5173
+```
+
+`npm run dev` démarre les deux serveurs dans la même fenêtre (`scripts/dev.mjs`), sous
+PowerShell comme sous cmd.exe ; Ctrl+C les arrête tous les deux.
+
+Pour rejouer la suite de tests, il faut que PostgreSQL tourne :
+
+```powershell
+npm run typecheck
+npm test               # unitaires + intégration
+npm run test:e2e       # Playwright ; `npx playwright install chromium` la première fois
 ```
 
 ### Tester sur un smartphone
@@ -134,6 +198,7 @@ sillon/
 ├── apps/web/          React 19 + Vite + TanStack Router/Query + Tailwind 4 (PWA)
 ├── e2e/               Parcours Playwright (smartphone et bureau)
 ├── specs/             Brief, modèle de données, schéma Prisma d'origine
+├── scripts/           Outils de développement multiplateformes (dev.mjs)
 └── infra/             Initialisation PostgreSQL pour Docker
 ```
 
@@ -145,11 +210,25 @@ itinéraire technique, disponibilité des planches, délai de retour d'une famil
 rendements. L'API et l'interface appliquent **les mêmes fonctions** — l'aperçu des dates et
 le calcul des semences s'affichent donc sans aller-retour serveur, et restent justes hors ligne.
 
-### Tout est entier
+### Tout est entier, dans les unités de Brinjel
 
-Comme dans Brinjel : longueurs en **centimètres**, prix en **centimes**, durées en **jours**,
-temps de travail en **minutes**. Aucun flottant n'approche la base ; la conversion en mètres
-ou en euros n'a lieu qu'à l'affichage (`packages/core/src/money.ts`).
+Les unités de stockage sont reprises telles quelles des types Ecto de Brinjel
+(`lib/brinjel/ecto_types/`), pour qu'une base Brinjel ou Qrop se reprenne sans arrondi :
+
+| Grandeur                     | Unité de stockage         | Type Brinjel   |
+| ---------------------------- | ------------------------- | -------------- |
+| Longueur de planche          | **millimètre**            | `BedLength`    |
+| Espacement sur le rang       | **dixième de millimètre** | `Distance`     |
+| Rendement, quantité récoltée | **millième d'unité**      | `Yield`        |
+| Densité de semences          | **graine par kilogramme** | `SeedsPerGram` |
+| Prix, produit                | **centime**               | `Money`        |
+| Durée de culture             | **jour**                  | —              |
+| Temps de travail             | **seconde**               | —              |
+
+Aucun flottant n'approche la base. La conversion n'a lieu qu'aux bords — à la saisie et à
+l'affichage — dans `packages/core/src/units.ts` (`metersToMillimeters`,
+`centimetersToTenthsOfMillimeter`, `unitsToThousandths`, `minutesToSeconds`…). Le
+formulaire d'une série se saisit donc toujours en mètres, en centimètres et en minutes.
 
 ### Isolation des fermes : `farm_id` + RLS
 
@@ -197,26 +276,48 @@ ont besoin d'une réponse du serveur (identifiants, contrôles de rotation).
 
 ---
 
-## Portage depuis Brinjel : ce qui a été décidé
+## Portage depuis Brinjel : ce qui a été vérifié
 
-Le dépôt Elixir n'était pas joignable depuis l'environnement de développement (Framagit filtre
-les accès automatisés). Le portage s'appuie donc sur `specs/sillon-modele-de-donnees.md` et
-`specs/schema.prisma`. Les points que ce document marquait « à confirmer » ont reçu une
-valeur explicite, isolée pour être facile à corriger :
+La première version de Sillon a été écrite sans le code Elixir sous la main (Framagit filtre
+les accès automatisés) : huit points du modèle avaient reçu une valeur explicite, marquée
+« à confirmer ». Le code de Brinjel a depuis été lu ligne à ligne. **Six de ces huit
+hypothèses étaient fausses** ; elles ont été corrigées, et la migration
+`20260916090000_align_sur_brinjel` convertit les données existantes.
 
-| Point                    | Choix retenu                                                                   | Où le corriger                                                 |
-| ------------------------ | ------------------------------------------------------------------------------ | -------------------------------------------------------------- |
-| `families.interval`      | délai de retour en **années**                                                  | `packages/core/src/rotation.ts` (`DAYS_PER_ROTATION_INTERVAL`) |
-| Unité de `BedLength`     | **centimètres**                                                                | `packages/core/src/types.ts`                                   |
-| `labor_time`             | **minutes**                                                                    | `packages/core/src/stats.ts`                                   |
-| Plants par rang          | `floor(longueur / espacement)`, sans plant en bout de planche                  | `packages/core/src/seeds.ts`                                   |
-| Perte en pépinière       | augmente le nombre d'alvéoles semées (`plants / (1 − perte)`)                  | `packages/core/src/seeds.ts`                                   |
-| Marge de sécurité        | augmente la quantité de **graines**, pas d'alvéoles                            | `packages/core/src/seeds.ts`                                   |
-| Rôles `farm_memberships` | `owner`, `manager`, `member`                                                   | `apps/api/prisma/schema.prisma`                                |
-| Occupation d'une planche | de la mise en place à la fin de récolte (la pépinière n'occupe pas la planche) | `packages/core/src/planting.ts`                                |
+| Point                    | Hypothèse initiale                      | Ce que fait Brinjel                                                                                                                    | Où                              |
+| ------------------------ | --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------- |
+| Unité de `BedLength`     | centimètres                             | **millimètres** ; l'espacement est en **dixièmes de millimètre**                                                                       | `packages/core/src/units.ts`    |
+| `labor_time`             | minutes                                 | **secondes**                                                                                                                           | `packages/core/src/units.ts`    |
+| Poquets par planche      | `floor(longueur / espacement)`, arrondi | `longueur × 10 / espacement × rangs`, **sans arrondi** — le flottant se propage jusqu'à la commande                                    | `packages/core/src/seeds.ts`    |
+| Perte en pépinière       | augmente le nombre d'alvéoles semées    | **divise** les graines par alvéole et le nombre de plants (`/ (1 − perte)`), le nombre de poquets ne bouge pas                         | `packages/core/src/seeds.ts`    |
+| Marge de sécurité        | s'applique à toute série                | n'entre **que dans la commande**, et **seulement en semis direct**                                                                     | `packages/core/src/seeds.ts`    |
+| Rôles `farm_memberships` | trois rôles sur une échelle             | **cinq** rôles, et une **matrice** de permissions : le saisonnier saisit des récoltes sans voir les commandes, le consultant l'inverse | `packages/core/src/roles.ts`    |
+| `families.interval`      | délai de retour en années               | confirmé — années, comparées en jours (`365`)                                                                                          | `packages/core/src/rotation.ts` |
+| Occupation d'une planche | de la mise en place à la fin de récolte | confirmé — la pépinière n'occupe pas la planche                                                                                        | `packages/core/src/planting.ts` |
 
-Chacun de ces choix est couvert par des tests : si une lecture du code Elixir les contredit,
-le test dira exactement ce qui change.
+Les rôles méritent un mot : ce n'est **pas** une hiérarchie. Une première version rangeait
+les cinq rôles sur une échelle (consultant < saisonnier < employé < chef de culture <
+propriétaire), ce qui renvoyait 403 au saisonnier sur les tâches et les récoltes — le
+travail pour lequel le rôle existe. La matrice de `Brinjel.Admin.Role` est portée telle
+quelle dans `packages/core/src/roles.ts` ; l'API la fait respecter par
+`requirePermission(domaine, action)` sur les routes de terrain et de lecture, et garde
+`requireFarm(rôle)` là où la hiérarchie `owner > manager` est bien ce que décrit Brinjel
+(réglages, équipe, plan de culture en écriture).
+
+Le modèle des dates a changé de la même façon. Une série ne porte plus une « date de
+départ » et deux dates de récolte, mais :
+
+- trois dates possibles — `sowing`, `planting`, `potting` — dont celle qui vaut mise en
+  place au champ dépend du type de série (`fieldDate`) ;
+- trois durées — `days_to_transplant`, `days_to_maturity`, `harvest_window` ;
+- **une liste** de fenêtres de récolte (`harvest_periods`) : une série peut en compter
+  plusieurs, ce qu'une paire début/fin ne savait pas représenter.
+
+Le type de série compte désormais quatre valeurs, `seedling` (production de plants, qui
+n'occupe pas de planche et ne produit pas de récolte) s'ajoutant aux trois premières.
+
+Chacune de ces corrections est couverte par des tests : ils citent en commentaire le
+fichier Elixir dont la formule est tirée.
 
 ---
 
@@ -224,15 +325,80 @@ le test dira exactement ce qui change.
 
 | Niveau       | Où                                | Contenu                                                                                                                                                                                            |
 | ------------ | --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Unitaire     | `packages/core/src/*.test.ts`     | 61 tests : dates et semaines ISO, chaîne des dates d'une série, semences et plaques, itinéraires techniques, disponibilité des planches, rotations, rendements, commandes, CSV, montants           |
+| Unitaire     | `packages/core/src/*.test.ts`     | 90 tests : dates et semaines ISO, chaîne des dates d'une série, semences et plaques, itinéraires techniques, disponibilité des planches, rotations, rendements, commandes, CSV, montants           |
 | Unitaire     | `apps/web/src/lib/outbox.test.ts` | file d'attente hors ligne : ordre, rejeu, abandon d'une saisie refusée, reprise après panne                                                                                                        |
-| Intégration  | `apps/api/src/api.test.ts`        | 21 tests sur une vraie base : inscription, rôles, **isolation RLS**, trigger `ltree`, filtres, lot, duplication, rotations, génération et recalage des tâches, commandes CSV, statistiques, export |
+| Intégration  | `apps/api/src/api.test.ts`        | 26 tests sur une vraie base : inscription, rôles, **isolation RLS**, trigger `ltree`, filtres, lot, duplication, rotations, génération et recalage des tâches, commandes CSV, statistiques, export |
 | Bout en bout | `e2e/parcours.spec.ts`            | parcours complet joué au **smartphone** et au **bureau** sur le build de production                                                                                                                |
 
 ```bash
 npm test          # unitaires + intégration (PostgreSQL requis)
 npm run test:e2e  # Playwright ; PLAYWRIGHT_CHROMIUM_PATH permet d'utiliser un Chromium déjà installé
 ```
+
+---
+
+## Versions et publication
+
+Rien ne se tague ni ne se publie à la main. Deux workflows s'en chargent.
+
+### Les messages de commit pilotent la version
+
+Le dépôt suit les [Conventional Commits](https://www.conventionalcommits.org/fr/). Seul le
+préfixe est contraint ; la description reste en français :
+
+```
+feat(web): affiche la période de récolte sur la fiche d'une série
+fix(api): rétablit l'isolation RLS sous Docker
+docs: ajoute la section Windows
+```
+
+| Préfixe                       | Version (avant la 1.0) | Version (après) | Dans le CHANGELOG      |
+| ----------------------------- | ---------------------- | --------------- | ---------------------- |
+| `feat:`                       | mineure (0.1.0→0.2.0)  | mineure         | Fonctionnalités        |
+| `!` ou `BREAKING CHANGE:`     | mineure (0.1.0→0.2.0)  | **majeure**     | Changements de rupture |
+| `fix:`                        | corrective             | corrective      | Corrections            |
+| `perf:`, `refactor:`, `docs:` | corrective             | corrective      | leur propre rubrique   |
+| `ci:`, `test:`, `chore:`      | corrective             | corrective      | _masqué_               |
+
+Avant la 1.0, une rupture ne propulse pas le projet en 1.0.0 : c'est le réglage
+`bump-minor-pre-major` de `.release-please-config.json`. Les types masqués font quand même
+avancer le numéro de version — ils n'ajoutent simplement pas de ligne au CHANGELOG.
+
+Types acceptés : `feat`, `fix`, `perf`, `refactor`, `docs`, `test`, `build`, `ci`, `chore`,
+`revert`. **Un message hors convention n'échoue nulle part : il disparaît simplement de la
+release.** C'est le seul vrai piège.
+
+### Ce qui se passe ensuite
+
+1. Vous fusionnez une PR sur `main`.
+2. `release.yml` ouvre — ou met à jour — une **PR de release** intitulée
+   `chore(main): release X.Y.Z`. Elle ne contient que le `CHANGELOG.md` et les numéros de
+   version (racine et les trois workspaces, tenus en phase).
+3. Cette PR reste ouverte et s'enrichit à chaque fusion. **Rien n'est publié tant qu'elle
+   n'est pas fusionnée** : c'est là que vous décidez du moment.
+4. En la fusionnant : le tag `vX.Y.Z` est posé, la GitHub Release est créée avec les notes
+   du CHANGELOG, et les images Docker partent sur ghcr.io.
+
+### Images publiées
+
+```bash
+docker pull ghcr.io/pobsteta/sillon-api:latest
+docker pull ghcr.io/pobsteta/sillon-web:0.2      # ou :0.2.0, ou :0
+```
+
+Elles sont construites depuis le tag, pas depuis la pointe de `main` : l'image correspond
+exactement au code publié.
+
+### Deux points à connaître
+
+- Les PR ouvertes par `release.yml` utilisent le `GITHUB_TOKEN` intégré, et **GitHub ne
+  déclenche pas de workflow depuis un workflow** : la CI ne tourne pas sur la PR de release.
+  Ce n'est pas gênant — elle ne change que le CHANGELOG et des numéros de version — mais si
+  une règle de protection de branche exige des checks, il faut un jeton personnel
+  (`secrets.RELEASE_PLEASE_TOKEN`) à la place.
+- Le premier passage crée la release `0.2.0` depuis la version `0.1.0` déclarée dans
+  `.release-please-manifest.json`. Ce fichier est la source de vérité : ne l'éditez pas à la
+  main, release-please le met à jour lui-même.
 
 ---
 

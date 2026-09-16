@@ -2,11 +2,15 @@
 // SPDX-FileCopyrightText: © 2026 Sillon contributors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Commandes de semences et de plants (§3.4 du brief) : agrégation des besoins de toutes
-// les séries d'une période, regroupés par variété et par fournisseur.
+// Commandes de semences et de plants, d'après `Brinjel.CropPlan.OrderList` :
+// les séries de la période sont regroupées par espèce puis par variété, et les
+// quantités s'y calculent avec la marge de sécurité — contrairement à la fiche d'une
+// série. Le filtre « séries placées uniquement » remplace la longueur de la série par
+// la longueur réellement posée sur l'assolement.
 
-import { anchorDateType } from './planting.js';
-import { seedRequirement } from './seeds.js';
+import { fieldDate, usesSeeds } from './planting.js';
+import { orderQuantity } from './seeds.js';
+import { PlantingType } from './types.js';
 import type { DateRange, IsoDate, PlantingDates, PlantingSpec } from './types.js';
 
 /** Une série vue par le module de commande. */
@@ -19,8 +23,8 @@ export interface OrderablePlanting extends PlantingSpec {
   providerId: number | null;
   providerName: string | null;
   dates: PlantingDates;
-  /** La série est-elle posée sur l'assolement ? (filtre « séries placées uniquement ») */
-  placed: boolean;
+  /** Longueur déjà posée sur l'assolement, en millimètres. */
+  assignedLength: number;
 }
 
 export interface OrderLine {
@@ -33,28 +37,29 @@ export interface OrderLine {
   providerName: string | null;
   /** Nombre de séries concernées. */
   plantingCount: number;
-  /** Graines à commander, marge comprise. */
-  seedCount: number;
-  /** Masse correspondante en milligrammes, `null` si aucune série ne renseigne `seedsPerGram`. */
-  seedMassMg: number | null;
-  /** Plants à acheter pour les séries en plant acheté. */
-  plantsToBuy: number;
-  /** Date de la première utilisation (semis ou plantation), pour trier la commande. */
+  /** Graines à commander, marge de sécurité comprise. */
+  seedsNumber: number;
+  /** Masse correspondante en grammes ; `null` si aucune série ne donne sa densité. */
+  seedsQuantityGrams: number | null;
+  /** Plants à acheter, pour les séries en plant acheté. */
+  transplantsToBuy: number;
+  /** Date de la première utilisation, pour trier la commande. */
   firstNeededOn: IsoDate | null;
 }
 
 export interface OrderOptions {
-  /** Ne retenir que les séries placées sur l'assolement. */
-  placedOnly?: boolean;
-  /** Restreindre à une période, d'après la date d'ancre de la série. */
+  /** Ne retenir que la longueur placée sur l'assolement. */
+  assignedPlantingsOnly?: boolean;
+  /** Restreindre à une période, d'après la date de semis. */
   range?: DateRange | null;
   providerIds?: readonly number[] | null;
   cropIds?: readonly number[] | null;
 }
 
-function anchorOf(planting: OrderablePlanting): IsoDate | null {
-  const date = planting.dates[anchorDateType(planting.plantingType)];
-  return date ? (date.effective ?? date.planned) : null;
+function sowingDate(planting: OrderablePlanting): IsoDate | null {
+  const sowing = planting.dates.sowing;
+  if (sowing) return sowing.effective ?? sowing.planned;
+  return fieldDate(planting.dates, planting.plantingType);
 }
 
 /** Construit la liste de commande à partir des séries du plan de culture. */
@@ -65,32 +70,41 @@ export function buildOrderLines(
   const lines = new Map<string, OrderLine>();
 
   for (const planting of plantings) {
-    if (options.placedOnly && !planting.placed) continue;
     if (options.providerIds?.length && !options.providerIds.includes(planting.providerId ?? -1)) {
       continue;
     }
     if (options.cropIds?.length && !options.cropIds.includes(planting.cropId)) continue;
 
-    const anchor = anchorOf(planting);
+    const sowing = sowingDate(planting);
     if (options.range) {
-      if (!anchor) continue;
-      if (anchor < options.range.begin || anchor > options.range.end) continue;
+      if (!sowing) continue;
+      if (sowing < options.range.begin || sowing > options.range.end) continue;
     }
 
-    const requirement = seedRequirement(planting);
-    if (requirement.seedCount === 0 && (requirement.plantsToBuy ?? 0) === 0) continue;
+    const length = options.assignedPlantingsOnly ? planting.assignedLength : planting.length;
+    if (length <= 0) continue;
+
+    const quantity = usesSeeds(planting.plantingType)
+      ? orderQuantity(planting, length)
+      : { seedsNumber: 0, seedsQuantityGrams: null };
+    const transplants =
+      planting.plantingType === PlantingType.transplantBought
+        ? Math.round(((length * 10) / (planting.spacingPlants || 1)) * planting.rows)
+        : 0;
+    if (quantity.seedsNumber === 0 && transplants === 0) continue;
 
     const key = `${planting.cropId}:${planting.varietyId ?? 0}:${planting.providerId ?? 0}`;
     const existing = lines.get(key);
     if (existing) {
       existing.plantingCount += 1;
-      existing.seedCount += requirement.seedCount;
-      if (requirement.seedMassMg !== null) {
-        existing.seedMassMg = (existing.seedMassMg ?? 0) + requirement.seedMassMg;
+      existing.seedsNumber += quantity.seedsNumber;
+      if (quantity.seedsQuantityGrams !== null) {
+        existing.seedsQuantityGrams =
+          (existing.seedsQuantityGrams ?? 0) + quantity.seedsQuantityGrams;
       }
-      existing.plantsToBuy += requirement.plantsToBuy ?? 0;
-      if (anchor && (!existing.firstNeededOn || anchor < existing.firstNeededOn)) {
-        existing.firstNeededOn = anchor;
+      existing.transplantsToBuy += transplants;
+      if (sowing && (!existing.firstNeededOn || sowing < existing.firstNeededOn)) {
+        existing.firstNeededOn = sowing;
       }
     } else {
       lines.set(key, {
@@ -102,10 +116,10 @@ export function buildOrderLines(
         providerId: planting.providerId,
         providerName: planting.providerName,
         plantingCount: 1,
-        seedCount: requirement.seedCount,
-        seedMassMg: requirement.seedMassMg,
-        plantsToBuy: requirement.plantsToBuy ?? 0,
-        firstNeededOn: anchor,
+        seedsNumber: quantity.seedsNumber,
+        seedsQuantityGrams: quantity.seedsQuantityGrams,
+        transplantsToBuy: transplants,
+        firstNeededOn: sowing,
       });
     }
   }

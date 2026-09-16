@@ -14,7 +14,7 @@
   },
   "scripts": {
     "build": "npm run build -w @sillon/core && npm run build -w @sillon/api && npm run build -w @sillon/web",
-    "dev": "npm run dev -w @sillon/api & npm run dev -w @sillon/web",
+    "dev": "node scripts/dev.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "npm run typecheck --workspaces --if-present",

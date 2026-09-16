@@ -6,6 +6,7 @@
 import fp from 'fastify-plugin';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
+import { can, type Action, type Resource } from '@sillon/core';
 import {
   SESSION_COOKIE,
   roleAtLeast,
@@ -47,25 +48,54 @@ export const authPlugin = fp(async (app, options: { env: Env }) => {
   });
 
   /**
-   * Exige une session et un rôle suffisant sur la ferme de l'URL.
+   * Résout l'appartenance à la ferme de l'URL et pose `request.farm`.
    * Une ferme dont on n'est pas membre est signalée « introuvable » : on ne révèle pas
    * l'existence des fermes des autres.
    */
-  app.decorate('requireFarm', (minimumRole: Role = 'member') => {
+  const resoudreFerme = async (request: FastifyRequest): Promise<Role> => {
+    if (!request.currentUser) throw unauthorized();
+    const { farmId } = FarmParams.parse(request.params);
+    const membership = await withoutFarmScope((db) =>
+      db.farmMembership.findUnique({
+        where: { farmId_userId: { farmId, userId: request.currentUser!.id } },
+      }),
+    );
+    if (!membership) throw notFound('Ferme introuvable');
+    const role = membership.role as Role;
+    request.farm = { id: farmId, role };
+    return role;
+  };
+
+  /**
+   * Exige un rôle d'administration sur la ferme. À réserver aux routes où la hiérarchie
+   * `owner > manager` est bien ce que décrit Brinjel — réglages, équipe, plan de culture.
+   * Pour tout ce qui touche au terrain, c'est `requirePermission` qui fait foi : le
+   * saisonnier et le consultant ne se rangent pas sur une échelle.
+   */
+  app.decorate('requireFarm', (minimumRole: Role = 'employee') => {
     return async (request: FastifyRequest, _reply: FastifyReply) => {
-      if (!request.currentUser) throw unauthorized();
-      const { farmId } = FarmParams.parse(request.params);
-      const membership = await withoutFarmScope((db) =>
-        db.farmMembership.findUnique({
-          where: { farmId_userId: { farmId, userId: request.currentUser!.id } },
-        }),
-      );
-      if (!membership) throw notFound('Ferme introuvable');
-      const role = membership.role as Role;
+      const role = await resoudreFerme(request);
       if (!roleAtLeast(role, minimumRole)) {
         throw forbidden(`Cette action demande le rôle « ${minimumRole} »`);
       }
-      request.farm = { id: farmId, role };
+    };
+  });
+
+  /**
+   * Exige seulement d'être membre de la ferme, quel que soit le rôle. Pour les routes
+   * dont tout le monde a besoin : lire la ferme elle-même.
+   */
+  app.decorate('requireMember', async (request: FastifyRequest, _reply: FastifyReply) => {
+    await resoudreFerme(request);
+  });
+
+  /** Exige une permission de la matrice `Brinjel.Admin.Role`. */
+  app.decorate('requirePermission', (resource: Resource, action: Action) => {
+    return async (request: FastifyRequest, _reply: FastifyReply) => {
+      const role = await resoudreFerme(request);
+      if (!can(role, resource, action)) {
+        throw forbidden(`Le rôle « ${role} » ne peut pas ${action} sur ${resource}`);
+      }
     };
   });
 });
@@ -75,6 +105,11 @@ declare module 'fastify' {
     requireUser: (request: FastifyRequest) => Promise<void>;
     requireFarm: (
       minimumRole?: Role,
+    ) => (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
+    requireMember: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
+    requirePermission: (
+      resource: Resource,
+      action: Action,
     ) => (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
   }
 }

@@ -115,7 +115,7 @@ export function synchronize(): Promise<{ sent: number; dropped: number }> {
 }
 
 /** Construit une chaîne de requête en ignorant les filtres vides. */
-export function queryString(params: Record<string, unknown>): string {
+export function queryString(params: object): string {
   const search = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) {
     if (value === undefined || value === null || value === '') continue;

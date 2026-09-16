@@ -92,9 +92,10 @@
     "family": "Famille",
     "type": "Mode d’implantation",
     "types": {
-      "direct_seed": "Semis direct",
+      "direct_seeded": "Semis direct",
       "transplant_raised": "Plant produit en pépinière",
-      "transplant_bought": "Plant acheté"
+      "transplant_bought": "Plant acheté",
+      "seedling": "Production de plants"
     },
     "underCover": "Sous abri",
     "openField": "Plein champ",
@@ -108,16 +109,11 @@
     "tags": "Étiquettes",
     "dates": "Dates",
     "durations": "Durées",
-    "anchorDate": "Date de départ",
     "dateHint": "Date (15/03) ou semaine (S12)",
-    "greenhouseDuration": "Durée en pépinière",
-    "toHarvestDuration": "Délai avant récolte",
-    "harvestDuration": "Durée de récolte",
     "dateTypes": {
-      "greenhouse_sowing": "Semis en pépinière",
-      "sowing_planting": "Semis / plantation",
-      "harvest_begin": "Début de récolte",
-      "harvest_end": "Fin de récolte"
+      "sowing": "Semis",
+      "planting": "Plantation",
+      "potting": "Rempotage"
     },
     "seeds": "Semences",
     "seedsPerGram": "Graines par gramme",
@@ -125,10 +121,7 @@
     "seedsPerHoleDirect": "Graines par poquet",
     "seedsExtra": "Marge de sécurité (%)",
     "greenhouseLoss": "Perte en pépinière (%)",
-    "plantCount": "Plants",
     "holes": "Alvéoles à semer",
-    "trays": "Plaques",
-    "seedCount": "Graines",
     "expectedYield": "Rendement escompté",
     "expectedRevenue": "Produit escompté",
     "finished": "Série clôturée",
@@ -143,7 +136,19 @@
     "placedOn": "Placée sur {{names}}",
     "generateTasks": "Générer les tâches",
     "applyTemplate": "Appliquer un itinéraire",
-    "empty": "Aucune série. Commencez par en créer une."
+    "empty": "Aucune série. Commencez par en créer une.",
+    "durationTypes": {
+      "days_to_transplant": "Durée en pépinière",
+      "days_to_maturity": "Délai avant récolte",
+      "harvest_window": "Durée de récolte"
+    },
+    "sowingDate": "Date de semis",
+    "fieldDate": "Mise en place",
+    "harvestPeriod": "Période de récolte",
+    "firstHarvest": "Début de récolte",
+    "seedlings": "Plants",
+    "containers": "Plaques",
+    "seedsNumber": "Graines"
   },
   "tasks": {
     "title": "Tâches",
@@ -174,7 +179,19 @@
     "offsetDays": "Décalage (jours)",
     "reference": "Date de référence",
     "addStep": "Ajouter une étape",
-    "sheet": "Feuille de la semaine"
+    "sheet": "Feuille de la semaine",
+    "natures": {
+      "direct_sow": "Semis direct",
+      "greenhouse_sow": "Semis en pépinière",
+      "transplant": "Plantation",
+      "custom": "Libre"
+    },
+    "templateDateTypes": {
+      "field_sowing_planting": "Mise en place au champ",
+      "greenhouse_sowing": "Semis en pépinière",
+      "first_harvest": "Début de récolte",
+      "last_harvest": "Fin de récolte"
+    }
   },
   "beds": {
     "title": "Assolement",
@@ -253,7 +270,13 @@
     "team": "Équipe",
     "invite": "Inviter par courriel",
     "role": "Rôle",
-    "roles": { "owner": "Propriétaire", "manager": "Chef·fe de culture", "member": "Équipe" },
+    "roles": {
+      "owner": "Propriétaire",
+      "manager": "Chef·fe de culture",
+      "employee": "Salarié·e",
+      "seasonal": "Saisonnier·ère",
+      "consultant": "Conseiller·ère"
+    },
     "farmSettings": "Réglages de la ferme",
     "bedSettings": "Planches par défaut",
     "bedWidth": "Largeur de planche",
