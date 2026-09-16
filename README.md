@@ -49,7 +49,14 @@ docker compose up --build
 ```
 
 L'interface est sur <http://localhost:8080>, l'API sur <http://localhost:3000>,
-la documentation OpenAPI sur <http://localhost:3000/docs>.
+la documentation OpenAPI sur <http://localhost:3000/docs>. Les migrations sont appliquées
+au démarrage du conteneur ; la base part vide, on crée son compte et sa ferme depuis
+l'écran de connexion.
+
+L'API se connecte sous `sillon_app`, un rôle **ordinaire** créé par
+`infra/postgres-init.sql` — pas sous le superutilisateur de l'image PostgreSQL, qui
+ignorerait les politiques RLS et rendrait l'isolation des fermes inopérante sans rien
+signaler.
 
 ### Sans Docker
 
@@ -75,6 +82,63 @@ npm run db:seed        # compte : maraichere@example.org / sillon-demonstration
 
 # 3. API (port 3000) et interface (port 5173)
 npm run dev
+```
+
+### Sur Windows
+
+Les deux chemins ci-dessus marchent tels quels ; seules changent les commandes du shell.
+
+**Avec Docker Desktop** (le plus simple) — installez Docker Desktop avec le moteur WSL 2,
+puis dans PowerShell, à la racine du dépôt :
+
+```powershell
+copy .env.example .env
+docker compose up --build
+```
+
+L'interface répond sur <http://localhost:8080>. Pour tout arrêter : `docker compose down`
+(ajoutez `-v` pour effacer aussi la base).
+
+**Sans Docker** — Node 22+ et PostgreSQL 16, par exemple avec winget :
+
+```powershell
+winget install OpenJS.NodeJS.LTS
+winget install PostgreSQL.PostgreSQL.16
+```
+
+L'installateur PostgreSQL ajoute `psql` dans `C:\Program Files\PostgreSQL\16\bin` ;
+ouvrez un nouveau PowerShell pour que le `PATH` soit à jour. Créez ensuite le rôle et les
+bases (le mot de passe demandé est celui du superutilisateur `postgres` choisi à
+l'installation) :
+
+```powershell
+psql -U postgres -c "CREATE ROLE sillon LOGIN PASSWORD 'sillon' CREATEDB;"
+psql -U postgres -c "CREATE DATABASE sillon_dev OWNER sillon;"
+psql -U postgres -c "CREATE DATABASE sillon_test OWNER sillon;"
+psql -U postgres -d sillon_dev  -c "CREATE EXTENSION IF NOT EXISTS citext; CREATE EXTENSION IF NOT EXISTS unaccent; CREATE EXTENSION IF NOT EXISTS ltree;"
+psql -U postgres -d sillon_test -c "CREATE EXTENSION IF NOT EXISTS citext; CREATE EXTENSION IF NOT EXISTS unaccent; CREATE EXTENSION IF NOT EXISTS ltree;"
+```
+
+Puis le projet :
+
+```powershell
+npm install
+copy apps\api\.env.example apps\api\.env
+npm run build -w @sillon/core
+npm run db:migrate
+npm run db:seed        # compte : maraichere@example.org / sillon-demonstration
+npm run dev            # API sur 3000, interface sur http://localhost:5173
+```
+
+`npm run dev` démarre les deux serveurs dans la même fenêtre (`scripts/dev.mjs`), sous
+PowerShell comme sous cmd.exe ; Ctrl+C les arrête tous les deux.
+
+Pour rejouer la suite de tests, il faut que PostgreSQL tourne :
+
+```powershell
+npm run typecheck
+npm test               # unitaires + intégration
+npm run test:e2e       # Playwright ; `npx playwright install chromium` la première fois
 ```
 
 ### Tester sur un smartphone
@@ -134,6 +198,7 @@ sillon/
 ├── apps/web/          React 19 + Vite + TanStack Router/Query + Tailwind 4 (PWA)
 ├── e2e/               Parcours Playwright (smartphone et bureau)
 ├── specs/             Brief, modèle de données, schéma Prisma d'origine
+├── scripts/           Outils de développement multiplateformes (dev.mjs)
 └── infra/             Initialisation PostgreSQL pour Docker
 ```
 
