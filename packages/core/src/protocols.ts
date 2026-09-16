@@ -2,16 +2,22 @@
 // SPDX-FileCopyrightText: © 2026 Sillon contributors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Itinéraires techniques : une suite d'étapes positionnées par rapport aux dates de la
-// série (« buttage 20 jours après la plantation »). Chaque tâche générée garde le lien
+// Itinéraires techniques : une suite d'étapes positionnées par rapport à une date de la
+// série (« buttage 20 jours après la plantation »). Chaque tâche engendrée garde le lien
 // vers son étape, ce qui permet de la recaler quand les dates de la série bougent.
+//
+// Les quatre dates de référence sont celles de `TemplateTask.@template_date_types` ;
+// deux d'entre elles — première et dernière récolte — se lisent dans les périodes de
+// récolte et non dans les dates de la série.
 
 import { addDays } from './dates.js';
-import { anchorDateType } from './planting.js';
+import { fieldDate, usesNursery } from './planting.js';
 import {
   PlantingDateType,
   PlantingType,
   TaskDefaultType,
+  TemplateDateType,
+  type HarvestPeriod,
   type IsoDate,
   type PlantingDates,
 } from './types.js';
@@ -23,12 +29,12 @@ export interface TemplateStep {
   methodId?: number | null;
   implementId?: number | null;
   daysInField: number;
+  /** Temps prévu, en secondes. */
   plannedLaborTime?: number | null;
   description?: string | null;
   /** Décalage en jours par rapport à la date de référence (négatif = avant). */
   linkDays: number;
-  /** Date de la série servant de référence. */
-  templateDateType: PlantingDateType;
+  templateDateType: TemplateDateType;
 }
 
 /** Tâche prête à être insérée, avec la trace de l'étape qui l'a produite. */
@@ -41,35 +47,70 @@ export interface GeneratedTask {
   daysInField: number;
   plannedLaborTime: number | null;
   description: string | null;
-  link: { templateTaskId: number; linkDays: number; templateDateType: PlantingDateType } | null;
+  link: { templateTaskId: number; linkDays: number; templateDateType: TemplateDateType } | null;
+}
+
+/** Contexte temporel d'une série : ses dates et ses fenêtres de récolte. */
+export interface PlantingSchedule {
+  plantingType: PlantingType;
+  dates: PlantingDates;
+  harvestPeriods: readonly HarvestPeriod[];
+}
+
+function sortedPeriods(periods: readonly HarvestPeriod[]): HarvestPeriod[] {
+  return [...periods].sort((a, b) => a.begin.localeCompare(b.begin));
+}
+
+/** Date désignée par un type de référence d'itinéraire, si la série la possède. */
+export function referenceDate(schedule: PlantingSchedule, type: TemplateDateType): IsoDate | null {
+  switch (type) {
+    case TemplateDateType.fieldSowingPlanting:
+      return fieldDate(schedule.dates, schedule.plantingType);
+    case TemplateDateType.greenhouseSowing: {
+      if (!usesNursery(schedule.plantingType) && schedule.plantingType !== PlantingType.seedling) {
+        return null;
+      }
+      const sowing = schedule.dates[PlantingDateType.sowing];
+      return sowing ? (sowing.effective ?? sowing.planned) : null;
+    }
+    case TemplateDateType.firstHarvest: {
+      const [first] = sortedPeriods(schedule.harvestPeriods);
+      return first ? first.begin : null;
+    }
+    case TemplateDateType.lastHarvest: {
+      const periods = sortedPeriods(schedule.harvestPeriods);
+      const last = periods[periods.length - 1];
+      return last ? last.end : null;
+    }
+  }
 }
 
 /** Date prévue d'une étape : date de référence de la série + décalage. */
 export function resolveStepDate(
-  dates: PlantingDates,
-  templateDateType: PlantingDateType,
+  schedule: PlantingSchedule,
+  templateDateType: TemplateDateType,
   linkDays: number,
 ): IsoDate | null {
-  const reference = dates[templateDateType];
-  if (!reference) return null;
-  return addDays(reference.effective ?? reference.planned, linkDays);
+  const reference = referenceDate(schedule, templateDateType);
+  return reference === null ? null : addDays(reference, linkDays);
 }
 
 /**
  * Applique un itinéraire technique à une série.
- * Les étapes dont la date de référence n'existe pas sur la série (par exemple un semis
- * en pépinière pour une série en semis direct) sont ignorées silencieusement.
+ * Les étapes dont la date de référence n'existe pas sur la série — un semis en pépinière
+ * pour une série en semis direct, une récolte pour une série sans durée de maturité —
+ * sont ignorées silencieusement.
  */
 export function generateTasksFromTemplate(
   steps: readonly TemplateStep[],
-  dates: PlantingDates,
+  schedule: PlantingSchedule,
 ): GeneratedTask[] {
   const tasks: GeneratedTask[] = [];
   for (const step of steps) {
-    const plannedDate = resolveStepDate(dates, step.templateDateType, step.linkDays);
+    const plannedDate = resolveStepDate(schedule, step.templateDateType, step.linkDays);
     if (!plannedDate) continue;
     tasks.push({
-      defaultType: TaskDefaultType.other,
+      defaultType: TaskDefaultType.custom,
       typeId: step.typeId,
       methodId: step.methodId ?? null,
       implementId: step.implementId ?? null,
@@ -87,61 +128,90 @@ export function generateTasksFromTemplate(
   return tasks.sort((a, b) => a.plannedDate.localeCompare(b.plannedDate));
 }
 
+/** Nature de la tâche de mise en place au champ (`field_task_type`). */
+export function fieldTaskType(plantingType: PlantingType): TaskDefaultType | null {
+  switch (plantingType) {
+    case PlantingType.directSeeded:
+      return TaskDefaultType.directSow;
+    case PlantingType.transplantRaised:
+    case PlantingType.transplantBought:
+      return TaskDefaultType.transplant;
+    case PlantingType.seedling:
+      return null;
+  }
+}
+
+/** Nature de la tâche de semis en pépinière (`nursery_sowing_task_type`). */
+export function nurserySowingTaskType(plantingType: PlantingType): TaskDefaultType | null {
+  switch (plantingType) {
+    case PlantingType.transplantRaised:
+    case PlantingType.seedling:
+      return TaskDefaultType.greenhouseSow;
+    case PlantingType.directSeeded:
+    case PlantingType.transplantBought:
+      return null;
+  }
+}
+
 /**
- * Tâches de semis et de plantation déduites directement du plan de culture (§3.2 du brief),
- * sans itinéraire technique : une tâche de semis (pépinière ou direct) et, pour les séries
- * repiquées, une tâche de plantation.
+ * Tâches déduites du plan de culture, sans itinéraire technique : le semis en pépinière
+ * puis la mise en place au champ, chacun selon le mode d'implantation. Un plant acheté
+ * n'a pas de semis ; une production de plants n'a pas de mise en place.
  */
 export function defaultTasksForPlanting(
-  plantingType: PlantingType,
-  dates: PlantingDates,
-  typeIds: { sowing?: number | null; planting?: number | null } = {},
+  schedule: PlantingSchedule,
+  typeIds: {
+    greenhouseSow?: number | null;
+    directSow?: number | null;
+    transplant?: number | null;
+  } = {},
 ): GeneratedTask[] {
   const tasks: GeneratedTask[] = [];
-  const sowingDate = dates[anchorDateType(plantingType)];
-  const transplanted = plantingType !== PlantingType.directSeed;
+  const base = {
+    methodId: null,
+    implementId: null,
+    daysInField: 0,
+    plannedLaborTime: null,
+    description: null,
+    link: null,
+  };
 
-  if (sowingDate && plantingType !== PlantingType.transplantBought) {
+  const nurseryType = nurserySowingTaskType(schedule.plantingType);
+  const sowing = schedule.dates[PlantingDateType.sowing];
+  if (nurseryType && sowing) {
     tasks.push({
-      defaultType: TaskDefaultType.sowing,
-      typeId: typeIds.sowing ?? null,
-      methodId: null,
-      implementId: null,
-      plannedDate: sowingDate.effective ?? sowingDate.planned,
-      daysInField: 0,
-      plannedLaborTime: null,
-      description: null,
-      link: null,
+      ...base,
+      defaultType: nurseryType,
+      typeId: typeIds.greenhouseSow ?? null,
+      plannedDate: sowing.effective ?? sowing.planned,
     });
   }
 
-  const plantingDate = dates[PlantingDateType.sowingPlanting];
-  if (transplanted && plantingDate) {
+  const inFieldType = fieldTaskType(schedule.plantingType);
+  const inFieldDate = fieldDate(schedule.dates, schedule.plantingType);
+  if (inFieldType && inFieldDate) {
     tasks.push({
-      defaultType: TaskDefaultType.planting,
-      typeId: typeIds.planting ?? null,
-      methodId: null,
-      implementId: null,
-      plannedDate: plantingDate.effective ?? plantingDate.planned,
-      daysInField: 0,
-      plannedLaborTime: null,
-      description: null,
-      link: null,
+      ...base,
+      defaultType: inFieldType,
+      typeId:
+        inFieldType === TaskDefaultType.directSow
+          ? (typeIds.directSow ?? null)
+          : (typeIds.transplant ?? null),
+      plannedDate: inFieldDate,
     });
   }
 
-  // Une série en semis direct n'a pas de plantation ; une série repiquée en a bien deux.
   return tasks;
 }
 
 /**
- * Recale une tâche générée après un changement de dates de la série.
- * Renvoie `null` si la date de référence a disparu : la tâche est alors laissée telle quelle
- * à l'appelant, qui décide de la supprimer ou de la détacher.
+ * Recale une tâche engendrée après un changement de dates de la série.
+ * Renvoie `null` si la date de référence a disparu : la tâche est alors laissée telle
+ * quelle à l'appelant, qui décide de la supprimer ou de la détacher.
  */
 export function rescheduleGeneratedTask(
-  link: { linkDays: number; templateDateType: PlantingDateType },
-  dates: PlantingDates,
+  link: { linkDays: number; templateDateType: TemplateDateType },
+  schedule: PlantingSchedule,
 ): IsoDate | null {
-  return resolveStepDate(dates, link.templateDateType, link.linkDays);
+  return resolveStepDate(schedule, link.templateDateType, link.linkDays);
 }

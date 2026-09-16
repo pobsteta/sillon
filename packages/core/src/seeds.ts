@@ -1,105 +1,136 @@
-// SPDX-FileCopyrightText: © 2023-2026 André Hoarau <andre@hoarau.dev> (règles d'origine, Brinjel)
+// SPDX-FileCopyrightText: © 2023-2026 André Hoarau <andre@hoarau.dev> (formules d'origine, Brinjel)
 // SPDX-FileCopyrightText: © 2026 Sillon contributors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Calcul des quantités de semences, de plants et de plaques de pépinière.
+// Quantités de semences, de plants et de plaques de pépinière.
 //
-// Hypothèses de portage (à confirmer face à `lib/brinjel/planting.ex`, cf. §6 du modèle
-// de données) — elles sont isolées ici pour être faciles à corriger :
-//   * le nombre de plants par rang est `floor(longueur / espacement)` : on ne compte pas
-//     un plant supplémentaire en bout de planche ;
-//   * la perte en pépinière augmente le nombre d'alvéoles semées, la marge de sécurité
-//     augmente la quantité de semences ;
-//   * tous les arrondis se font vers le haut : on ne sème jamais un demi-trou.
+// Les formules suivent `Brinjel.CropPlan.Planting` (fiche d'une série) et
+// `Brinjel.CropPlan.OrderList` (liste de commande), qui diffèrent sur un point :
+// la marge de sécurité `seeds_extra_percentage` n'entre QUE dans la commande, et
+// seulement pour le semis direct. La fiche montre l'estimation nue.
+//
+// Deux pièges, vérifiés sur la source :
+//   * le nombre de poquets n'est pas arrondi — c'est un flottant qui se propage ;
+//   * la perte en pépinière divise les graines par alvéole et le nombre de plants
+//     (`/ (1 − perte)`), elle n'augmente pas le nombre de poquets.
 
 import { PlantingType, type PlantingSpec } from './types.js';
-import { usesGreenhouse, usesSeeds } from './planting.js';
+import { SEEDS_PER_GRAM_FACTOR } from './units.js';
 
 export interface SeedRequirement {
-  /** Nombre de plants en place visés sur la planche. */
-  plantCount: number;
-  /** Alvéoles (pépinière) ou poquets (semis direct) à semer, pertes comprises. */
-  holesToSow: number;
-  /** Plaques de pépinière à préparer ; `null` si la série n'en utilise pas. */
-  trays: number | null;
-  /** Alvéoles inutilisées sur la dernière plaque ; `null` sans plaque. */
-  spareCells: number | null;
-  /** Graines à prévoir, marge de sécurité comprise. */
-  seedCount: number;
-  /** Masse de semences en milligrammes (entier), `null` si `seedsPerGram` est inconnu. */
-  seedMassMg: number | null;
-  /** Plants à commander pour une série en plant acheté ; `null` sinon. */
-  plantsToBuy: number | null;
+  /** Poquets ou alvéoles à semer, valeur non arrondie comme dans Brinjel. */
+  holes: number;
+  /** Plants attendus en place, pertes de pépinière comprises. */
+  seedlings: number;
+  /** Plaques de pépinière à préparer, à deux décimales ; `null` sans plaque choisie. */
+  containers: number | null;
+  /** Graines à semer, hors marge de sécurité. */
+  seedsNumber: number;
+  /** Masse correspondante en grammes ; `null` si la densité est inconnue. */
+  seedsWeightGrams: number | null;
 }
 
-/** Nombre de plants tenant sur la planche, d'après la longueur, les rangs et l'espacement. */
-export function plantCount(spec: Pick<PlantingSpec, 'length' | 'rows' | 'spacingPlants'>): number {
-  const { length, rows, spacingPlants } = spec;
-  if (length <= 0 || rows <= 0 || spacingPlants <= 0) return 0;
-  return Math.floor(length / spacingPlants) * rows;
-}
-
-function applyPercentage(value: number, percentage: number): number {
-  return Math.ceil(value * (1 + percentage / 100));
+function greenhouseLossRatio(spec: PlantingSpec): number {
+  const loss = spec.estimatedGreenhouseLoss ?? 0;
+  // Une perte de 100 % rendrait la division impossible : Brinjel ne la borne pas,
+  // le formulaire la limite à 99 %.
+  return Math.min(Math.max(loss, 0), 99) / 100;
 }
 
 /**
- * Applique une perte attendue : pour obtenir `value` plants malgré `loss` % de pertes,
- * il faut en semer `value / (1 - loss)`.
+ * Poquets tenant sur la planche : `longueur × 10 / espacement × rangs`.
+ * Le facteur 10 convertit les millimètres de la longueur en dixièmes de millimètre,
+ * unité de l'espacement (commentaire d'origine dans `order_list.ex`).
  */
-function compensateLoss(value: number, lossPercentage: number): number {
-  const loss = Math.min(Math.max(lossPercentage, 0), 99);
-  return Math.ceil(value / (1 - loss / 100));
+export function holeCount(spec: Pick<PlantingSpec, 'length' | 'rows' | 'spacingPlants'>): number {
+  const { length, rows, spacingPlants } = spec;
+  if (length <= 0 || rows <= 0 || spacingPlants <= 0) return 0;
+  return ((length * 10) / spacingPlants) * rows;
 }
 
-/** Quantités à prévoir pour une série : semences, alvéoles, plaques, plants à acheter. */
+/** Quantités affichées sur la fiche d'une série, sans marge de sécurité. */
 export function seedRequirement(spec: PlantingSpec): SeedRequirement {
-  const plants = plantCount(spec);
-  const extra = spec.seedsExtraPercentage ?? 0;
+  const holes = holeCount(spec);
+  const loss = greenhouseLossRatio(spec);
 
-  if (spec.plantingType === PlantingType.transplantBought) {
-    return {
-      plantCount: plants,
-      holesToSow: 0,
-      trays: null,
-      spareCells: null,
-      seedCount: 0,
-      seedMassMg: null,
-      plantsToBuy: plants,
-    };
+  let seedlings = 0;
+  if (spec.plantingType === PlantingType.transplantRaised) {
+    seedlings = holes === 0 ? 0 : Math.round(holes / (1 - loss));
+  } else if (spec.plantingType === PlantingType.transplantBought) {
+    seedlings = Math.round(holes);
   }
 
-  const greenhouse = usesGreenhouse(spec.plantingType);
-  const holesToSow = greenhouse
-    ? compensateLoss(plants, spec.estimatedGreenhouseLoss ?? 0)
-    : plants;
-  const seedsPerHole = greenhouse
-    ? (spec.seedsPerHoleSeedling ?? 1)
-    : (spec.seedsPerHoleDirect ?? 1);
-  const seedCount = usesSeeds(spec.plantingType)
-    ? applyPercentage(holesToSow * Math.max(seedsPerHole, 0), extra)
-    : 0;
+  let seedsNumber = 0;
+  if (spec.plantingType === PlantingType.directSeeded) {
+    seedsNumber = holes * (spec.seedsPerHoleDirect ?? 0);
+  } else if (
+    spec.plantingType === PlantingType.transplantRaised ||
+    spec.plantingType === PlantingType.seedling
+  ) {
+    seedsNumber = Math.round((holes * (spec.seedsPerHoleSeedling ?? 0)) / (1 - loss));
+  }
 
-  const containerSize = greenhouse ? (spec.containerSize ?? null) : null;
-  const trays = containerSize && containerSize > 0 ? Math.ceil(holesToSow / containerSize) : null;
-  const spareCells = trays !== null && containerSize ? trays * containerSize - holesToSow : null;
+  const containers =
+    spec.containerSize && spec.containerSize > 0 && holes > 0
+      ? Math.round((holes / spec.containerSize / (1 - loss)) * 100) / 100
+      : null;
+
+  // `seedsPerGram` est stocké en graines par kilogramme.
+  const seedsPerGram = spec.seedsPerGram ? spec.seedsPerGram / SEEDS_PER_GRAM_FACTOR : 0;
 
   return {
-    plantCount: plants,
-    holesToSow,
-    trays,
-    spareCells,
-    seedCount,
-    seedMassMg:
-      spec.seedsPerGram && spec.seedsPerGram > 0
-        ? Math.ceil((seedCount * 1000) / spec.seedsPerGram)
-        : null,
-    plantsToBuy: null,
+    holes,
+    seedlings,
+    containers,
+    seedsNumber,
+    seedsWeightGrams: seedsPerGram > 0 ? seedsNumber / seedsPerGram : null,
   };
 }
 
-/** Formate une masse de semences (mg) pour l'affichage : « 1,25 g », « 340 mg ». */
-export function formatSeedMass(massMg: number, locale = 'fr'): string {
-  if (massMg < 1000) return `${massMg} mg`;
-  return `${(massMg / 1000).toLocaleString(locale, { maximumFractionDigits: 2 })} g`;
+/**
+ * Graines par poquet retenues pour une COMMANDE (`OrderList.seeds_per_hole`).
+ * C'est ici, et seulement ici, que la marge de sécurité s'applique — au semis direct.
+ */
+export function orderSeedsPerHole(spec: PlantingSpec): number {
+  if (spec.plantingType === PlantingType.directSeeded) {
+    const perHole = spec.seedsPerHoleDirect ?? 0;
+    if (spec.seedsExtraPercentage === null || spec.seedsExtraPercentage === undefined) {
+      return perHole;
+    }
+    return perHole * (1 + spec.seedsExtraPercentage / 100);
+  }
+
+  const perHole = spec.seedsPerHoleSeedling ?? 0;
+  if (spec.estimatedGreenhouseLoss === null || spec.estimatedGreenhouseLoss === undefined) {
+    return perHole;
+  }
+  return perHole / (1 - greenhouseLossRatio(spec));
+}
+
+export interface OrderQuantity {
+  seedsNumber: number;
+  /** Masse en grammes ; `null` si la densité est inconnue. */
+  seedsQuantityGrams: number | null;
+}
+
+/**
+ * Quantités d'une ligne de commande, pour la longueur retenue — celle de la série,
+ * ou la longueur déjà placée sur l'assolement selon le filtre choisi.
+ */
+export function orderQuantity(spec: PlantingSpec, length: number = spec.length): OrderQuantity {
+  const holes = holeCount({ ...spec, length });
+  const seedsNumber = holes * orderSeedsPerHole(spec);
+  const seedsPerGram = spec.seedsPerGram ? spec.seedsPerGram / SEEDS_PER_GRAM_FACTOR : 0;
+  return {
+    seedsNumber,
+    seedsQuantityGrams: seedsPerGram > 0 ? seedsNumber / seedsPerGram : null,
+  };
+}
+
+/** Formate une masse de semences en grammes : « 1,25 g », « 340 mg ». */
+export function formatSeedWeight(grams: number, locale = 'fr'): string {
+  if (grams < 1) {
+    return `${Math.round(grams * 1000).toLocaleString(locale)} mg`;
+  }
+  return `${grams.toLocaleString(locale, { maximumFractionDigits: 2 })} g`;
 }

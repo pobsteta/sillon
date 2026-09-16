@@ -14,7 +14,7 @@ import type { DateRange, IsoDate } from './types.js';
 export interface Bed {
   id: number;
   name: string;
-  /** Longueur utile, en centimètres. */
+  /** Longueur utile, en millimètres. */
   bedLength: number;
   bedWidth?: number | null;
   greenhouse: boolean;
@@ -24,11 +24,13 @@ export interface Bed {
 export interface Occupation {
   plantingId: number;
   locationId: number;
-  /** Longueur occupée sur cette planche, en centimètres. */
+  /** Longueur occupée sur cette planche, en millimètres. */
   length: number;
   range: DateRange;
   /** Famille botanique de la série, pour le contrôle des rotations. */
   familyId?: number | null;
+  /** Date de mise en place au champ : c'est elle que compare le délai de retour. */
+  fieldDate?: IsoDate | null;
 }
 
 /**

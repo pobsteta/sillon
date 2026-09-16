@@ -1,39 +1,47 @@
+// SPDX-FileCopyrightText: © 2023-2026 André Hoarau <andre@hoarau.dev> (formules d'origine, Brinjel)
 // SPDX-FileCopyrightText: © 2026 Sillon contributors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Rendements, chiffre d'affaires escompté, temps de travail, état des tâches.
-// Toutes les grandeurs restent entières : quantités dans l'unité de la série,
-// montants en centimes, temps en minutes.
+// Rendements, produit escompté, temps de travail, état des tâches.
+//
+// Rendement et produit suivent `Planting.estimated_yield/1` et `estimated_revenue/1`,
+// qui multiplient simplement le rendement au mètre par la longueur. Ces valeurs sont
+// lues en unités d'affichage chez Brinjel (mètres, unités) ; ici tout reste entier,
+// la conversion est donc explicite.
 
 import { addDays, daysBetween } from './dates.js';
 import { OverdueUnit, type IsoDate, type PlantingSpec } from './types.js';
+import { MM_PER_METER, SECONDS_PER_MINUTE } from './units.js';
 
-const CM_PER_METER = 100;
-
-/** Rendement escompté d'une série : rendement au mètre × longueur de planche. */
+/**
+ * Rendement escompté, en millièmes d'unité : rendement au mètre × longueur en mètres.
+ * `yieldPerBedMeter` est déjà en millièmes, `length` en millimètres.
+ */
 export function expectedYield(spec: Pick<PlantingSpec, 'length' | 'yieldPerBedMeter'>): number {
   if (!spec.yieldPerBedMeter || spec.length <= 0) return 0;
-  return Math.round((spec.yieldPerBedMeter * spec.length) / CM_PER_METER);
+  return Math.round((spec.yieldPerBedMeter * spec.length) / MM_PER_METER);
 }
 
-/** Produit escompté d'une série, en centimes. */
+/** Produit escompté, en centimes : rendement escompté × prix unitaire. */
 export function expectedRevenue(
   spec: Pick<PlantingSpec, 'length' | 'yieldPerBedMeter' | 'pricePerUnit'>,
 ): number {
   if (!spec.pricePerUnit) return 0;
-  return expectedYield(spec) * spec.pricePerUnit;
+  // Le rendement est en millièmes d'unité : on revient à l'unité avant de multiplier
+  // par un prix exprimé en centimes par unité.
+  return Math.round((expectedYield(spec) * spec.pricePerUnit) / 1000);
 }
 
 /** Rendement réalisé ramené au mètre de planche, comparable à `yieldPerBedMeter`. */
-export function actualYieldPerBedMeter(totalQuantity: number, lengthCm: number): number {
-  if (lengthCm <= 0) return 0;
-  return Math.round((totalQuantity * CM_PER_METER) / lengthCm);
+export function actualYieldPerBedMeter(totalQuantity: number, lengthMm: number): number {
+  if (lengthMm <= 0) return 0;
+  return Math.round((totalQuantity * MM_PER_METER) / lengthMm);
 }
 
 export interface YieldComparison {
   expected: number;
   actual: number;
-  /** Écart réalisé − prévu, dans l'unité de la série. */
+  /** Écart réalisé − prévu, en millièmes d'unité. */
   difference: number;
   /** Écart en pourcentage du prévu ; `null` si rien n'était prévu. */
   differencePercentage: number | null;
@@ -87,7 +95,7 @@ export function taskStatus(
   return task.plannedDate >= limit ? TaskStatus.late : TaskStatus.upcoming;
 }
 
-/** Temps de travail agrégé, en minutes. */
+/** Temps de travail agrégé, en secondes. */
 export function totalLaborTime(
   entries: readonly { plannedLaborTime?: number | null; effectiveLaborTime?: number | null }[],
 ): { planned: number; effective: number } {
@@ -100,8 +108,10 @@ export function totalLaborTime(
   return { planned, effective };
 }
 
-/** Formate des minutes en « 3 h 20 » / « 45 min ». */
-export function formatLaborTime(minutes: number): string {
+/** Formate un temps de travail exprimé en secondes : « 3 h 20 », « 45 min », « 30 s ». */
+export function formatLaborTime(seconds: number): string {
+  if (seconds < SECONDS_PER_MINUTE) return `${seconds} s`;
+  const minutes = Math.round(seconds / SECONDS_PER_MINUTE);
   if (minutes < 60) return `${minutes} min`;
   const hours = Math.floor(minutes / 60);
   const rest = minutes % 60;
