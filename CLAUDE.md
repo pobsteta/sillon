@@ -11,3 +11,6 @@ en centimes, durées de culture en jours, temps de travail en secondes. La conve
 n'a lieu qu'aux bords (saisie et affichage) : voir `packages/core/src/units.ts`.
 farm_id partout, RLS.
 Conserver les en-têtes SPDX et le crédit Brinjel sur tout code porté.
+Messages de commit : Conventional Commits (`feat:`, `fix:`, `docs:`… description en
+français) — release-please en déduit la version, le CHANGELOG et le tag. Un message hors
+convention disparaît silencieusement de la release.

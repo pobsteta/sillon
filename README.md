@@ -328,6 +328,71 @@ npm run test:e2e  # Playwright ; PLAYWRIGHT_CHROMIUM_PATH permet d'utiliser un C
 
 ---
 
+## Versions et publication
+
+Rien ne se tague ni ne se publie à la main. Deux workflows s'en chargent.
+
+### Les messages de commit pilotent la version
+
+Le dépôt suit les [Conventional Commits](https://www.conventionalcommits.org/fr/). Seul le
+préfixe est contraint ; la description reste en français :
+
+```
+feat(web): affiche la période de récolte sur la fiche d'une série
+fix(api): rétablit l'isolation RLS sous Docker
+docs: ajoute la section Windows
+```
+
+| Préfixe                       | Version (avant la 1.0) | Version (après) | Dans le CHANGELOG      |
+| ----------------------------- | ---------------------- | --------------- | ---------------------- |
+| `feat:`                       | mineure (0.1.0→0.2.0)  | mineure         | Fonctionnalités        |
+| `!` ou `BREAKING CHANGE:`     | mineure (0.1.0→0.2.0)  | **majeure**     | Changements de rupture |
+| `fix:`                        | corrective             | corrective      | Corrections            |
+| `perf:`, `refactor:`, `docs:` | corrective             | corrective      | leur propre rubrique   |
+| `ci:`, `test:`, `chore:`      | corrective             | corrective      | _masqué_               |
+
+Avant la 1.0, une rupture ne propulse pas le projet en 1.0.0 : c'est le réglage
+`bump-minor-pre-major` de `.release-please-config.json`. Les types masqués font quand même
+avancer le numéro de version — ils n'ajoutent simplement pas de ligne au CHANGELOG.
+
+Types acceptés : `feat`, `fix`, `perf`, `refactor`, `docs`, `test`, `build`, `ci`, `chore`,
+`revert`. **Un message hors convention n'échoue nulle part : il disparaît simplement de la
+release.** C'est le seul vrai piège.
+
+### Ce qui se passe ensuite
+
+1. Vous fusionnez une PR sur `main`.
+2. `release.yml` ouvre — ou met à jour — une **PR de release** intitulée
+   `chore(main): release X.Y.Z`. Elle ne contient que le `CHANGELOG.md` et les numéros de
+   version (racine et les trois workspaces, tenus en phase).
+3. Cette PR reste ouverte et s'enrichit à chaque fusion. **Rien n'est publié tant qu'elle
+   n'est pas fusionnée** : c'est là que vous décidez du moment.
+4. En la fusionnant : le tag `vX.Y.Z` est posé, la GitHub Release est créée avec les notes
+   du CHANGELOG, et les images Docker partent sur ghcr.io.
+
+### Images publiées
+
+```bash
+docker pull ghcr.io/pobsteta/sillon-api:latest
+docker pull ghcr.io/pobsteta/sillon-web:0.2      # ou :0.2.0, ou :0
+```
+
+Elles sont construites depuis le tag, pas depuis la pointe de `main` : l'image correspond
+exactement au code publié.
+
+### Deux points à connaître
+
+- Les PR ouvertes par `release.yml` utilisent le `GITHUB_TOKEN` intégré, et **GitHub ne
+  déclenche pas de workflow depuis un workflow** : la CI ne tourne pas sur la PR de release.
+  Ce n'est pas gênant — elle ne change que le CHANGELOG et des numéros de version — mais si
+  une règle de protection de branche exige des checks, il faut un jeton personnel
+  (`secrets.RELEASE_PLEASE_TOKEN`) à la place.
+- Le premier passage crée la release `0.2.0` depuis la version `0.1.0` déclarée dans
+  `.release-please-manifest.json`. Ce fichier est la source de vérité : ne l'éditez pas à la
+  main, release-please le met à jour lui-même.
+
+---
+
 ## Poids et performance
 
 Le bundle initial pèse **144 kio compressés** (JS) + 6 kio de CSS ; les écrans de bureau
