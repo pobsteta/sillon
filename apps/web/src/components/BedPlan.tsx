@@ -30,7 +30,7 @@ export function BedPlan({
   onSelectPlanting?: (plantingId: number) => void;
   onSelectBed?: (locationId: number) => void;
 }) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const locale = useLocale();
   const beds = locations.filter((location) => location.bedLength > 0);
 

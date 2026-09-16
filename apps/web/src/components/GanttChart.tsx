@@ -30,7 +30,7 @@ export function GanttChart({
   dayWidth?: number;
   onSelect?: (plantingId: number) => void;
 }) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const locale = useLocale();
   const totalDays = Math.max(daysBetween(from, to), 1);
   const width = LABEL_WIDTH + totalDays * dayWidth;

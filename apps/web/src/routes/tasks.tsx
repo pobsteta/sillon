@@ -32,7 +32,7 @@ export function TaskList({
   farmId: number;
   compact?: boolean;
 }) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const locale = useLocale();
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -145,7 +145,7 @@ export function TaskList({
 }
 
 export function TasksPage() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const locale = useLocale();
   const farmId = useFarmId();
   const [anchor, setAnchor] = useState<IsoDate>(today());

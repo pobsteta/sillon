@@ -63,6 +63,7 @@ jobs:
       - run: npm run build -w @sillon/core
       - run: npm run db:migrate -w @sillon/api
       - run: npm run typecheck
+      - run: npm run lint
       - run: npx prettier --check .
       - run: npm test
       - run: npm run build

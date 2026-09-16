@@ -60,7 +60,7 @@ export function LoginPage() {
         <p className="mt-1 text-earth-700 dark:text-earth-200">{t('auth.welcome')}</p>
       </div>
 
-      <form className="card space-y-4" onSubmit={submit} noValidate>
+      <form className="card space-y-4" onSubmit={(event) => void submit(event)} noValidate>
         <Field
           label={t('auth.email')}
           type="email"
