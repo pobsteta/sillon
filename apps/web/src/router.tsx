@@ -130,6 +130,11 @@ const harvestsRoute = createRoute({
   path: '/recoltes',
   component: HarvestsPage,
 });
+const notesRoute = createRoute({
+  getParentRoute: () => protectedRoute,
+  path: '/notes',
+  component: lazyRouteComponent(() => import('./routes/notes.js'), 'NotesPage'),
+});
 const statsRoute = createRoute({
   getParentRoute: () => protectedRoute,
   path: '/statistiques',
@@ -164,6 +169,7 @@ const routeTree = rootRoute.addChildren([
     bedsRoute,
     ordersRoute,
     harvestsRoute,
+    notesRoute,
     statsRoute,
     settingsRoute,
   ]),

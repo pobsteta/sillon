@@ -85,6 +85,22 @@ export async function api<T>(path: string, options: RequestOptions = {}): Promis
 }
 
 /**
+ * Téléverse un fichier. À part de `api()` parce que le corps est un `FormData` : le
+ * navigateur doit poser lui-même l'en-tête `content-type` avec sa frontière multipart,
+ * et l'écraser avec `application/json` casserait la lecture côté serveur.
+ *
+ * Pas de mise en file d'attente hors ligne : un fichier ne tient pas dans l'outbox, qui
+ * ne sérialise que du JSON. Sans réseau, l'appel échoue et l'écran le dit.
+ */
+export async function upload<T>(path: string, file: File): Promise<T> {
+  const body = new FormData();
+  body.append('file', file);
+  const response = await fetch(path, { method: 'POST', credentials: 'include', body });
+  if (!response.ok) throw await toError(response);
+  return response.json() as Promise<T>;
+}
+
+/**
  * Vide le cache de réponses tenu par le service worker.
  * Ce cache est indexé par URL, pas par session : sans cette purge, les données de la
  * ferme précédente resteraient lisibles hors ligne après une déconnexion, ou après le

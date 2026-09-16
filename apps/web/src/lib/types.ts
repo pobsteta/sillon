@@ -196,13 +196,19 @@ export interface Harvest {
   planting?: { crop: Named; variety: Named | null; unit: Named | null };
 }
 
+export type Photo = Named;
+
 export interface Note {
   id: number;
   content: string;
   date: IsoDate;
   pinned: boolean;
   archivedAt: string | null;
-  photos: { photo: { id: number; name: string } }[];
+  photos: { photo: Photo }[];
+  /** Séries auxquelles la note est rattachée ; absent des réponses de création. */
+  plantings?: { planting: { id: number; crop: Named } }[];
+  /** Planches auxquelles la note est rattachée. */
+  locations?: { location: Named }[];
 }
 
 export interface OrderLine {
