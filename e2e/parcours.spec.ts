@@ -5,6 +5,7 @@
 // validation d'une tâche. Joué à l'identique au smartphone et au bureau.
 
 import { expect, test } from '@playwright/test';
+import { grandePhotoPng } from './image-fixture.js';
 
 const password = 'graines-de-courgette-2026';
 
@@ -156,4 +157,36 @@ test('écrit une note avec photo et la retrouve au journal', async ({ page }, te
   await expect(page.getByText('Aucune note pour l’instant')).toBeVisible();
   await page.getByLabel('Voir les notes archivées').check();
   await expect(page.getByText('Limaces sur la planche du fond')).toBeVisible();
+});
+
+test('compresse une grande photo avant de l’envoyer', async ({ page }, testInfo) => {
+  const email = uniqueEmail(`compression-${testInfo.project.name}`);
+
+  await page.goto('/connexion');
+  await page.getByRole('button', { name: 'Pas encore de compte ?' }).click();
+  await page.getByLabel('Adresse électronique').fill(email);
+  await page.getByLabel('Mot de passe').fill(password);
+  await page.getByRole('button', { name: 'Créer un compte', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Tableau de bord' })).toBeVisible();
+
+  const more = page.getByRole('button', { name: 'Plus' });
+  if (await more.isVisible()) await more.click();
+  await page.getByRole('link', { name: 'Notes' }).first().click();
+  await expect(page.getByRole('heading', { name: 'Notes', level: 1 })).toBeVisible();
+
+  // 2600 × 1800 bruités, soit 14 Mo : au-delà de ce que l'API accepte. L'envoi ne peut
+  // donc aboutir que si le navigateur a réduit la photo avant de la transmettre.
+  await page.getByLabel('Ajouter une photo').setInputFiles({
+    name: 'limace-hd.png',
+    mimeType: 'image/png',
+    buffer: grandePhotoPng(),
+  });
+
+  // Le nom le dit : `.png` à l'entrée, `.jpg` enregistré. C'est la trace visible de la
+  // compression — sans elle, la vignette porterait encore le nom d'origine.
+  const vignette = page.getByRole('img', { name: 'limace-hd.jpg' });
+  await expect(vignette).toBeVisible({ timeout: 30_000 });
+  await expect
+    .poll(() => vignette.evaluate((img) => (img as HTMLImageElement).naturalWidth))
+    .toBeGreaterThan(0);
 });

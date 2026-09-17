@@ -36,7 +36,7 @@ les fichiers qui en dérivent conservent son copyright (convention REUSE / SPDX)
 | Itinéraires techniques : génération des tâches et **recalage** quand les dates de la série bougent                | ✅   |
 | Assolement : arbre jardins → planches (`ltree`), placement, emplacements disponibles, contrôle des rotations      | ✅   |
 | Commandes de semences et de plants, export CSV                                                                    | ✅   |
-| Récoltes, notes, photos (réduites, réorientées, purgées de leurs métadonnées)                                     | ✅   |
+| Récoltes, notes, photos (réduites au navigateur **et** au serveur, purgées de leurs métadonnées)                  | ✅   |
 | Statistiques : rendements prévu/réalisé, temps de travail, avancement                                             | ✅   |
 | PWA : installation, cache des lectures, file d'attente des saisies hors ligne                                     | ✅   |
 | Interface fr/en, mode sombre, cibles tactiles ≥ 44 px, feuilles d'impression                                      | ✅   |
@@ -356,6 +356,17 @@ ont besoin d'une réponse du serveur (identifiants, contrôles de rotation).
 
 ### Photos : normalisées à l'arrivée, puis rangées
 
+La photo est réduite **deux fois, pour deux raisons différentes**. Dans le navigateur
+d'abord (`apps/web/src/lib/image.ts`), parce qu'au champ c'est le **transfert** qui coûte :
+sur un partage de connexion qui hoquette, envoyer 6 Mo prend une minute et échoue souvent,
+en envoyer 400 Ko passe. Puis sur le serveur, parce qu'une API publique doit se protéger de
+ce qu'on lui envoie — et parce que le navigateur ne sait pas toujours faire.
+
+Côté navigateur, rien n'est promis : sans `createImageBitmap`, sur une image que le
+décodeur refuse, ou si le réencodage alourdit le fichier — ce qui arrive aux captures
+d'écran, le JPEG ne battant pas le PNG sur de grands aplats —, c'est l'original qui part.
+Une photo un peu lourde vaut mieux qu'une photo perdue.
+
 Une photo prise au champ pèse 4 à 8 Mo pour 4 000 pixels de large, porte son orientation
 dans une étiquette EXIF plutôt que dans ses pixels, et emporte les **coordonnées GPS de la
 parcelle**. Les trois posent problème, et `apps/api/src/images.ts` les règle en une passe :
@@ -463,11 +474,12 @@ fichier Elixir dont la formule est tirée.
 | Niveau       | Où                                | Contenu                                                                                                                                                                                                                                                                             |
 | ------------ | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Unitaire     | `packages/core/src/*.test.ts`     | 99 tests : dates et semaines ISO, chaîne des dates d'une série, semences et plaques, **matrice des permissions**, itinéraires techniques, disponibilité des planches, rotations, rendements, commandes, CSV, montants                                                               |
+| Unitaire     | `apps/web/src/lib/image.test.ts`  | compression avant envoi : dimensions visées, résultat gardé seulement s'il allège, nom du fichier, repli sur l'original quand le navigateur ne sait pas faire                                                                                                                       |
 | Unitaire     | `apps/web/src/lib/outbox.test.ts` | file d'attente hors ligne : ordre, rejeu, abandon d'une saisie refusée, reprise après panne                                                                                                                                                                                         |
 | Unitaire     | `apps/api/src/mail.test.ts`       | file des courriels : mise en file plutôt qu'envoi, repli en direct si Redis manque, livraison par le worker, échec relancé pour que la file réessaie                                                                                                                                |
 | Unitaire     | `apps/api/src/images.test.ts`     | photos : réduction, orientation EXIF appliquée, métadonnées GPS retirées, réencodage, contenu illisible refusé ; choix du stockage et garde-fou du dossier local                                                                                                                    |
 | Intégration  | `apps/api/src/api.test.ts`        | 41 tests sur une vraie base : inscription, **courriels transactionnels**, **rôles et permissions**, **isolation RLS**, trigger `ltree`, filtres, lot, duplication, rotations, génération et recalage des tâches, commandes CSV, statistiques, export, **type servi pour une photo** |
-| Bout en bout | `e2e/parcours.spec.ts`            | 4 parcours joués au **smartphone** et au **bureau** sur le build de production, vignette réellement décodée comprise                                                                                                                                                                |
+| Bout en bout | `e2e/parcours.spec.ts`            | 5 parcours joués au **smartphone** et au **bureau** sur le build de production : vignette réellement décodée, et photo de 14 Mo que seule la compression du navigateur fait passer                                                                                                  |
 
 ```bash
 npm test          # unitaires + intégration (PostgreSQL requis)
@@ -590,9 +602,6 @@ en SVG et en CSS : aucune bibliothèque de visualisation n'est téléchargée.
 - **Tâches de fond** : la file des courriels tourne (BullMQ + Redis, worker distinct) ;
   restent à y faire passer les exports volumineux et la régénération massive des tâches.
   `apps/api/src/queue.ts` accueille les files suivantes.
-- **Compression côté client** (§7.3 du brief) : la photo est réduite à l'arrivée, donc le
-  téléphone envoie encore l'original. Au champ, sur un réseau qui hoquette, c'est le
-  transfert qui coûte, pas le stockage.
 - **TOTP**, abonnements Paddle, centres de formation et fermes d'apprenants : tables et
   relations présentes, logique à écrire.
 - **Glisser-déposer** de l'assolement sur PC : le placement se fait aujourd'hui par la liste
