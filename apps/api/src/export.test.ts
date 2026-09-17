@@ -54,6 +54,13 @@ function entries(payload: Buffer): Record<string, string> {
   return Object.fromEntries(Object.entries(files).map(([name, data]) => [name, strFromU8(data)]));
 }
 
+/** Lit un fichier de l'archive, en disant lequel manque plutôt que d'échouer plus loin. */
+function fichier(files: Record<string, string>, name: string): string {
+  const found = files[name];
+  if (found === undefined) throw new Error(`${name} absent de l’archive`);
+  return found;
+}
+
 /** Lit un CSV de l'archive en colonnes nommées. Aucun champ de l'export ne contient de
  *  « ; » ni de retour ligne, donc une découpe simple suffit ici. */
 function table(csv: string): Record<string, string>[] {
@@ -61,7 +68,7 @@ function table(csv: string): Record<string, string>[] {
     .replace(/^\ufeff/, '')
     .trimEnd()
     .split('\r\n');
-  const headers = lines[0].split(';');
+  const headers = (lines[0] ?? '').split(';');
   return lines.slice(1).map((line) => {
     const cells = line.split(';');
     return Object.fromEntries(headers.map((header, index) => [header, cells[index] ?? '']));
@@ -118,13 +125,13 @@ describe('export complet de la ferme', () => {
     expect(Object.keys(files)).toContain('LISEZMOI.txt');
 
     // Les unités sont indéchiffrables sans la notice : 30000 est une longueur en mm.
-    expect(files['LISEZMOI.txt']).toContain('millimètres');
-    expect(files['LISEZMOI.txt']).toContain('secondes');
-    expect(files['series.csv']).toContain('30000');
+    expect(fichier(files, 'LISEZMOI.txt')).toContain('millimètres');
+    expect(fichier(files, 'LISEZMOI.txt')).toContain('secondes');
+    expect(fichier(files, 'series.csv')).toContain('30000');
 
     // Une table vide garde son en-tête, pour dire qu'elle existe et qu'elle est vide.
-    expect(files['invitations.csv'].trim().split('\r\n')).toHaveLength(1);
-    expect(files['invitations.csv']).toContain('email');
+    expect(fichier(files, 'invitations.csv').trim().split('\r\n')).toHaveLength(1);
+    expect(fichier(files, 'invitations.csv')).toContain('email');
   });
 
   it('ne laisse filtrer aucune ligne d’une autre ferme', async () => {
@@ -157,7 +164,7 @@ describe('export complet de la ferme', () => {
 
     expect(Object.values(files).join('\n')).not.toContain('Ferme Voisine');
     expect(Object.values(files).join('\n')).not.toContain('voisine@example.org');
-    expect(files['series.csv'], 'la longueur de la série voisine').not.toContain('77777');
+    expect(fichier(files, 'series.csv'), 'la longueur de la série voisine').not.toContain('77777');
 
     // Toute table qui cite une série ne doit citer que les nôtres. C'est ce contrôle,
     // colonne par colonne, qui couvre les tables de liaison sans `farm_id`.
@@ -165,7 +172,8 @@ describe('export complet de la ferme', () => {
     for (const [name, csv] of Object.entries(files)) {
       if (!name.endsWith('.csv')) continue;
       const rows = table(csv);
-      if (rows.length === 0 || !('plantingId' in rows[0])) continue;
+      const premiere = rows[0];
+      if (premiere === undefined || !('plantingId' in premiere)) continue;
       verifiees += 1;
       for (const row of rows) {
         expect(row.plantingId, `${name} cite une série d’une autre ferme`).not.toBe(
@@ -178,7 +186,7 @@ describe('export complet de la ferme', () => {
 
     // Et nos propres lignes filles sont bien là : sans quoi l'essai passerait aussi
     // avec un export vide.
-    expect(table(files['series_dates.csv']).length).toBeGreaterThan(0);
+    expect(table(fichier(files, 'series_dates.csv')).length).toBeGreaterThan(0);
   });
 
   it('réserve l’export au propriétaire et au chef de culture', async () => {

@@ -11,20 +11,22 @@ import { useTranslation } from 'react-i18next';
 import { useLocale } from '../lib/locale.js';
 import { today } from '@sillon/core';
 import { useCurrentSession, useFarmId } from '../lib/session.js';
-import { useAssignmentPlan, useFarmMutation, useLocations } from '../lib/queries.js';
-import { api } from '../lib/api.js';
-import { BedPlan } from '../components/BedPlan.js';
+import { useAssignmentPlan, useFarmMutation, useLocations, usePlantings } from '../lib/queries.js';
+import { api, ApiError } from '../lib/api.js';
+import { BedPlan, type BedOccupation, type PlacementEnCours } from '../components/BedPlan.js';
 import {
   Drawer,
   EmptyState,
+  ErrorNotice,
   Field,
   Loading,
   PageHeader,
   Select,
   Toggle,
 } from '../components/ui.js';
-import { parseLengthMeters } from '@sillon/core';
+import { moveAssignment, parseLengthMeters, placeWholeOnBed } from '@sillon/core';
 import { formatDate, formatLength } from '../lib/format.js';
+import type { Planting } from '../lib/types.js';
 
 export function BedsPage() {
   const { t } = useTranslation();
@@ -38,6 +40,8 @@ export function BedsPage() {
   const [to, setTo] = useState(`${year}-12-31`);
   const [creating, setCreating] = useState(false);
   const [historyFor, setHistoryFor] = useState<number | null>(null);
+  const [placing, setPlacing] = useState<PlacementEnCours | null>(null);
+  const [placementError, setPlacementError] = useState<string | null>(null);
   const [draft, setDraft] = useState({
     name: '',
     parentId: '',
@@ -49,10 +53,82 @@ export function BedsPage() {
   const locations = useLocations(farmId);
   const plan = useAssignmentPlan(farmId, from, to);
   const history = useHistory(farmId, historyFor);
+  // Les séries de la saison qui n'occupent encore aucune planche : la matière du panneau
+  // « à placer ». Le filtre `placed` existe déjà côté API.
+  const unplaced = usePlantings(farmId, { year, placed: false });
+
+  const place = useFarmMutation(
+    farmId,
+    ({
+      plantingId,
+      assignments,
+      force,
+    }: {
+      plantingId: number;
+      assignments: { locationId: number; length: number }[];
+      force: boolean;
+    }) =>
+      api(`/api/farms/${farmId}/plantings/${plantingId}/assignments`, {
+        method: 'PUT',
+        body: { assignments, force },
+      }),
+  );
 
   const createLocation = useFarmMutation(farmId, (body: Record<string, unknown>) =>
     api(`/api/farms/${farmId}/locations`, { method: 'POST', body }),
   );
+
+  /**
+   * Dépôt d'une série sur une planche, quel que soit le geste qui l'a amenée là. Le
+   * placement remplace ce que la série occupait ailleurs quand elle vient du panneau ;
+   * quand un tronçon a été saisi sur une planche, seul ce tronçon bouge.
+   */
+  const deposer = async (locationId: number) => {
+    if (!placing) return;
+    const bed = (locations.data ?? []).find((location) => location.id === locationId);
+    if (!bed) return;
+
+    // Deux gestes, deux sources. Une série venue du panneau n'occupe rien : c'est sa
+    // longueur de planche qu'il faut placer. Un tronçon saisi sur une planche connaît déjà
+    // sa longueur, et seul lui doit bouger — d'où la liste complète des tronçons.
+    const { assignments, remaining } =
+      placing.sourceLocationId === null
+        ? placeWholeOnBed(
+            bed,
+            (unplaced.data ?? []).find((serie) => serie.id === placing.plantingId)?.length ?? 0,
+          )
+        : moveAssignment(
+            (plan.data?.occupations ?? [])
+              .filter((occupation: BedOccupation) => occupation.plantingId === placing.plantingId)
+              .map((occupation: BedOccupation) => ({
+                locationId: occupation.locationId,
+                length: occupation.length,
+              })),
+            placing.sourceLocationId,
+            bed,
+          );
+
+    setPlacementError(null);
+    try {
+      await place.mutateAsync({ plantingId: placing.plantingId, assignments, force: false });
+    } catch (cause) {
+      // La rotation est la seule alerte bloquante : l'API refuse, et c'est à la personne
+      // de trancher. Tout le reste (dépassement de longueur) passe avec un avertissement.
+      const rotation =
+        cause instanceof ApiError && /rotation/i.test(cause.message)
+          ? window.confirm(t('beds.rotationConfirm'))
+          : false;
+      if (!rotation) {
+        setPlacementError(cause instanceof ApiError ? cause.message : String(cause));
+        return;
+      }
+      await place.mutateAsync({ plantingId: placing.plantingId, assignments, force: true });
+    }
+
+    setPlacing(null);
+    if (remaining > 0)
+      setPlacementError(t('beds.overflow', { length: formatLength(remaining, locale) }));
+  };
 
   if (locations.isLoading) return <Loading />;
 
@@ -90,6 +166,26 @@ export function BedsPage() {
         </label>
       </div>
 
+      {canEdit ? (
+        <ToPlacePanel
+          plantings={unplaced.data ?? []}
+          placing={placing}
+          onPick={(planting) =>
+            setPlacing(
+              placing?.plantingId === planting.id && placing.sourceLocationId === null
+                ? null
+                : {
+                    plantingId: planting.id,
+                    name: planting.crop.name,
+                    sourceLocationId: null,
+                  },
+            )
+          }
+          onCancel={() => setPlacing(null)}
+          error={placementError}
+        />
+      ) : null}
+
       {all.length === 0 ? (
         <EmptyState message={t('beds.noBeds')} />
       ) : (
@@ -100,6 +196,18 @@ export function BedsPage() {
           onSelectPlanting={(plantingId) =>
             void navigate({ to: '/plan/$plantingId', params: { plantingId: String(plantingId) } })
           }
+          placing={canEdit ? placing : null}
+          onGrabPlaced={
+            canEdit
+              ? (occupation: BedOccupation) =>
+                  setPlacing({
+                    plantingId: occupation.plantingId,
+                    name: occupation.cropName ?? t('beds.bed'),
+                    sourceLocationId: occupation.locationId,
+                  })
+              : undefined
+          }
+          onDropOnBed={canEdit ? (locationId) => void deposer(locationId) : undefined}
         />
       )}
 
@@ -215,4 +323,82 @@ function useHistory(farmId: number, locationId: number | null) {
     queryFn: () => api<HistoryEntry[]>(`/api/farms/${farmId}/locations/${locationId}/history`),
     enabled: locationId !== null,
   });
+}
+
+/**
+ * Panneau des séries qui n'occupent encore aucune planche. C'est le point de départ des
+ * deux gestes : on fait glisser une puce sur une planche, ou on la touche puis on touche
+ * « Placer ici ». La puce reste un `<button>` — au clavier, c'est le seul chemin, et le
+ * glisser-déposer natif HTML ignore le toucher de toute façon.
+ */
+function ToPlacePanel({
+  plantings,
+  placing,
+  onPick,
+  onCancel,
+  error,
+}: {
+  plantings: Planting[];
+  placing: PlacementEnCours | null;
+  onPick: (planting: Planting) => void;
+  onCancel: () => void;
+  error: string | null;
+}) {
+  const { t } = useTranslation();
+
+  return (
+    <section className="no-print mb-4">
+      <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
+        <h2 className="text-sm font-semibold">{t('beds.toPlace')}</h2>
+        {placing ? (
+          <button type="button" className="btn-ghost text-xs" onClick={onCancel}>
+            {t('beds.stopPlacing')}
+          </button>
+        ) : null}
+      </div>
+
+      {placing ? (
+        <p role="status" className="mb-2 text-xs text-sillon-800 dark:text-sillon-200">
+          {t('beds.placing', { name: placing.name })}
+        </p>
+      ) : (
+        <p className="mb-2 text-xs text-earth-700 dark:text-earth-200">{t('beds.placeHint')}</p>
+      )}
+
+      {error ? <ErrorNotice error={error} /> : null}
+
+      {plantings.length === 0 ? (
+        <p className="text-xs text-earth-700 dark:text-earth-200">{t('beds.toPlaceNone')}</p>
+      ) : (
+        <ul className="flex flex-wrap gap-2">
+          {plantings.map((planting) => {
+            const choisie =
+              placing?.plantingId === planting.id && placing.sourceLocationId === null;
+            return (
+              <li key={planting.id}>
+                <button
+                  type="button"
+                  draggable
+                  onDragStart={() => {
+                    if (!choisie) onPick(planting);
+                  }}
+                  onClick={() => onPick(planting)}
+                  aria-pressed={choisie}
+                  className={`chip cursor-grab ${
+                    choisie
+                      ? 'bg-sillon-600 text-white'
+                      : 'bg-earth-100 text-earth-900 dark:bg-earth-700 dark:text-earth-50'
+                  }`}
+                  style={choisie ? undefined : { borderLeft: `4px solid ${planting.crop.color}` }}
+                >
+                  {planting.crop.name}
+                  {planting.variety ? ` · ${planting.variety.name}` : ''}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </section>
+  );
 }

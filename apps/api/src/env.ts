@@ -28,6 +28,38 @@ const EnvSchema = z.object({
   APP_URL: z.string().default('http://localhost:5173'),
   /** Validité des liens de confirmation et de réinitialisation, en heures. */
   TOKEN_HOURS: z.coerce.number().int().positive().default(24),
+
+  /**
+   * Redis des files de fond, par exemple `redis://localhost:6379`. Absent, les courriels
+   * partent dans la requête qui les déclenche : pratique en développement, à éviter en
+   * production où un serveur SMTP lent se paie sur le temps de réponse.
+   */
+  REDIS_URL: z.string().min(1).optional(),
+  /** Courriels traités de front par le worker. Un SMTP domestique n'aime pas les rafales. */
+  MAIL_CONCURRENCY: z.coerce.number().int().positive().default(4),
+
+  /**
+   * Dossier des photos quand aucun stockage objet n'est configuré. Relatif au processus,
+   * donc à préciser dès qu'on dépasse le développement.
+   */
+  UPLOAD_DIR: z.string().min(1).optional(),
+  /**
+   * Stockage objet des photos. `S3_BUCKET` commande : sans lui, les photos restent sur
+   * disque. Le brief veut un hébergement européen, donc un service compatible S3
+   * (Scaleway, OVH, Hetzner) plutôt qu'AWS — d'où `S3_ENDPOINT`.
+   */
+  S3_BUCKET: z.string().min(1).optional(),
+  S3_ENDPOINT: z.string().min(1).optional(),
+  S3_REGION: z.string().default('fr-par'),
+  S3_ACCESS_KEY_ID: z.string().min(1).optional(),
+  S3_SECRET_ACCESS_KEY: z.string().min(1).optional(),
+  /** Préfixe des clés, pour partager un seau entre plusieurs déploiements. */
+  S3_PREFIX: z.string().min(1).optional(),
+  /** Voir `S3Storage` : MinIO et plusieurs services européens exigent la forme chemin. */
+  S3_FORCE_PATH_STYLE: z
+    .string()
+    .default('true')
+    .transform((value) => value === 'true'),
 });
 
 export type Env = z.infer<typeof EnvSchema> & { corsOrigins: string[] };

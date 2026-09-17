@@ -7,6 +7,7 @@
 import { readFile } from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
 import { strFromU8, unzipSync } from 'fflate';
+import { grandePhotoPng } from './image-fixture.js';
 
 const password = 'graines-de-courgette-2026';
 
@@ -143,13 +144,111 @@ test('écrit une note avec photo et la retrouve au journal', async ({ page }, te
   const note = page.getByRole('article').filter({ hasText: 'Limaces sur la planche du fond' });
   await expect(note).toBeVisible();
   // La photo est bien rattachée à la note enregistrée, pas seulement au formulaire.
-  await expect(note.getByRole('img', { name: 'limace.png' })).toBeVisible();
+  const vignette = note.getByRole('img', { name: 'limace.png' });
+  await expect(vignette).toBeVisible();
+  // « Visible » ne dit rien du décodage : une image que le navigateur refuse d'afficher
+  // occupe quand même sa place. C'est `naturalWidth` qui tranche — et c'est ce contrôle
+  // qui manquait quand la route servait les photos en `application/octet-stream`, type
+  // qu'interdit `X-Content-Type-Options: nosniff`.
+  await expect
+    .poll(() => vignette.evaluate((img) => (img as HTMLImageElement).naturalWidth))
+    .toBeGreaterThan(0);
 
   // Archivée, elle quitte le journal courant et reparaît sous le filtre.
   await note.getByRole('button', { name: 'Archiver' }).click();
   await expect(page.getByText('Aucune note pour l’instant')).toBeVisible();
   await page.getByLabel('Voir les notes archivées').check();
   await expect(page.getByText('Limaces sur la planche du fond')).toBeVisible();
+});
+
+test('compresse une grande photo avant de l’envoyer', async ({ page }, testInfo) => {
+  const email = uniqueEmail(`compression-${testInfo.project.name}`);
+
+  await page.goto('/connexion');
+  await page.getByRole('button', { name: 'Pas encore de compte ?' }).click();
+  await page.getByLabel('Adresse électronique').fill(email);
+  await page.getByLabel('Mot de passe').fill(password);
+  await page.getByRole('button', { name: 'Créer un compte', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Tableau de bord' })).toBeVisible();
+
+  const more = page.getByRole('button', { name: 'Plus' });
+  if (await more.isVisible()) await more.click();
+  await page.getByRole('link', { name: 'Notes' }).first().click();
+  await expect(page.getByRole('heading', { name: 'Notes', level: 1 })).toBeVisible();
+
+  // 2600 × 1800 bruités, soit 14 Mo : au-delà de ce que l'API accepte. L'envoi ne peut
+  // donc aboutir que si le navigateur a réduit la photo avant de la transmettre.
+  await page.getByLabel('Ajouter une photo').setInputFiles({
+    name: 'limace-hd.png',
+    mimeType: 'image/png',
+    buffer: grandePhotoPng(),
+  });
+
+  // Le nom le dit : `.png` à l'entrée, `.jpg` enregistré. C'est la trace visible de la
+  // compression — sans elle, la vignette porterait encore le nom d'origine.
+  const vignette = page.getByRole('img', { name: 'limace-hd.jpg' });
+  await expect(vignette).toBeVisible({ timeout: 30_000 });
+  await expect
+    .poll(() => vignette.evaluate((img) => (img as HTMLImageElement).naturalWidth))
+    .toBeGreaterThan(0);
+});
+
+test('place une série sur une planche, au doigt comme à la souris', async ({ page }, testInfo) => {
+  const email = uniqueEmail(`assolement-${testInfo.project.name}`);
+
+  await test.step('créer un compte, une planche et une série', async () => {
+    await page.goto('/connexion');
+    await page.getByRole('button', { name: 'Pas encore de compte ?' }).click();
+    await page.getByLabel('Adresse électronique').fill(email);
+    await page.getByLabel('Mot de passe').fill(password);
+    await page.getByLabel('Nom de la ferme').fill('Ferme de l’assolement');
+    await page.getByRole('button', { name: 'Créer un compte', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Tableau de bord' })).toBeVisible();
+
+    const more = page.getByRole('button', { name: 'Plus' });
+    if (await more.isVisible()) await more.click();
+    await page.getByRole('link', { name: 'Assolement' }).first().click();
+    await page.getByRole('button', { name: 'Nouvel emplacement' }).click();
+    await page.getByLabel('Nom').fill('Jardin du bas');
+    await page.getByRole('button', { name: 'Enregistrer' }).click();
+
+    await page.getByRole('button', { name: 'Nouvel emplacement' }).click();
+    await page.getByLabel('Nom').fill('Planche A1');
+    await page.getByLabel('Emplacement parent').selectOption({ label: 'Jardin du bas' });
+    await page.getByRole('button', { name: 'Enregistrer' }).click();
+    await expect(page.getByRole('button', { name: 'Planche A1' })).toBeVisible();
+
+    await page.getByRole('link', { name: 'Plan de culture' }).first().click();
+    await page.getByRole('link', { name: 'Nouvelle série' }).first().click();
+    await page.getByLabel('Espèce', { exact: true }).selectOption({ label: 'Tomate' });
+    await page.getByLabel('Longueur de planche (m)').fill('20');
+    await page.getByLabel('Date de semis').fill('S10');
+    await page.getByRole('button', { name: 'Enregistrer' }).click();
+    await expect(page.getByRole('heading', { name: 'Modifier la série' })).toBeVisible();
+  });
+
+  await test.step('désigner la série puis la planche', async () => {
+    const more = page.getByRole('button', { name: 'Plus' });
+    if (await more.isVisible()) await more.click();
+    await page.getByRole('link', { name: 'Assolement' }).first().click();
+
+    // La série n'occupe encore aucune planche : elle attend dans le panneau.
+    const puce = page.getByRole('button', { name: /Tomate/ }).first();
+    await expect(puce).toBeVisible();
+
+    // Le geste tactile — et le seul praticable au clavier : on désigne, puis on place.
+    await puce.click();
+    await expect(puce).toHaveAttribute('aria-pressed', 'true');
+    // Le texte plutôt que le rôle : la barre d'application porte déjà ses propres
+    // `role="status"` (hors ligne, adresse non confirmée), et le mode strict refuserait.
+    await expect(page.getByText('Placement de Tomate')).toBeVisible();
+
+    await page.getByRole('button', { name: 'Placer ici' }).first().click();
+
+    // La barre colorée de la planche porte désormais la série, et le panneau s'est vidé.
+    await expect(page.getByText('Toutes les séries de la période sont placées.')).toBeVisible();
+    await expect(page.getByRole('button', { name: /^Tomate$/ })).toBeVisible();
+  });
 });
 
 test('exporte toutes les données de la ferme en une archive', async ({ page }, testInfo) => {

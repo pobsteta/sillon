@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.3.0](https://github.com/pobsteta/sillon/compare/v0.2.1...v0.3.0) (2026-09-17)
+
+
+### Fonctionnalités
+
+* **api:** envoie les courriels d'invitation, de confirmation et de mot de passe oublié ([8a49735](https://github.com/pobsteta/sillon/commit/8a49735482f71ea0d1289a00daa882b5108d1d3e))
+* **web:** écrans de mot de passe oublié et de confirmation d'adresse ([0c77d94](https://github.com/pobsteta/sillon/commit/0c77d94c9d7c4295c9efc7b0e284353b8c20d3fb))
+* **web:** journal de notes et photos ([15f66c2](https://github.com/pobsteta/sillon/commit/15f66c296ddbe8d7b31fba438edd8389e3a629a7))
+
+
+### Corrections
+
+* **api:** ouvre le téléversement de photos au saisonnier ([f04366f](https://github.com/pobsteta/sillon/commit/f04366fbedc2597a5060577e928f9975573c6206))
+* **ci:** écrit la configuration ESLint qui manquait depuis le début ([62432c3](https://github.com/pobsteta/sillon/commit/62432c3f9d598eb67b37d4e87c349df232399240))
+
+
+### Documentation
+
+* retire un doublon de la rubrique Documentation de la 0.2.0 ([7af063e](https://github.com/pobsteta/sillon/commit/7af063e999bca3cfbbf7b09aa8be76697c89dd67))
+
 ## [0.2.1](https://github.com/pobsteta/sillon/compare/v0.2.0...v0.2.1) (2026-09-16)
 
 

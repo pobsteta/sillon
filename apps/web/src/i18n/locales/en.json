@@ -233,7 +233,16 @@
     "forcePlace": "Place anyway",
     "history": "Bed history",
     "plan": "Bed plan",
-    "noBeds": "No location yet. Create a garden, then beds."
+    "noBeds": "No location yet. Create a garden, then beds.",
+    "toPlace": "To place",
+    "toPlaceNone": "Every planting in this period is placed.",
+    "placeHint": "Drag a planting onto a bed, or tap it then tap “Place here”.",
+    "placeHere": "Place here",
+    "placing": "Placing {{name}} — pick a bed",
+    "stopPlacing": "Cancel placing",
+    "grabSegment": "Move {{name}} to another bed",
+    "overflow": "{{length}} did not fit on this bed: place the rest elsewhere.",
+    "rotationConfirm": "Rotation is not respected on this bed. Place anyway?"
   },
   "orders": {
     "title": "Orders",

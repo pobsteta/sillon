@@ -34,16 +34,17 @@ les fichiers qui en dérivent conservent son copyright (convention REUSE / SPDX)
 | Calcul des semences, des alvéoles, des plaques de pépinière, du rendement et du produit escomptés                 | ✅   |
 | Tâches : feuille de la semaine, retards, validation en deux touches, impression                                   | ✅   |
 | Itinéraires techniques : génération des tâches et **recalage** quand les dates de la série bougent                | ✅   |
-| Assolement : arbre jardins → planches (`ltree`), placement, emplacements disponibles, contrôle des rotations      | ✅   |
+| Assolement : arbre jardins → planches (`ltree`), placement par glisser-déposer ou au doigt, rotations             | ✅   |
 | Commandes de semences et de plants, export CSV                                                                    | ✅   |
-| Récoltes, notes, photos                                                                                           | ✅   |
+| Récoltes, notes, photos (réduites au navigateur **et** au serveur, purgées de leurs métadonnées)                  | ✅   |
 | Statistiques : rendements prévu/réalisé, temps de travail, avancement                                             | ✅   |
 | PWA : installation, cache des lectures, file d'attente des saisies hors ligne                                     | ✅   |
 | Interface fr/en, mode sombre, cibles tactiles ≥ 44 px, feuilles d'impression                                      | ✅   |
 | Export complet des données de la ferme (RGPD, auto-service)                                                       | ✅   |
 | Abonnements, centres de formation, TOTP : **tables présentes, interface à écrire**                                | ⏳   |
 | Courriels : invitation, confirmation d'adresse, mot de passe oublié                                               | ✅   |
-| Tâches de fond BullMQ, stockage S3                                                                                | ⏳   |
+| Tâches de fond : file des courriels (BullMQ + Redis), worker distinct                                             | ✅   |
+| Stockage objet compatible S3 (Scaleway, OVH, Hetzner) ou dossier local                                            | ✅   |
 
 Les points marqués ⏳ ont leur place dans le schéma et dans l'architecture, mais pas encore
 d'implémentation : voir « Ce qui reste à faire ».
@@ -174,12 +175,45 @@ En production, `SMTP_URL` bascule sur un vrai serveur. S'il est absent, l'API le
 démarrage — une invitation qui ne part pas est un défaut silencieux, et c'est bien le
 genre de chose qu'on découvre trop tard.
 
-| Variable      | Rôle                                                      | Défaut                               |
-| ------------- | --------------------------------------------------------- | ------------------------------------ |
-| `SMTP_URL`    | `smtps://utilisateur:motdepasse@serveur:465`              | _absent_ → console                   |
-| `MAIL_FROM`   | Expéditeur                                                | `Sillon <ne-pas-repondre@localhost>` |
-| `APP_URL`     | Adresse publique de l'interface, base des liens envoyés   | `http://localhost:5173`              |
-| `TOKEN_HOURS` | Validité des liens de confirmation et de réinitialisation | `24`                                 |
+**Avec `REDIS_URL`, les envois sortent du chemin de la requête.** Le message part dans une
+file BullMQ et un worker distinct s'en charge : un serveur SMTP lent ne fait plus attendre
+la personne qui s'inscrit ou qui invite un collègue. Les routes n'ont pas changé — elles
+appellent toujours `app.mailer.send()`, c'est le transport qui est enveloppé.
+
+```bash
+npm run dev -w @sillon/api          # l'API met en file
+npm run dev:worker -w @sillon/api   # le worker la vide
+```
+
+Sous `docker compose`, le service `worker` fait ce travail ; il partage l'image de l'API.
+**Sans worker, les courriels s'empilent dans Redis sans jamais partir.** Avec une file, c'est
+lui qui parle à SMTP : `SMTP_URL` et `MAIL_FROM` doivent être donnés **au worker**, et la
+sortie du transport console s'y lit (`docker compose logs worker`). L'API garde ces variables
+pour le seul cas où elle doit envoyer elle-même, Redis étant injoignable ; `APP_URL`, qui
+fabrique les liens, reste de son côté.
+
+Chaque envoi est retenté cinq fois, à intervalle exponentiel à partir de dix secondes, soit
+un peu plus de deux minutes et demie — de quoi traverser le redémarrage d'un serveur SMTP.
+Les travaux réussis disparaissent au bout d'une heure, les échoués restent une semaine :
+c'est la trace qui permet de répondre à « je n'ai jamais reçu l'invitation ».
+
+Si Redis est injoignable au moment de la mise en file, l'API **envoie quand même**, en
+direct, et le journalise. Perdre une invitation serait pire que rendre la main une seconde
+plus tard. Deux garde-fous s'en chargent, et il en faut bien deux : l'API ne s'adresse pas à
+une file dont la connexion n'est pas prête — c'est le cas courant d'un Redis arrêté, et le
+seul qui garantisse l'absence de doublon — et elle borne l'attente à trois secondes pour le
+reste, car `Queue.add()` commence par attendre une connexion prête, sans échéance. La
+connexion étant par ailleurs paresseuse et ouverte en tâche de fond, l'API démarre aussi
+lorsque Redis est absent.
+
+| Variable           | Rôle                                                      | Défaut                               |
+| ------------------ | --------------------------------------------------------- | ------------------------------------ |
+| `SMTP_URL`         | `smtps://utilisateur:motdepasse@serveur:465`              | _absent_ → console                   |
+| `MAIL_FROM`        | Expéditeur                                                | `Sillon <ne-pas-repondre@localhost>` |
+| `APP_URL`          | Adresse publique de l'interface, base des liens envoyés   | `http://localhost:5173`              |
+| `TOKEN_HOURS`      | Validité des liens de confirmation et de réinitialisation | `24`                                 |
+| `REDIS_URL`        | File de fond ; absent, l'envoi se fait dans la requête    | _absent_ → envoi direct              |
+| `MAIL_CONCURRENCY` | Courriels traités de front par le worker                  | `4`                                  |
 
 Les liens sont à usage unique : le jeton est détruit dès qu'il est validé, et une nouvelle
 demande annule la précédente. Réinitialiser un mot de passe ferme toutes les sessions
@@ -231,6 +265,7 @@ Le port de l'API derrière le proxy se change avec `API_PORT` (3000 par défaut)
 | `npm run typecheck`                     | TypeScript strict sur les trois paquets                                          |
 | `npm run build`                         | Construit `@sillon/core`, l'API et l'interface                                   |
 | `npm run db:migrate:dev -w @sillon/api` | Crée une migration après modification du schéma                                  |
+| `npm run dev:worker -w @sillon/api`     | Worker des files de fond (courriels) ; exige `REDIS_URL`                         |
 
 ---
 
@@ -319,6 +354,98 @@ Deux mécanismes complémentaires :
 Les écritures structurantes (créer une série, déplacer une planche) exigent le réseau : elles
 ont besoin d'une réponse du serveur (identifiants, contrôles de rotation).
 
+### Photos : normalisées à l'arrivée, puis rangées
+
+La photo est réduite **deux fois, pour deux raisons différentes**. Dans le navigateur
+d'abord (`apps/web/src/lib/image.ts`), parce qu'au champ c'est le **transfert** qui coûte :
+sur un partage de connexion qui hoquette, envoyer 6 Mo prend une minute et échoue souvent,
+en envoyer 400 Ko passe. Puis sur le serveur, parce qu'une API publique doit se protéger de
+ce qu'on lui envoie — et parce que le navigateur ne sait pas toujours faire.
+
+Côté navigateur, rien n'est promis : sans `createImageBitmap`, sur une image que le
+décodeur refuse, ou si le réencodage alourdit le fichier — ce qui arrive aux captures
+d'écran, le JPEG ne battant pas le PNG sur de grands aplats —, c'est l'original qui part.
+Une photo un peu lourde vaut mieux qu'une photo perdue.
+
+Une photo prise au champ pèse 4 à 8 Mo pour 4 000 pixels de large, porte son orientation
+dans une étiquette EXIF plutôt que dans ses pixels, et emporte les **coordonnées GPS de la
+parcelle**. Les trois posent problème, et `apps/api/src/images.ts` les règle en une passe :
+orientation appliquée puis retirée, métadonnées non recopiées, côté long ramené à
+2 048 pixels, réencodage en JPEG. Une photo de téléphone y perd plus de la moitié de son
+poids sans rien de visible en moins — ce qui compte quand on la recharge au champ.
+
+Le format de sortie est unique, et c'est délibéré : le stockage devient homogène et le type
+servi n'est plus une devinette. Le JPEG l'emporte sur le WebP parce que le brief compte
+parmi ses utilisateurs des « appareils parfois anciens ou bas de gamme », et qu'une photo
+qu'on ne peut pas ouvrir ne vaut rien.
+
+Le type est enregistré en base et servi tel quel. Il ne l'était pas : la route répondait
+`application/octet-stream`, que `X-Content-Type-Options: nosniff` — posé par `helmet` sur
+toutes les réponses — interdit d'afficher. La vignette existait dans le code et restait
+blanche à l'écran.
+
+Les photos vont sur un stockage objet compatible S3 dès que `S3_BUCKET` est décrit, et dans
+un dossier local sinon. C'est la même interface des deux côtés : les routes ne savent pas
+laquelle elles ont sous la main.
+
+| Variable               | Rôle                                                              | Défaut                   |
+| ---------------------- | ----------------------------------------------------------------- | ------------------------ |
+| `S3_BUCKET`            | Seau du stockage objet ; absent, les photos vont sur disque       | _absent_ → dossier local |
+| `S3_ENDPOINT`          | Serveur compatible S3, hors AWS                                   | _absent_                 |
+| `S3_REGION`            | Région                                                            | `fr-par`                 |
+| `S3_ACCESS_KEY_ID`     | Clé d'accès ; absente, la chaîne d'identification habituelle joue | _absent_                 |
+| `S3_SECRET_ACCESS_KEY` | Secret associé                                                    | _absent_                 |
+| `S3_PREFIX`            | Préfixe des clés, pour partager un seau                           | _absent_                 |
+| `S3_FORCE_PATH_STYLE`  | URL en `serveur/seau/clé` plutôt qu'en sous-domaine               | `true`                   |
+| `UPLOAD_DIR`           | Dossier des photos sans stockage objet                            | `uploads/`               |
+
+L'aller-retour — dépôt, relecture, préfixe, type, suppression — a été joué contre un MinIO
+local, forme chemin comprise :
+
+```bash
+docker run -d -p 9000:9000 -e MINIO_ROOT_USER=… -e MINIO_ROOT_PASSWORD=… \
+  quay.io/minio/minio server /data
+```
+
+---
+
+### Assolement : deux gestes, un seul chemin
+
+Le brief veut le glisser-déposer au bureau (§3.3) et la désignation au doigt sur le
+téléphone (§7.2). Les deux aboutissent ici au même appel : `onDropOnBed`, déclenché aussi
+bien par le dépôt d'une puce que par le bouton « Placer ici » qui apparaît sur chaque
+planche dès qu'une série est désignée.
+
+Ce bouton n'est pas un pis-aller mobile. Le glisser-déposer natif du navigateur ignore le
+toucher, et il n'existe pas au clavier : sans lui, l'assolement ne serait utilisable qu'à la
+souris. Une puce reste donc un `<button>` porteur d'`aria-pressed`, et la planche affiche une
+cible explicite.
+
+Les règles du geste sont dans le noyau, pas dans l'écran : `placeWholeOnBed` place une série
+entière sur une planche en rabotant à sa longueur et en annonçant ce qui dépasse,
+`moveAssignment` déplace un tronçon d'une planche à l'autre en fusionnant avec ce qui s'y
+trouvait déjà — sans quoi l'assolement montrerait deux barres accolées pour une seule
+culture. Les deux sont testées sans navigateur.
+
+Le contrôle de rotation reste celui de l'API, qui refuse un placement fautif tant qu'on ne
+passe pas `force` ; l'écran repose alors la question plutôt que de décider à la place de
+qui sait ce qu'il fait.
+
+---
+
+### Files de fond : un second processus
+
+Avec `REDIS_URL`, un déploiement compte **deux processus** issus de la même image : le
+serveur web (`dist/server.js`) et le worker (`dist/worker.js`). L'un remplit les files, l'autre
+les vide. Oublier le worker ne casse rien de visible — les courriels s'accumulent simplement
+dans Redis sans jamais partir, ce qui est exactement le genre de panne qu'on découvre trois
+jours plus tard.
+
+Les deux bouts ne configurent pas Redis pareil, et c'est délibéré : côté API la mise en file
+échoue tout de suite si Redis manque, pour que l'envoi direct prenne le relais sans faire
+attendre la requête ; côté worker la connexion est patiente, parce qu'il n'a personne à faire
+patienter. `apps/api/src/queue.ts` porte le détail.
+
 ---
 
 ## Portage depuis Brinjel : ce qui a été vérifié
@@ -368,18 +495,28 @@ fichier Elixir dont la formule est tirée.
 
 ## Tests
 
-| Niveau       | Où                                | Contenu                                                                                                                                                                                                                                              |
-| ------------ | --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Unitaire     | `packages/core/src/*.test.ts`     | 99 tests : dates et semaines ISO, chaîne des dates d'une série, semences et plaques, **matrice des permissions**, itinéraires techniques, disponibilité des planches, rotations, rendements, commandes, CSV, montants                                |
-| Unitaire     | `apps/web/src/lib/outbox.test.ts` | file d'attente hors ligne : ordre, rejeu, abandon d'une saisie refusée, reprise après panne                                                                                                                                                          |
-| Intégration  | `apps/api/src/api.test.ts`        | 37 tests sur une vraie base : inscription, **courriels transactionnels**, **rôles et permissions**, **isolation RLS**, trigger `ltree`, filtres, lot, duplication, rotations, génération et recalage des tâches, commandes CSV, statistiques, export |
-| Bout en bout | `e2e/parcours.spec.ts`            | 3 parcours joués au **smartphone** et au **bureau** sur le build de production                                                                                                                                                                       |
+| Niveau       | Où                                | Contenu                                                                                                                                                                                                                                                                             |
+| ------------ | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Unitaire     | `packages/core/src/*.test.ts`     | 107 tests : dates et semaines ISO, chaîne des dates d'une série, semences et plaques, **matrice des permissions**, itinéraires techniques, disponibilité des planches, **placement et déplacement d'un tronçon**, rotations, rendements, commandes, CSV, montants                   |
+| Unitaire     | `apps/web/src/lib/image.test.ts`  | compression avant envoi : dimensions visées, résultat gardé seulement s'il allège, nom du fichier, repli sur l'original quand le navigateur ne sait pas faire                                                                                                                       |
+| Unitaire     | `apps/web/src/lib/outbox.test.ts` | file d'attente hors ligne : ordre, rejeu, abandon d'une saisie refusée, reprise après panne                                                                                                                                                                                         |
+| Unitaire     | `apps/api/src/mail.test.ts`       | file des courriels : mise en file plutôt qu'envoi, repli en direct si Redis manque, livraison par le worker, échec relancé pour que la file réessaie                                                                                                                                |
+| Unitaire     | `apps/api/src/images.test.ts`     | photos : réduction, orientation EXIF appliquée, métadonnées GPS retirées, réencodage, contenu illisible refusé ; choix du stockage et garde-fou du dossier local                                                                                                                    |
+| Intégration  | `apps/api/src/api.test.ts`        | 41 tests sur une vraie base : inscription, **courriels transactionnels**, **rôles et permissions**, **isolation RLS**, trigger `ltree`, filtres, lot, duplication, rotations, génération et recalage des tâches, commandes CSV, statistiques, export, **type servi pour une photo** |
+| Bout en bout | `e2e/parcours.spec.ts`            | 6 parcours joués au **smartphone** et au **bureau** sur le build de production : vignette réellement décodée, photo de 14 Mo que seule la compression du navigateur fait passer, série désignée puis posée sur une planche                                                          |
 
 ```bash
 npm test          # unitaires + intégration (PostgreSQL requis)
 npm run test:e2e  # Playwright ; PLAYWRIGHT_CHROMIUM_PATH permet d'utiliser un Chromium déjà installé
 npm run lint      # ESLint : peu de règles, mais qui attrapent de vraies fautes
 ```
+
+Les fichiers d'essai sont **typés comme le reste**. Ils ne l'étaient pas : le `tsconfig` de
+construction les écarte — ils n'ont rien à faire dans `dist` — et le typage suivait cette
+exclusion. Un essai pouvait donc appeler une méthode avec le mauvais nombre d'arguments
+sans que rien ne le dise avant l'exécution, ce qui est précisément arrivé en écrivant
+`images.test.ts`. `tsconfig.typecheck.json` reprend la même configuration sans rien exclure ;
+il n'a révélé aucune erreur existante, ce qui rendait la correction gratuite.
 
 Le style est l'affaire de Prettier, pas d'ESLint : la configuration ne contient aucune
 règle de mise en forme. Elle vise les fautes que le typage ne voit pas — promesse oubliée,
@@ -486,17 +623,11 @@ en SVG et en CSS : aucune bibliothèque de visualisation n'est téléchargée.
 
 ## Ce qui reste à faire
 
-- **File d'envoi** : les courriels partent aujourd'hui dans la requête qui les déclenche.
-  Un serveur SMTP lent ralentit donc l'invitation ou l'inscription. Le passage par BullMQ
-  ne demandera pas de toucher aux routes : `Mailer` est déjà une dépendance injectée.
-- **Tâches de fond** (BullMQ + Redis) : exports volumineux, envoi des courriels, régénération
-  massive des tâches. Le service Redis est déjà dans `docker-compose.yml`.
-- **Stockage objet S3** : `apps/api/src/storage.ts` définit l'interface et une implémentation
-  locale ; il reste à écrire l'implémentation S3 et le redimensionnement à l'upload.
+- **Tâches de fond** : la file des courriels tourne (BullMQ + Redis, worker distinct) ;
+  restent à y faire passer les exports volumineux et la régénération massive des tâches.
+  `apps/api/src/queue.ts` accueille les files suivantes.
 - **TOTP**, abonnements Paddle, centres de formation et fermes d'apprenants : tables et
   relations présentes, logique à écrire.
-- **Glisser-déposer** de l'assolement sur PC : le placement se fait aujourd'hui par la liste
-  des emplacements disponibles, qui fonctionne aussi au doigt.
 - **Traductions** : les fichiers `apps/web/src/i18n/locales/*.json` sont prêts pour Weblate ;
   l'espagnol et le néerlandais n'attendent qu'un fichier de plus.
 - **Supervision** : page d'état publique et Sentry.

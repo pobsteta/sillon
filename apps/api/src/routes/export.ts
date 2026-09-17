@@ -10,14 +10,13 @@ import { z } from 'zod';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import { inFarm } from '../scope.js';
 import { notFound } from '../errors.js';
-import { createStorage } from '../storage.js';
 import { EXPORT_TABLES, archiveName, readme, tableToCsv } from '../export.js';
 
 const FarmParams = z.object({ farmId: z.coerce.number().int().positive() });
 
 export async function exportRoutes(app: FastifyInstance): Promise<void> {
   const typed = app.withTypeProvider<ZodTypeProvider>();
-  const storage = createStorage();
+  const storage = app.photos;
 
   typed.get(
     '/api/farms/:farmId/export.zip',

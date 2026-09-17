@@ -5,8 +5,10 @@ import {
   availableLength,
   distributeOverBeds,
   findAvailableBeds,
+  moveAssignment,
   occupancyRate,
   peakOccupiedLength,
+  placeWholeOnBed,
   type Bed,
   type Occupation,
 } from './beds.js';
@@ -118,5 +120,99 @@ describe('taux d’occupation', () => {
       { begin: '2026-01-01', end: '2026-12-31' },
     );
     expect(rate).toBe(50);
+  });
+});
+
+describe('placement d’une série entière sur une planche', () => {
+  const planche = (id: number, bedLength: number): Bed => ({
+    id,
+    name: `Planche ${id}`,
+    bedLength,
+    bedWidth: 800,
+    greenhouse: false,
+  });
+
+  it('place la longueur demandée quand la planche suffit', () => {
+    expect(placeWholeOnBed(planche(1, 30_000), 12_000)).toEqual({
+      assignments: [{ locationId: 1, length: 12_000 }],
+      remaining: 0,
+    });
+  });
+
+  it('rabote à la planche et annonce ce qui dépasse', () => {
+    // 40 m sur une planche de 30 : on en place 30 et on dit qu'il en reste 10, plutôt que
+    // de faire disparaître le surplus.
+    expect(placeWholeOnBed(planche(1, 30_000), 40_000)).toEqual({
+      assignments: [{ locationId: 1, length: 30_000 }],
+      remaining: 10_000,
+    });
+  });
+
+  it('ne place rien sur une planche de longueur nulle', () => {
+    expect(placeWholeOnBed(planche(1, 0), 12_000)).toEqual({ assignments: [], remaining: 12_000 });
+  });
+});
+
+describe('déplacement d’un tronçon entre planches', () => {
+  const planche = (id: number, bedLength: number): Bed => ({
+    id,
+    name: `Planche ${id}`,
+    bedLength,
+    bedWidth: 800,
+    greenhouse: false,
+  });
+
+  it('déplace le tronçon saisi et laisse les autres en place', () => {
+    const avant = [
+      { locationId: 1, length: 10_000 },
+      { locationId: 2, length: 5_000 },
+    ];
+
+    const { assignments, remaining } = moveAssignment(avant, 1, planche(3, 30_000));
+
+    expect(remaining).toBe(0);
+    expect(assignments).toEqual([
+      { locationId: 2, length: 5_000 },
+      { locationId: 3, length: 10_000 },
+    ]);
+  });
+
+  it('fusionne avec le tronçon déjà posé sur la planche d’arrivée', () => {
+    // Sans fusion, l'assolement montrerait deux barres accolées pour une seule culture.
+    const avant = [
+      { locationId: 1, length: 10_000 },
+      { locationId: 2, length: 5_000 },
+    ];
+
+    const { assignments } = moveAssignment(avant, 1, planche(2, 30_000));
+
+    expect(assignments).toEqual([{ locationId: 2, length: 15_000 }]);
+  });
+
+  it('rabote à la planche d’arrivée et signale le dépassement', () => {
+    const avant = [{ locationId: 1, length: 40_000 }];
+
+    expect(moveAssignment(avant, 1, planche(2, 30_000))).toEqual({
+      assignments: [{ locationId: 2, length: 30_000 }],
+      remaining: 10_000,
+    });
+  });
+
+  it('ne change rien si l’on repose le tronçon sur sa propre planche', () => {
+    const avant = [{ locationId: 1, length: 10_000 }];
+
+    expect(moveAssignment(avant, 1, planche(1, 30_000))).toEqual({
+      assignments: avant,
+      remaining: 0,
+    });
+  });
+
+  it('ne change rien si le tronçon saisi n’existe pas', () => {
+    const avant = [{ locationId: 1, length: 10_000 }];
+
+    expect(moveAssignment(avant, 9, planche(2, 30_000))).toEqual({
+      assignments: avant,
+      remaining: 0,
+    });
   });
 });
