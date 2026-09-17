@@ -34,7 +34,7 @@ les fichiers qui en dérivent conservent son copyright (convention REUSE / SPDX)
 | Calcul des semences, des alvéoles, des plaques de pépinière, du rendement et du produit escomptés                 | ✅   |
 | Tâches : feuille de la semaine, retards, validation en deux touches, impression                                   | ✅   |
 | Itinéraires techniques : génération des tâches et **recalage** quand les dates de la série bougent                | ✅   |
-| Assolement : arbre jardins → planches (`ltree`), placement, emplacements disponibles, contrôle des rotations      | ✅   |
+| Assolement : arbre jardins → planches (`ltree`), placement par glisser-déposer ou au doigt, rotations             | ✅   |
 | Commandes de semences et de plants, export CSV                                                                    | ✅   |
 | Récoltes, notes, photos (réduites au navigateur **et** au serveur, purgées de leurs métadonnées)                  | ✅   |
 | Statistiques : rendements prévu/réalisé, temps de travail, avancement                                             | ✅   |
@@ -409,6 +409,30 @@ docker run -d -p 9000:9000 -e MINIO_ROOT_USER=… -e MINIO_ROOT_PASSWORD=… \
 
 ---
 
+### Assolement : deux gestes, un seul chemin
+
+Le brief veut le glisser-déposer au bureau (§3.3) et la désignation au doigt sur le
+téléphone (§7.2). Les deux aboutissent ici au même appel : `onDropOnBed`, déclenché aussi
+bien par le dépôt d'une puce que par le bouton « Placer ici » qui apparaît sur chaque
+planche dès qu'une série est désignée.
+
+Ce bouton n'est pas un pis-aller mobile. Le glisser-déposer natif du navigateur ignore le
+toucher, et il n'existe pas au clavier : sans lui, l'assolement ne serait utilisable qu'à la
+souris. Une puce reste donc un `<button>` porteur d'`aria-pressed`, et la planche affiche une
+cible explicite.
+
+Les règles du geste sont dans le noyau, pas dans l'écran : `placeWholeOnBed` place une série
+entière sur une planche en rabotant à sa longueur et en annonçant ce qui dépasse,
+`moveAssignment` déplace un tronçon d'une planche à l'autre en fusionnant avec ce qui s'y
+trouvait déjà — sans quoi l'assolement montrerait deux barres accolées pour une seule
+culture. Les deux sont testées sans navigateur.
+
+Le contrôle de rotation reste celui de l'API, qui refuse un placement fautif tant qu'on ne
+passe pas `force` ; l'écran repose alors la question plutôt que de décider à la place de
+qui sait ce qu'il fait.
+
+---
+
 ### Files de fond : un second processus
 
 Avec `REDIS_URL`, un déploiement compte **deux processus** issus de la même image : le
@@ -473,13 +497,13 @@ fichier Elixir dont la formule est tirée.
 
 | Niveau       | Où                                | Contenu                                                                                                                                                                                                                                                                             |
 | ------------ | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Unitaire     | `packages/core/src/*.test.ts`     | 99 tests : dates et semaines ISO, chaîne des dates d'une série, semences et plaques, **matrice des permissions**, itinéraires techniques, disponibilité des planches, rotations, rendements, commandes, CSV, montants                                                               |
+| Unitaire     | `packages/core/src/*.test.ts`     | 107 tests : dates et semaines ISO, chaîne des dates d'une série, semences et plaques, **matrice des permissions**, itinéraires techniques, disponibilité des planches, **placement et déplacement d'un tronçon**, rotations, rendements, commandes, CSV, montants                   |
 | Unitaire     | `apps/web/src/lib/image.test.ts`  | compression avant envoi : dimensions visées, résultat gardé seulement s'il allège, nom du fichier, repli sur l'original quand le navigateur ne sait pas faire                                                                                                                       |
 | Unitaire     | `apps/web/src/lib/outbox.test.ts` | file d'attente hors ligne : ordre, rejeu, abandon d'une saisie refusée, reprise après panne                                                                                                                                                                                         |
 | Unitaire     | `apps/api/src/mail.test.ts`       | file des courriels : mise en file plutôt qu'envoi, repli en direct si Redis manque, livraison par le worker, échec relancé pour que la file réessaie                                                                                                                                |
 | Unitaire     | `apps/api/src/images.test.ts`     | photos : réduction, orientation EXIF appliquée, métadonnées GPS retirées, réencodage, contenu illisible refusé ; choix du stockage et garde-fou du dossier local                                                                                                                    |
 | Intégration  | `apps/api/src/api.test.ts`        | 41 tests sur une vraie base : inscription, **courriels transactionnels**, **rôles et permissions**, **isolation RLS**, trigger `ltree`, filtres, lot, duplication, rotations, génération et recalage des tâches, commandes CSV, statistiques, export, **type servi pour une photo** |
-| Bout en bout | `e2e/parcours.spec.ts`            | 5 parcours joués au **smartphone** et au **bureau** sur le build de production : vignette réellement décodée, et photo de 14 Mo que seule la compression du navigateur fait passer                                                                                                  |
+| Bout en bout | `e2e/parcours.spec.ts`            | 6 parcours joués au **smartphone** et au **bureau** sur le build de production : vignette réellement décodée, photo de 14 Mo que seule la compression du navigateur fait passer, série désignée puis posée sur une planche                                                          |
 
 ```bash
 npm test          # unitaires + intégration (PostgreSQL requis)
@@ -604,8 +628,6 @@ en SVG et en CSS : aucune bibliothèque de visualisation n'est téléchargée.
   `apps/api/src/queue.ts` accueille les files suivantes.
 - **TOTP**, abonnements Paddle, centres de formation et fermes d'apprenants : tables et
   relations présentes, logique à écrire.
-- **Glisser-déposer** de l'assolement sur PC : le placement se fait aujourd'hui par la liste
-  des emplacements disponibles, qui fonctionne aussi au doigt.
 - **Traductions** : les fichiers `apps/web/src/i18n/locales/*.json` sont prêts pour Weblate ;
   l'espagnol et le néerlandais n'attendent qu'un fichier de plus.
 - **Supervision** : page d'état publique et Sentry.

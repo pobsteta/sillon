@@ -233,7 +233,16 @@
     "forcePlace": "Placer malgré l’alerte",
     "history": "Historique de la planche",
     "plan": "Plan d’assolement",
-    "noBeds": "Aucun emplacement. Créez un jardin puis des planches."
+    "noBeds": "Aucun emplacement. Créez un jardin puis des planches.",
+    "toPlace": "À placer",
+    "toPlaceNone": "Toutes les séries de la période sont placées.",
+    "placeHint": "Faites glisser une série sur une planche, ou touchez-la puis touchez « Placer ici ».",
+    "placeHere": "Placer ici",
+    "placing": "Placement de {{name}} — choisissez une planche",
+    "stopPlacing": "Abandonner le placement",
+    "grabSegment": "Déplacer {{name}} vers une autre planche",
+    "overflow": "{{length}} n’ont pas tenu sur la planche : à placer ailleurs.",
+    "rotationConfirm": "Rotation non respectée sur cette planche. Placer quand même ?"
   },
   "orders": {
     "title": "Commandes",

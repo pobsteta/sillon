@@ -133,3 +133,60 @@ export function occupancyRate(
   }
   return Math.round((cmDays / (bed.bedLength * totalDays)) * 100);
 }
+
+/** Une série occupe une longueur donnée sur une planche donnée. */
+export interface BedAssignment {
+  locationId: number;
+  length: number;
+}
+
+/**
+ * Placement d'une série entière sur une seule planche : le geste de l'assolement, qu'on
+ * l'ait fait glisser au bureau ou désignée au doigt. La longueur est bornée par la planche
+ * — déposer une série de 40 m sur une planche de 30 m en place 30, et le reste attend une
+ * autre planche plutôt que d'être perdu de vue.
+ *
+ * Le placement **remplace** ce que la série occupait ailleurs : c'est ce que dit le geste,
+ * et c'est déjà ce que fait le bouton « Placer » de la fiche de série.
+ */
+export function placeWholeOnBed(
+  target: Bed,
+  requiredLength: number,
+): { assignments: BedAssignment[]; remaining: number } {
+  const length = Math.max(0, Math.min(requiredLength, target.bedLength));
+  return {
+    assignments: length > 0 ? [{ locationId: target.id, length }] : [],
+    remaining: Math.max(0, requiredLength - length),
+  };
+}
+
+/**
+ * Déplacement d'un tronçon d'une planche à une autre, une série pouvant être répartie sur
+ * plusieurs. Seul le tronçon saisi bouge ; les autres restent où ils sont.
+ *
+ * Deux cas méritent d'être nommés :
+ *   * la planche d'arrivée porte déjà un tronçon de la même série — les deux fusionnent,
+ *     sans quoi on obtiendrait deux barres accolées pour une seule culture ;
+ *   * la planche d'arrivée est plus courte que le tronçon — la longueur est rabotée, et
+ *     ce qui dépasse est signalé au lieu d'être placé en douce.
+ */
+export function moveAssignment(
+  current: readonly BedAssignment[],
+  sourceLocationId: number,
+  target: Bed,
+): { assignments: BedAssignment[]; remaining: number } {
+  const deplace = current.find((assignment) => assignment.locationId === sourceLocationId);
+  if (!deplace || sourceLocationId === target.id) {
+    return { assignments: [...current], remaining: 0 };
+  }
+
+  const autres = current.filter((assignment) => assignment.locationId !== sourceLocationId);
+  const dejaSurCible = autres.find((assignment) => assignment.locationId === target.id);
+  const voulu = (dejaSurCible?.length ?? 0) + deplace.length;
+  const tenu = Math.max(0, Math.min(voulu, target.bedLength));
+
+  const assignments = autres.filter((assignment) => assignment.locationId !== target.id);
+  if (tenu > 0) assignments.push({ locationId: target.id, length: tenu });
+
+  return { assignments, remaining: voulu - tenu };
+}
