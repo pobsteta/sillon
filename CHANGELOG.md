@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.5.1](https://github.com/pobsteta/sillon/compare/v0.5.0...v0.5.1) (2026-09-17)
+
+
+### Corrections
+
+* **api:** le décalage par lot emmène les tâches avec lui ([568bf0b](https://github.com/pobsteta/sillon/commit/568bf0b15302d9ecad72b2c5ad9891ae85e21333))
+
+
+### Documentation
+
+* brief d'intégration d'un calendrier lunaire ([4833f95](https://github.com/pobsteta/sillon/commit/4833f95c7a1fe5225194e9dd08115f18a6688c8a))
+
 ## [0.5.0](https://github.com/pobsteta/sillon/compare/v0.4.0...v0.5.0) (2026-09-17)
 
 
