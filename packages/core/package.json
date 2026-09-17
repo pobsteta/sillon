@@ -1,6 +1,6 @@
 {
   "name": "@sillon/core",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Règles métier de Sillon (calculs semences, dates, rotations, assolement, statistiques)",
   "license": "AGPL-3.0-or-later",
   "type": "module",

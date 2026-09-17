@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.5.0](https://github.com/pobsteta/sillon/compare/v0.4.0...v0.5.0) (2026-09-17)
+
+
+### Fonctionnalités
+
+* **api:** second facteur par code temporaire ([a66c989](https://github.com/pobsteta/sillon/commit/a66c989697ca4b6b03831f362bc4e158a41e082c))
+* **api:** sondes de supervision et remontée des erreurs ([4110305](https://github.com/pobsteta/sillon/commit/411030531fce9eff39b16a3b47bb4bbbcc15d51e))
+
 ## [0.4.0](https://github.com/pobsteta/sillon/compare/v0.3.0...v0.4.0) (2026-09-17)
 
 
