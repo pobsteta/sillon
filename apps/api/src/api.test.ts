@@ -493,6 +493,59 @@ describe('plan de culture', () => {
     expect(contenu.rawPayload.length).toBeGreaterThan(0);
   });
 
+  it('sert la photo sous son type, et pas en flux d’octets', async () => {
+    // `helmet` pose `X-Content-Type-Options: nosniff` sur toutes les réponses. Sous cette
+    // en-tête, un navigateur refuse d'afficher une image annoncée
+    // `application/octet-stream` — ce que la route répondait, faute de connaître le type.
+    // La vignette existait dans le code et restait blanche à l'écran.
+    const guest = await memberWithRole('seasonal', 'photo-type@example.org');
+    const cookie = { cookie: guest.cookie };
+    const boundary = 'sillon-essai-multipart';
+
+    const televersement = await app.inject({
+      method: 'POST',
+      url: farmUrl('/photos'),
+      headers: { ...cookie, 'content-type': `multipart/form-data; boundary=${boundary}` },
+      payload: photoPayload(boundary),
+    });
+    expect(televersement.statusCode).toBe(201);
+    // Le PNG envoyé est réencodé : le stockage est homogène, le type n'est plus une devinette.
+    expect(televersement.json().contentType).toBe('image/jpeg');
+
+    const contenu = await app.inject({
+      method: 'GET',
+      url: farmUrl(`/photos/${televersement.json().id}/content`),
+      headers: cookie,
+    });
+    expect(contenu.headers['content-type']).toBe('image/jpeg');
+    expect(contenu.headers['x-content-type-options']).toBe('nosniff');
+  });
+
+  it('refuse un fichier qui n’est pas une image, quel que soit le type annoncé', async () => {
+    const guest = await memberWithRole('seasonal', 'photo-fausse@example.org');
+    const boundary = 'sillon-essai-multipart';
+    const corps = Buffer.concat([
+      Buffer.from(
+        `--${boundary}\r\n` +
+          'content-disposition: form-data; name="file"; filename="planche.png"\r\n' +
+          'content-type: image/png\r\n\r\n',
+      ),
+      Buffer.from('%PDF-1.7 ceci n’est pas une photo'),
+      Buffer.from(`\r\n--${boundary}--\r\n`),
+    ]);
+
+    const televersement = await app.inject({
+      method: 'POST',
+      url: farmUrl('/photos'),
+      headers: {
+        cookie: guest.cookie,
+        'content-type': `multipart/form-data; boundary=${boundary}`,
+      },
+      payload: corps,
+    });
+    expect(televersement.statusCode, 'un PDF déguisé en PNG').toBe(400);
+  });
+
   it('refuse la photo au consultant, qui ne tient pas de notes', async () => {
     // L'autre bord de la même règle : le consultant lit tout mais n'écrit aucune note.
     const guest = await memberWithRole('consultant', 'photo-consultant@example.org');

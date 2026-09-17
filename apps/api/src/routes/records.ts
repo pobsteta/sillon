@@ -13,7 +13,7 @@ import { inFarm } from '../scope.js';
 import { badRequest, notFound } from '../errors.js';
 import { assertReferences } from '../references.js';
 import { isoDate, toDbDate } from '../planting-io.js';
-import { createStorage } from '../storage.js';
+import { normalizePhoto } from '../images.js';
 
 const FarmParams = z.object({ farmId: z.coerce.number().int().positive() });
 const IdParams = FarmParams.extend({ id: z.coerce.number().int().positive() });
@@ -23,7 +23,7 @@ const ALLOWED_PHOTO_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'i
 
 export async function recordRoutes(app: FastifyInstance): Promise<void> {
   const typed = app.withTypeProvider<ZodTypeProvider>();
-  const storage = createStorage();
+  const storage = app.photos;
 
   // ─────────────────────────── Récoltes ───────────────────────────
   const harvestTags = ['récoltes'];
@@ -306,12 +306,15 @@ export async function recordRoutes(app: FastifyInstance): Promise<void> {
       if (!ALLOWED_PHOTO_TYPES.has(file.mimetype)) {
         throw badRequest(`Format d’image non accepté : ${file.mimetype}`);
       }
-      const content = await file.toBuffer();
+      // Réduite, réorientée, réencodée et débarrassée de ses métadonnées — coordonnées GPS
+      // comprises — avant d'être stockée. Le type déclaré par le navigateur n'a servi qu'au
+      // premier tri : c'est sharp qui dit si le contenu est bien une image.
+      const { content, contentType } = await normalizePhoto(await file.toBuffer());
       const uuid = randomUUID();
 
       const photo = await inFarm(request, async (db, { farmId }) => {
-        await storage.put(`${farmId}/${uuid}`, content, file.mimetype);
-        return db.photo.create({ data: { farmId, name: file.filename, uuid } });
+        await storage.put(`${farmId}/${uuid}`, content, contentType);
+        return db.photo.create({ data: { farmId, name: file.filename, uuid, contentType } });
       });
       return reply.status(201).send(photo);
     },
@@ -331,7 +334,10 @@ export async function recordRoutes(app: FastifyInstance): Promise<void> {
       });
       const content = await storage.get(`${request.params.farmId}/${photo.uuid}`);
       reply.header('cache-control', 'private, max-age=86400');
-      reply.type('application/octet-stream');
+      // Le type stocké, et non `application/octet-stream` : `helmet` pose
+      // `X-Content-Type-Options: nosniff`, sous lequel un navigateur refuse d'afficher
+      // une image annoncée comme un flux d'octets.
+      reply.type(photo.contentType);
       return reply.send(content);
     },
   );

@@ -846,12 +846,15 @@ model LocationNote {
 }
 
 model Photo {
-  id         Int      @id @default(autoincrement())
-  farmId     Int      @map("farm_id")
-  name       String
-  uuid       String // clé de l'objet sur le stockage S3
-  insertedAt DateTime @default(now()) @map("inserted_at")
-  updatedAt  DateTime @updatedAt @map("updated_at")
+  id     Int    @id @default(autoincrement())
+  farmId Int    @map("farm_id")
+  name   String
+  uuid   String // clé de l'objet sur le stockage S3
+  /// Type MIME de l'objet stocké. Servi tel quel : sans lui, la route répondait
+  /// `application/octet-stream`, que `X-Content-Type-Options: nosniff` interdit d'afficher.
+  contentType String   @map("content_type")
+  insertedAt  DateTime @default(now()) @map("inserted_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
   farm  Farm        @relation(fields: [farmId], references: [id], onDelete: Cascade)
   notes NotePhoto[]

@@ -32,11 +32,11 @@ export async function resetDatabase(): Promise<void> {
 export const mailbox = new CaptureMailer();
 
 export async function createTestApp(): Promise<FastifyInstance> {
-  // `createStorage()` lit UPLOAD_DIR au moment où les routes s'enregistrent. Sans ça, les
-  // photos des essais atterriraient dans `uploads/` à la racine du dépôt.
-  process.env.UPLOAD_DIR ??= await mkdtemp(join(tmpdir(), 'sillon-photos-'));
+  // Sans dossier explicite, les photos des essais atterriraient dans `uploads/` à la
+  // racine du dépôt.
+  const photos = await mkdtemp(join(tmpdir(), 'sillon-photos-'));
   const app = await buildApp(
-    { NODE_ENV: 'test', APP_URL: 'https://sillon.example', TOKEN_HOURS: 24 },
+    { NODE_ENV: 'test', APP_URL: 'https://sillon.example', TOKEN_HOURS: 24, UPLOAD_DIR: photos },
     { mailer: mailbox },
   );
   await app.ready();

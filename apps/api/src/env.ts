@@ -37,6 +37,29 @@ const EnvSchema = z.object({
   REDIS_URL: z.string().min(1).optional(),
   /** Courriels traités de front par le worker. Un SMTP domestique n'aime pas les rafales. */
   MAIL_CONCURRENCY: z.coerce.number().int().positive().default(4),
+
+  /**
+   * Dossier des photos quand aucun stockage objet n'est configuré. Relatif au processus,
+   * donc à préciser dès qu'on dépasse le développement.
+   */
+  UPLOAD_DIR: z.string().min(1).optional(),
+  /**
+   * Stockage objet des photos. `S3_BUCKET` commande : sans lui, les photos restent sur
+   * disque. Le brief veut un hébergement européen, donc un service compatible S3
+   * (Scaleway, OVH, Hetzner) plutôt qu'AWS — d'où `S3_ENDPOINT`.
+   */
+  S3_BUCKET: z.string().min(1).optional(),
+  S3_ENDPOINT: z.string().min(1).optional(),
+  S3_REGION: z.string().default('fr-par'),
+  S3_ACCESS_KEY_ID: z.string().min(1).optional(),
+  S3_SECRET_ACCESS_KEY: z.string().min(1).optional(),
+  /** Préfixe des clés, pour partager un seau entre plusieurs déploiements. */
+  S3_PREFIX: z.string().min(1).optional(),
+  /** Voir `S3Storage` : MinIO et plusieurs services européens exigent la forme chemin. */
+  S3_FORCE_PATH_STYLE: z
+    .string()
+    .default('true')
+    .transform((value) => value === 'true'),
 });
 
 export type Env = z.infer<typeof EnvSchema> & { corsOrigins: string[] };
