@@ -24,9 +24,15 @@ services:
       retries: 10
 
   redis:
-    # Réservé aux tâches de fond (exports, courriels, génération de tâches) — BullMQ.
+    # File des tâches de fond (BullMQ) : les courriels y passent, les exports volumineux
+    # et la régénération massive des tâches y passeront.
     image: redis:7-alpine
     ports: ['6379:6379']
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 10
 
   api:
     build:
@@ -46,6 +52,29 @@ services:
       - uploads:/data/uploads
     depends_on:
       db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker:
+    # Même image que l'API, autre commande : il vide la file au lieu de servir des requêtes.
+    # Sans lui, les courriels s'empilent dans Redis sans jamais partir.
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    command: node dist/worker.js
+    environment:
+      DATABASE_URL: postgresql://sillon_app:sillon@db:5432/sillon_dev?schema=public
+      REDIS_URL: redis://redis:6379
+      SESSION_SECRET: ${SESSION_SECRET:-changez-moi-en-production-32-caracteres}
+      NODE_ENV: production
+      UPLOAD_DIR: /data/uploads
+    volumes:
+      - uploads:/data/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
         condition: service_healthy
 
   web:
