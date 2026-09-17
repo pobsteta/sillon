@@ -22,6 +22,9 @@ import { loadEnv, type Env } from './env.js';
 import type { Mailer } from './mail.js';
 import type { PhotoStorage } from './storage.js';
 import { registerErrorHandler } from './errors.js';
+import { agreger, sonder, statutHttp } from './health.js';
+import { getPrisma } from './db.js';
+import { createProducerRedis } from './queue.js';
 import { authPlugin } from './plugins/auth.js';
 import { mailPlugin } from './plugins/mail.js';
 import { storagePlugin } from './plugins/storage.js';
@@ -103,11 +106,54 @@ export async function buildApp(
 
   app.get(
     '/health',
-    { schema: { tags: ['infrastructure'], summary: 'État du service' } },
+    { schema: { tags: ['infrastructure'], summary: 'Le processus est-il vivant ?' } },
     async () => ({
       status: 'ok',
       version: VERSION,
     }),
+  );
+
+  /**
+   * Sonde de supervision : c'est elle qu'une page d'état publique interroge. Elle touche
+   * aux dépendances, donc elle coûte — d'où deux routes plutôt qu'une, `/health` restant
+   * gratuite pour le répartiteur de charge.
+   */
+  app.get(
+    '/ready',
+    { schema: { tags: ['infrastructure'], summary: 'Le service peut-il travailler ?' } },
+    async (_request, reply) => {
+      const sondes = [
+        await sonder('postgresql', true, 2_000, () => getPrisma().$queryRaw`SELECT 1`),
+        ...(env.REDIS_URL
+          ? [
+              await sonder('redis', false, 2_000, async () => {
+                // Connexion à part, jetée aussitôt : emprunter celle de la file ferait
+                // dépendre la sonde de l'état de la file, alors qu'on veut l'inverse.
+                const connexion = createProducerRedis(env.REDIS_URL!);
+                try {
+                  await connexion.connect();
+                  await connexion.ping();
+                } finally {
+                  connexion.disconnect();
+                }
+              }),
+            ]
+          : []),
+        await sonder('stockage', false, 3_000, async () => {
+          // Une lecture d'objet absent suffit : elle prouve que le stockage répond, sans
+          // rien y écrire. C'est la panne d'identifiants ou de réseau qu'on cherche.
+          await app.photos.get('sonde-de-supervision').catch((error: unknown) => {
+            const message = error instanceof Error ? error.message : String(error);
+            // « Absent » est la bonne réponse : le stockage a parlé.
+            if (/ENOENT|NoSuchKey|NotFound|not found/i.test(message)) return;
+            throw error;
+          });
+        }),
+      ];
+
+      const etat = agreger(sondes);
+      return reply.status(statutHttp(etat)).send({ status: etat, version: VERSION, sondes });
+    },
   );
 
   await app.register(async (instance) => authRoutes(instance, { env }));

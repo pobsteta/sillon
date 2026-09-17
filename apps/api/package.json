@@ -34,6 +34,7 @@
     "@fastify/swagger-ui": "^5.2.3",
     "@node-rs/argon2": "^2.0.2",
     "@prisma/client": "6.19.3",
+    "@sentry/node": "^10.75.0",
     "@sillon/core": "*",
     "archiver": "^7.0.1",
     "bullmq": "^6.3.6",

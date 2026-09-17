@@ -44,6 +44,7 @@ les fichiers qui en dérivent conservent son copyright (convention REUSE / SPDX)
 | Abonnements, centres de formation, TOTP : **tables présentes, interface à écrire**                                | ⏳   |
 | Courriels : invitation, confirmation d'adresse, mot de passe oublié                                               | ✅   |
 | Tâches de fond : file des courriels (BullMQ + Redis), worker distinct                                             | ✅   |
+| Supervision : sondes `/health` et `/ready`, remontée des erreurs (Sentry, désactivée par défaut)                  | ✅   |
 | Stockage objet compatible S3 (Scaleway, OVH, Hetzner) ou dossier local                                            | ✅   |
 
 Les points marqués ⏳ ont leur place dans le schéma et dans l'architecture, mais pas encore
@@ -433,6 +434,59 @@ qui sait ce qu'il fait.
 
 ---
 
+### Supervision : deux sondes, et une nuance
+
+`/health` dit « ce processus est vivant » : elle ne touche à rien et répond tout de suite,
+ce qui permet à un répartiteur de charge de l'interroger plusieurs fois par minute.
+
+`/ready` dit « le service peut travailler » : elle interroge PostgreSQL, Redis et le
+stockage des photos. C'est celle qu'une page d'état publique surveille.
+
+La nuance est dans le poids des dépendances, et elle décide qui on réveille. Sans
+PostgreSQL, il n'y a pas de service : `ko`, et **503**. Sans Redis, les courriels partent
+quand même, en direct — c'est `QueuedMailer` qui s'en charge. Sans stockage objet, les
+photos ne s'affichent plus mais le plan de culture, les tâches et les récoltes continuent.
+Ces deux-là donnent `degraded` et un **200** : une astreinte mérite d'être prévenue, pas
+réveillée à trois heures pour une vignette.
+
+```json
+{
+  "status": "degraded",
+  "version": "0.4.0",
+  "sondes": [
+    { "name": "postgresql", "status": "ok", "ms": 101, "essential": true },
+    {
+      "name": "redis",
+      "status": "ko",
+      "ms": 1,
+      "essential": false,
+      "detail": "Connection is closed."
+    },
+    { "name": "stockage", "status": "ok", "ms": 1, "essential": false }
+  ]
+}
+```
+
+Chaque sonde est bornée dans le temps : une dépendance qui ne répond plus — le cas le plus
+courant, bien avant le refus franc — ferait pendre la sonde, et la page d'état n'afficherait
+plus rien. Le détail publié est réduit à la première ligne du message et écourté : la page
+est publique, et les messages des pilotes sont bavards.
+
+**Sentry** ne s'initialise qu'avec `SENTRY_DSN`. Sans lui, rien ne sort de la machine — le
+brief promet « aucun tiers analytique », et une installation auto-hébergée ne doit pas se
+mettre à parler à un service tiers parce qu'une dépendance était dans le paquet. Avec lui,
+seules les **erreurs non gérées** remontent : les 4xx sont des réponses prévues, les y
+envoyer noierait les vraies pannes. Ni adresse IP, ni cookie, ni en-tête, ni corps de
+requête — une requête de Sillon contient des rendements, des prix et des adresses.
+
+| Variable                    | Rôle                          | Défaut             |
+| --------------------------- | ----------------------------- | ------------------ |
+| `SENTRY_DSN`                | Active la remontée d'erreurs  | _absent_ → inactif |
+| `SENTRY_ENVIRONMENT`        | Nom de l'environnement        | `NODE_ENV`         |
+| `SENTRY_TRACES_SAMPLE_RATE` | Part des transactions tracées | `0`                |
+
+---
+
 ### Files de fond : un second processus
 
 Avec `REDIS_URL`, un déploiement compte **deux processus** issus de la même image : le
@@ -500,6 +554,7 @@ fichier Elixir dont la formule est tirée.
 | Unitaire     | `packages/core/src/*.test.ts`     | 107 tests : dates et semaines ISO, chaîne des dates d'une série, semences et plaques, **matrice des permissions**, itinéraires techniques, disponibilité des planches, **placement et déplacement d'un tronçon**, rotations, rendements, commandes, CSV, montants                   |
 | Unitaire     | `apps/web/src/lib/image.test.ts`  | compression avant envoi : dimensions visées, résultat gardé seulement s'il allège, nom du fichier, repli sur l'original quand le navigateur ne sait pas faire                                                                                                                       |
 | Unitaire     | `apps/web/src/lib/outbox.test.ts` | file d'attente hors ligne : ordre, rejeu, abandon d'une saisie refusée, reprise après panne                                                                                                                                                                                         |
+| Unitaire     | `apps/api/src/health.test.ts`     | supervision : Redis à terre laisse le service dégradé, PostgreSQL à terre le met en panne, sonde bornée dans le temps, aucun détail d'infrastructure publié                                                                                                                         |
 | Unitaire     | `apps/api/src/mail.test.ts`       | file des courriels : mise en file plutôt qu'envoi, repli en direct si Redis manque, livraison par le worker, échec relancé pour que la file réessaie                                                                                                                                |
 | Unitaire     | `apps/api/src/images.test.ts`     | photos : réduction, orientation EXIF appliquée, métadonnées GPS retirées, réencodage, contenu illisible refusé ; choix du stockage et garde-fou du dossier local                                                                                                                    |
 | Intégration  | `apps/api/src/api.test.ts`        | 41 tests sur une vraie base : inscription, **courriels transactionnels**, **rôles et permissions**, **isolation RLS**, trigger `ltree`, filtres, lot, duplication, rotations, génération et recalage des tâches, commandes CSV, statistiques, export, **type servi pour une photo** |
@@ -630,7 +685,6 @@ en SVG et en CSS : aucune bibliothèque de visualisation n'est téléchargée.
   relations présentes, logique à écrire.
 - **Traductions** : les fichiers `apps/web/src/i18n/locales/*.json` sont prêts pour Weblate ;
   l'espagnol et le néerlandais n'attendent qu'un fichier de plus.
-- **Supervision** : page d'état publique et Sentry.
 
 ---
 

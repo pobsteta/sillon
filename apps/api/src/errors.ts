@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: © 2026 Sillon contributors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
+import { signaler } from './observability.js';
 import { hasZodFastifySchemaValidationErrors } from 'fastify-type-provider-zod';
 import { Prisma } from '@prisma/client';
 
@@ -75,7 +76,11 @@ export function registerErrorHandler(app: FastifyInstance): void {
       });
     }
 
+    // Seul ce point remonte à la supervision : tout ce qui précède est une réponse prévue
+    // — droits insuffisants, validation, conflit — et n'a rien d'un incident. Y envoyer les
+    // 4xx noierait les vraies pannes sous le bruit des requêtes mal formées.
     request.log.error({ err: error }, 'erreur non gérée');
+    signaler(error);
     return reply.status(500).send({ error: 'internal_error', message: 'Erreur interne' });
   });
 
