@@ -5,7 +5,7 @@
 [![CI](https://github.com/pobsteta/sillon/actions/workflows/ci.yml/badge.svg)](https://github.com/pobsteta/sillon/actions/workflows/ci.yml)
 [![Release](https://github.com/pobsteta/sillon/actions/workflows/release.yml/badge.svg)](https://github.com/pobsteta/sillon/actions/workflows/release.yml)
 [![Version](https://img.shields.io/github/v/release/pobsteta/sillon?sort=semver&logo=github&label=version&color=blue)](https://github.com/pobsteta/sillon/releases/latest)
-[![REUSE](https://api.reuse.software/badge/github.com/pobsteta/sillon)](https://api.reuse.software/info/github.com/pobsteta/sillon)
+[![REUSE status](https://api.reuse.software/badge/github.com/pobsteta/sillon)](https://api.reuse.software/info/github.com/pobsteta/sillon)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPLv3-blue.svg?logo=gnu)](https://www.gnu.org/licenses/agpl-3.0)
 
 <!-- badges: end -->
@@ -775,13 +775,16 @@ rejoue ce contrôle à chaque PR (job `conformite-licences`).
 
 ### Le badge REUSE
 
-Le badge en haut de ce fichier est servi par `api.reuse.software`, qui ne connaît que les
-dépôts **enregistrés auprès d'elle** : tant que l'enregistrement n'est pas fait, le badge
-reste gris quand bien même le dépôt est conforme — c'est l'enregistrement qui manque, pas
-la conformité.
+Le badge en haut de ce fichier est servi par `api.reuse.software`, auprès de qui le dépôt
+est **enregistré** : l'API reteste périodiquement la branche par défaut, et le badge suit
+son état réel plutôt qu'une déclaration.
 
-L'enregistrement se fait une seule fois, sur <https://api.reuse.software/register>, et
-demande de confirmer une adresse de courriel. Ensuite l'API reteste le dépôt
-périodiquement et le badge suit l'état réel de la branche par défaut.
+Deux contrôles indépendants portent donc la même exigence, et c'est voulu : la CI refuse une
+PR non conforme (job `conformite-licences`), l'API constate l'état de `main` après coup. Le
+premier empêche la régression, le second la rendrait visible si elle passait quand même.
+
+Un badge gris n'y signifierait pas « non conforme » mais « dépôt inconnu de l'API » — c'est
+l'état d'avant l'enregistrement, qui se fait une seule fois sur
+<https://api.reuse.software/register> avec confirmation d'une adresse de courriel.
 
 > Sillon — planification maraîchère libre.
