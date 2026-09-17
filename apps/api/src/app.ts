@@ -32,6 +32,7 @@ import { taskRoutes } from './routes/tasks.js';
 import { recordRoutes } from './routes/records.js';
 import { orderRoutes } from './routes/orders.js';
 import { statsRoutes } from './routes/stats.js';
+import { exportRoutes } from './routes/export.js';
 
 /**
  * Version publiée, lue dans le package.json que release-please tient à jour : `/health`
@@ -113,6 +114,7 @@ export async function buildApp(
   await app.register(recordRoutes);
   await app.register(orderRoutes);
   await app.register(statsRoutes);
+  await app.register(exportRoutes);
 
   return app;
 }

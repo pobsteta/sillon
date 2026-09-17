@@ -4,7 +4,9 @@
 // Parcours complet : inscription, création d'une série, génération des tâches,
 // validation d'une tâche. Joué à l'identique au smartphone et au bureau.
 
+import { readFile } from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
+import { strFromU8, unzipSync } from 'fflate';
 
 const password = 'graines-de-courgette-2026';
 
@@ -148,4 +150,40 @@ test('écrit une note avec photo et la retrouve au journal', async ({ page }, te
   await expect(page.getByText('Aucune note pour l’instant')).toBeVisible();
   await page.getByLabel('Voir les notes archivées').check();
   await expect(page.getByText('Limaces sur la planche du fond')).toBeVisible();
+});
+
+test('exporte toutes les données de la ferme en une archive', async ({ page }, testInfo) => {
+  const email = uniqueEmail(`export-${testInfo.project.name}`);
+
+  await page.goto('/connexion');
+  await page.getByRole('button', { name: 'Pas encore de compte ?' }).click();
+  await page.getByLabel('Adresse électronique').fill(email);
+  await page.getByLabel('Mot de passe').fill(password);
+  await page.getByLabel('Nom de la ferme').fill('Ferme de l’export');
+  await page.getByRole('button', { name: 'Créer un compte', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Tableau de bord' })).toBeVisible();
+
+  const more = page.getByRole('button', { name: 'Plus' });
+  if (await more.isVisible()) await more.click();
+  await page.getByRole('link', { name: 'Paramètres' }).first().click();
+  await expect(page.getByRole('heading', { name: 'Export des données' })).toBeVisible();
+
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByRole('link', { name: 'Télécharger l’archive' }).click(),
+  ]);
+
+  // Le nom porte le nom de la ferme et l'instant : deux exports ne s'écrasent pas.
+  expect(download.suggestedFilename()).toMatch(/^sillon-ferme-de-l-export-[\d-]+\.zip$/);
+
+  const chemin = await download.path();
+  const archive = unzipSync(new Uint8Array(await readFile(chemin)));
+  const noms = Object.keys(archive);
+
+  expect(noms).toContain('series.csv');
+  expect(noms).toContain('especes.csv');
+  expect(noms).toContain('LISEZMOI.txt');
+  // Le référentiel de départ est bien dedans : l'archive n'est pas une coquille vide.
+  expect(strFromU8(archive['especes.csv'])).toContain('Tomate');
+  expect(strFromU8(archive['LISEZMOI.txt'])).toContain('Ferme de l’export');
 });
