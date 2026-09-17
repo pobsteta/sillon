@@ -55,6 +55,7 @@ export function PlanPage() {
   const [selection, setSelection] = useState<number[]>([]);
   const [bulkOpen, setBulkOpen] = useState(false);
   const [shiftDays, setShiftDays] = useState('7');
+  const [shiftNotice, setShiftNotice] = useState<number | null>(null);
 
   const params = {
     year,
@@ -142,6 +143,15 @@ export function PlanPage() {
           </button>
         ) : null}
       </div>
+
+      {shiftNotice !== null ? (
+        <p
+          role="status"
+          className="no-print mb-3 rounded-lg bg-sillon-100 p-2 text-sm text-sillon-900 dark:bg-sillon-900 dark:text-sillon-100"
+        >
+          {t('planting.tasksRescheduled', { count: shiftNotice })}
+        </p>
+      ) : null}
 
       {plantings.isLoading ? (
         <Loading />
@@ -349,7 +359,14 @@ export function PlanPage() {
                 onClick={() =>
                   bulkUpdate.mutate(
                     { ids: selection, shiftDays: Number(shiftDays) },
-                    { onSuccess: () => setBulkOpen(false) },
+                    {
+                      onSuccess: (reponse) => {
+                        setBulkOpen(false);
+                        // Les tâches suivent les dates ; le dire évite d'aller vérifier.
+                        const recalees = (reponse as { rescheduled?: number })?.rescheduled ?? 0;
+                        setShiftNotice(recalees > 0 ? recalees : null);
+                      },
+                    },
                   )
                 }
               >

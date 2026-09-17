@@ -173,7 +173,9 @@
     "firstHarvest": "Harvest start",
     "seedlings": "Plants",
     "containers": "Trays",
-    "seedsNumber": "Seeds"
+    "seedsNumber": "Seeds",
+    "tasksRescheduled": "{{count}} task moved to the new dates",
+    "tasksRescheduled_other": "{{count}} tasks moved to the new dates"
   },
   "tasks": {
     "title": "Tasks",

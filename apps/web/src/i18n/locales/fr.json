@@ -173,7 +173,9 @@
     "firstHarvest": "Début de récolte",
     "seedlings": "Plants",
     "containers": "Plaques",
-    "seedsNumber": "Graines"
+    "seedsNumber": "Graines",
+    "tasksRescheduled": "{{count}} tâche recalée sur les nouvelles dates",
+    "tasksRescheduled_other": "{{count}} tâches recalées sur les nouvelles dates"
   },
   "tasks": {
     "title": "Tâches",

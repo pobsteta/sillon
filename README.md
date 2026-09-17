@@ -435,6 +435,25 @@ qui sait ce qu'il fait.
 
 ---
 
+### Décaler un printemps sans perdre ses tâches
+
+Une gelée tardive, on repousse toute la saison d'une semaine : c'est ce que fait le
+traitement par lot du plan de culture. Les tâches engendrées **suivent désormais** les dates
+de leur série. Elles ne le faisaient pas : le plan disait une chose et la feuille de tâches
+en disait une autre, et personne n'aurait vu l'écart avant d'aller semer aux anciennes dates.
+
+Le recalage existait pourtant, mais dans une route par série (`reschedule-tasks`) qu'aucun
+écran n'appelait. Il est remonté dans `apps/api/src/task-scheduling.ts`, d'où la route et le
+traitement par lot le partagent.
+
+Les tâches **déjà faites ne bougent pas**. Le travail réalisé est un fait : il s'est passé le
+jour où il s'est passé, et repousser le plan ne le déplace pas dans le passé. Une tâche
+ajoutée à la main ne bouge pas non plus — personne ne lui a donné de règle à suivre.
+
+L'écran annonce le nombre de tâches déplacées, ce qui évite d'aller vérifier.
+
+---
+
 ### Second facteur : ce que valent les refus
 
 Le code se donne dans la **même requête** que le mot de passe, et non après un jeton
@@ -594,6 +613,7 @@ fichier Elixir dont la formule est tirée.
 | Unitaire     | `packages/core/src/*.test.ts`      | 107 tests : dates et semaines ISO, chaîne des dates d'une série, semences et plaques, **matrice des permissions**, itinéraires techniques, disponibilité des planches, **placement et déplacement d'un tronçon**, rotations, rendements, commandes, CSV, montants                   |
 | Unitaire     | `apps/web/src/lib/image.test.ts`   | compression avant envoi : dimensions visées, résultat gardé seulement s'il allège, nom du fichier, repli sur l'original quand le navigateur ne sait pas faire                                                                                                                       |
 | Unitaire     | `apps/web/src/lib/outbox.test.ts`  | file d'attente hors ligne : ordre, rejeu, abandon d'une saisie refusée, reprise après panne                                                                                                                                                                                         |
+| Intégration  | `apps/api/src/recalage.test.ts`    | un décalage par lot emmène les tâches avec les dates de leur série, et laisse en place celles qui sont faites                                                                                                                                                                       |
 | Unitaire     | `apps/api/src/totp.test.ts`        | second facteur : **vecteurs d'essai des RFC 6238 et 4648**, fenêtre de tolérance, codes de secours lisibles et sans signe ambigu                                                                                                                                                    |
 | Intégration  | `apps/api/src/totp-routes.test.ts` | parcours complet : préparer, activer, se connecter, rejeu refusé, code de secours à usage unique, désactivation sous mot de passe                                                                                                                                                   |
 | Unitaire     | `apps/api/src/health.test.ts`      | supervision : Redis à terre laisse le service dégradé, PostgreSQL à terre le met en panne, sonde bornée dans le temps, aucun détail d'infrastructure publié                                                                                                                         |
@@ -720,9 +740,11 @@ en SVG et en CSS : aucune bibliothèque de visualisation n'est téléchargée.
 
 ## Ce qui reste à faire
 
-- **Tâches de fond** : la file des courriels tourne (BullMQ + Redis, worker distinct) ;
-  restent à y faire passer les exports volumineux et la régénération massive des tâches.
-  `apps/api/src/queue.ts` accueille les files suivantes.
+- **Tâches de fond** : la file des courriels tourne (BullMQ + Redis, worker distinct).
+  Y faire passer l'export et le décalage par lot **n'est pas justifié** : mesure faite, un
+  décalage de 200 séries et 400 tâches prend 2,1 s, et l'export récupère désormais ses
+  photos huit de front. `apps/api/src/queue.ts` accueillera les files suivantes le jour où
+  une mesure le réclamera, pas avant.
 - **Abonnements Paddle, centres de formation et fermes d'apprenants** : tables et relations
   présentes, logique à écrire. Contrairement au reste, ces trois-là attendent des décisions
   qui ne sont pas techniques — compte marchand et grille tarifaire d'un côté, définition de
