@@ -511,4 +511,26 @@ Le modèle de données, les règles métier et les parcours utilisateurs dérive
 © André Hoarau, sous la même licence. Les fichiers concernés portent les deux mentions de
 copyright, selon la convention [REUSE](https://reuse.software/) — la CI vérifie leur présence.
 
+### Vérifier la conformité REUSE
+
+```bash
+pipx install reuse   # ou : pip install reuse
+npm run licences     # équivaut à « reuse lint »
+```
+
+Le dépôt est conforme à la **spécification REUSE 3.3** : chaque fichier suivi porte une
+mention de copyright et une licence, directement en en-tête ou par `REUSE.toml`. La CI
+rejoue ce contrôle à chaque PR (job `conformite-licences`).
+
+### Le badge REUSE
+
+Le badge en haut de ce fichier est servi par `api.reuse.software`, qui ne connaît que les
+dépôts **enregistrés auprès d'elle** : tant que l'enregistrement n'est pas fait, le badge
+reste gris quand bien même le dépôt est conforme — c'est l'enregistrement qui manque, pas
+la conformité.
+
+L'enregistrement se fait une seule fois, sur <https://api.reuse.software/register>, et
+demande de confirmer une adresse de courriel. Ensuite l'API reteste le dépôt
+périodiquement et le badge suit l'état réel de la branche par défaut.
+
 > Sillon — planification maraîchère libre.
