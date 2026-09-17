@@ -20,6 +20,10 @@ export function LoginPage() {
   const [farmName, setFarmName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // Le champ n'apparaît qu'une fois le mot de passe accepté : avant, il dirait à qui essaie
+  // une adresse au hasard que ce compte existe et qu'il est protégé.
+  const [totpCode, setTotpCode] = useState('');
+  const [totpRequis, setTotpRequis] = useState(false);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -27,7 +31,10 @@ export function LoginPage() {
     setBusy(true);
     try {
       if (mode === 'signIn') {
-        await api('/api/auth/login', { method: 'POST', body: { email, password } });
+        await api('/api/auth/login', {
+          method: 'POST',
+          body: { email, password, totpCode: totpCode || undefined },
+        });
       } else {
         await api('/api/auth/register', {
           method: 'POST',
@@ -45,7 +52,15 @@ export function LoginPage() {
       await queryClient.invalidateQueries();
       await navigate({ to: '/' });
     } catch (cause) {
-      setError(cause instanceof ApiError ? cause.message : t('common.error'));
+      if (cause instanceof ApiError && cause.code === 'totp_required') {
+        setTotpRequis(true);
+        setError(null);
+      } else {
+        // Un code refusé laisse le champ en place : c'est presque toujours une horloge de
+        // téléphone décalée ou un chiffre mal recopié, pas un mot de passe à ressaisir.
+        setError(cause instanceof ApiError ? cause.message : t('common.error'));
+      }
+      setTotpCode('');
     } finally {
       setBusy(false);
     }
@@ -84,6 +99,21 @@ export function LoginPage() {
             label={t('auth.farmName')}
             value={farmName}
             onChange={(event) => setFarmName(event.target.value)}
+          />
+        ) : null}
+
+        {totpRequis && mode === 'signIn' ? (
+          <Field
+            label={t('auth.totpCode')}
+            hint={t('auth.totpHint')}
+            // `one-time-code` laisse le téléphone proposer le code reçu ou stocké, et
+            // `inputMode` sort le pavé numérique — au champ, avec des gants, ça compte.
+            autoComplete="one-time-code"
+            inputMode="numeric"
+            autoFocus
+            required
+            value={totpCode}
+            onChange={(event) => setTotpCode(event.target.value)}
           />
         ) : null}
 

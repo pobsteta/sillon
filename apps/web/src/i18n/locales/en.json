@@ -94,7 +94,9 @@
       "banner": "Your address is not confirmed yet.",
       "resend": "Resend the email",
       "resent": "Email sent"
-    }
+    },
+    "totpCode": "Verification code",
+    "totpHint": "Six digits, or one of your recovery codes."
   },
   "dashboard": {
     "title": "Dashboard",
@@ -340,5 +342,21 @@
     "removePhoto": "Remove photo {{name}}",
     "uploadFailed": "The photo could not be uploaded",
     "confirmDelete": "Delete this note and its photos?"
+  },
+  "totp": {
+    "title": "Second factor",
+    "intro": "A six-digit code, on top of the password, asked at every sign-in.",
+    "setup": "Turn on the second factor",
+    "scan": "Add this account to your authenticator app, then enter the code it shows.",
+    "openApp": "Open in the app",
+    "code": "Six-digit code",
+    "enable": "Turn on",
+    "enabled": "The second factor is on.",
+    "disable": "Turn off",
+    "confirmPassword": "Password, to confirm",
+    "recoveryTitle": "Recovery codes",
+    "recoveryHint": "Write them down now: they will not be shown again. Each works once, and lets you sign in without your phone.",
+    "recoveryLeft": "{{count}} recovery code left",
+    "recoveryLeft_other": "{{count}} recovery codes left"
   }
 }
