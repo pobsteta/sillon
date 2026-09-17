@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.4.0](https://github.com/pobsteta/sillon/compare/v0.3.0...v0.4.0) (2026-09-17)
+
+
+### Fonctionnalités
+
+* **api:** export complet des données de la ferme ([fbe2a3e](https://github.com/pobsteta/sillon/commit/fbe2a3eb53e6d1cc43cf9cc4c9d95a6b05b473b3))
+* **api:** normalise les photos et les range sur un stockage objet ([9f8814c](https://github.com/pobsteta/sillon/commit/9f8814cda8309e6a3f5297ec490de1e76b3bc418))
+* **api:** sort les courriels du chemin de la requête ([c9efbdc](https://github.com/pobsteta/sillon/commit/c9efbdc57e4a2aeb8eeadf748f3f9b3f8a7ac1c5))
+* **web:** compresse la photo avant de l'envoyer ([a5d4b9c](https://github.com/pobsteta/sillon/commit/a5d4b9c8c32a7aab6461dae773ba0c6c64786802))
+* **web:** place une série sur une planche, au doigt comme à la souris ([aefc02a](https://github.com/pobsteta/sillon/commit/aefc02ad0070e5701446e36d850f857da25675bb))
+
+
+### Corrections
+
+* **test:** sérialise vraiment les tests d'API entre fichiers ([a1a1ee3](https://github.com/pobsteta/sillon/commit/a1a1ee3d96da7469763a7bb12abd88a8fd04d48f))
+
+
+### Documentation
+
+* étude d'opportunité sur la reprise des données Mesclun ([482b235](https://github.com/pobsteta/sillon/commit/482b235928f5bfd02771637353b58c482223aa00))
+* explique pourquoi le badge REUSE reste gris ([119cd6b](https://github.com/pobsteta/sillon/commit/119cd6bdbdcf55e4744f33634d4f4b7b018bc00b))
+
 ## [0.3.0](https://github.com/pobsteta/sillon/compare/v0.2.1...v0.3.0) (2026-09-17)
 
 
