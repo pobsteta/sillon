@@ -94,7 +94,9 @@
       "banner": "Votre adresse n’est pas encore confirmée.",
       "resend": "Renvoyer le courriel",
       "resent": "Courriel renvoyé"
-    }
+    },
+    "totpCode": "Code de vérification",
+    "totpHint": "Six chiffres, ou l’un de vos codes de secours."
   },
   "dashboard": {
     "title": "Tableau de bord",
@@ -340,5 +342,21 @@
     "removePhoto": "Retirer la photo {{name}}",
     "uploadFailed": "La photo n’a pas pu être envoyée",
     "confirmDelete": "Supprimer cette note et ses photos ?"
+  },
+  "totp": {
+    "title": "Second facteur",
+    "intro": "Un code à six chiffres, en plus du mot de passe, demandé à chaque connexion.",
+    "setup": "Activer le second facteur",
+    "scan": "Ajoutez ce compte dans votre application d’authentification, puis saisissez le code qu’elle affiche.",
+    "openApp": "Ouvrir dans l’application",
+    "code": "Code à six chiffres",
+    "enable": "Activer",
+    "enabled": "Le second facteur est actif.",
+    "disable": "Désactiver",
+    "confirmPassword": "Mot de passe, pour confirmer",
+    "recoveryTitle": "Codes de secours",
+    "recoveryHint": "Notez-les maintenant : ils ne seront plus affichés. Chacun ne sert qu’une fois, et permet de se connecter sans le téléphone.",
+    "recoveryLeft": "{{count}} code de secours restant",
+    "recoveryLeft_other": "{{count}} codes de secours restants"
   }
 }

@@ -41,7 +41,8 @@ les fichiers qui en dérivent conservent son copyright (convention REUSE / SPDX)
 | PWA : installation, cache des lectures, file d'attente des saisies hors ligne                                     | ✅   |
 | Interface fr/en, mode sombre, cibles tactiles ≥ 44 px, feuilles d'impression                                      | ✅   |
 | Export complet des données de la ferme (RGPD, auto-service)                                                       | ✅   |
-| Abonnements, centres de formation, TOTP : **tables présentes, interface à écrire**                                | ⏳   |
+| Abonnements et centres de formation : **tables présentes, interface à écrire**                                    | ⏳   |
+| Second facteur TOTP : enrôlement, codes de secours, anti-rejeu                                                    | ✅   |
 | Courriels : invitation, confirmation d'adresse, mot de passe oublié                                               | ✅   |
 | Tâches de fond : file des courriels (BullMQ + Redis), worker distinct                                             | ✅   |
 | Supervision : sondes `/health` et `/ready`, remontée des erreurs (Sentry, désactivée par défaut)                  | ✅   |
@@ -434,6 +435,45 @@ qui sait ce qu'il fait.
 
 ---
 
+### Second facteur : ce que valent les refus
+
+Le code se donne dans la **même requête** que le mot de passe, et non après un jeton
+intermédiaire « mot de passe accepté, code attendu ». Un tel jeton serait un second
+identifiant à émettre, transporter, expirer et révoquer : exactement la pièce qu'on ajoute
+pour renforcer la connexion et qui finit par l'affaiblir. Quand le mot de passe est bon et
+le code absent, la réponse est un 401 portant le code `totp_required`, et l'interface
+affiche le champ.
+
+Ce qui se refuse compte plus que ce qui s'accepte :
+
+- **le mot de passe faux ne réclame rien.** Sinon la réponse dirait « ce compte existe et il
+  est protégé » — une information qu'on ne doit pas à qui essaie une adresse au hasard ;
+- **un code ne sert qu'une fois.** Il reste valable une demi-minute ; le pas de temps employé
+  est mémorisé, et un pas déjà consommé est refusé. Cela vaut aussi pour le code qui a servi
+  à activer le second facteur, au moment où le rejeu serait le plus tentant ;
+- **un code de secours disparaît en servant.** Ils sont hachés comme des mots de passe : une
+  copie de la base ne donne pas de quoi se connecter, et personne — support compris — ne
+  peut les relire ;
+- **désactiver exige le mot de passe.** Une session ouverte sur un poste laissé sans
+  surveillance ne suffit pas à retirer la protection.
+
+L'enrôlement se fait en deux temps : le secret est préparé **désactivé**, puis un premier
+code l'active. Activer d'emblée enfermerait dehors qui aurait mal recopié le secret ou dont
+le téléphone est à l'heure d'un autre fuseau.
+
+L'algorithme est écrit dans `apps/api/src/totp.ts` plutôt qu'emprunté à une bibliothèque, et
+la raison n'est pas l'économie d'une dépendance : la RFC 6238 publie des vecteurs d'essai, et
+une implémentation qu'on peut leur confronter vaut mieux qu'une boîte noire. Ils sont dans
+les essais, avec ceux de la base32 (RFC 4648).
+
+Le secret est rangé en octets, tel quel, comme le prévoit le schéma porté de Brinjel. Le
+chiffrer au repos supposerait une clé à gérer : liée à `SESSION_SECRET`, sa rotation —
+aujourd'hui sans conséquence, elle ne fait que déconnecter — enfermerait tout le monde
+dehors. Le choix est assumé, et la base doit être protégée comme elle l'est déjà pour le
+reste des données d'une ferme.
+
+---
+
 ### Supervision : deux sondes, et une nuance
 
 `/health` dit « ce processus est vivant » : elle ne touche à rien et répond tout de suite,
@@ -549,16 +589,18 @@ fichier Elixir dont la formule est tirée.
 
 ## Tests
 
-| Niveau       | Où                                | Contenu                                                                                                                                                                                                                                                                             |
-| ------------ | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Unitaire     | `packages/core/src/*.test.ts`     | 107 tests : dates et semaines ISO, chaîne des dates d'une série, semences et plaques, **matrice des permissions**, itinéraires techniques, disponibilité des planches, **placement et déplacement d'un tronçon**, rotations, rendements, commandes, CSV, montants                   |
-| Unitaire     | `apps/web/src/lib/image.test.ts`  | compression avant envoi : dimensions visées, résultat gardé seulement s'il allège, nom du fichier, repli sur l'original quand le navigateur ne sait pas faire                                                                                                                       |
-| Unitaire     | `apps/web/src/lib/outbox.test.ts` | file d'attente hors ligne : ordre, rejeu, abandon d'une saisie refusée, reprise après panne                                                                                                                                                                                         |
-| Unitaire     | `apps/api/src/health.test.ts`     | supervision : Redis à terre laisse le service dégradé, PostgreSQL à terre le met en panne, sonde bornée dans le temps, aucun détail d'infrastructure publié                                                                                                                         |
-| Unitaire     | `apps/api/src/mail.test.ts`       | file des courriels : mise en file plutôt qu'envoi, repli en direct si Redis manque, livraison par le worker, échec relancé pour que la file réessaie                                                                                                                                |
-| Unitaire     | `apps/api/src/images.test.ts`     | photos : réduction, orientation EXIF appliquée, métadonnées GPS retirées, réencodage, contenu illisible refusé ; choix du stockage et garde-fou du dossier local                                                                                                                    |
-| Intégration  | `apps/api/src/api.test.ts`        | 41 tests sur une vraie base : inscription, **courriels transactionnels**, **rôles et permissions**, **isolation RLS**, trigger `ltree`, filtres, lot, duplication, rotations, génération et recalage des tâches, commandes CSV, statistiques, export, **type servi pour une photo** |
-| Bout en bout | `e2e/parcours.spec.ts`            | 6 parcours joués au **smartphone** et au **bureau** sur le build de production : vignette réellement décodée, photo de 14 Mo que seule la compression du navigateur fait passer, série désignée puis posée sur une planche                                                          |
+| Niveau       | Où                                 | Contenu                                                                                                                                                                                                                                                                             |
+| ------------ | ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Unitaire     | `packages/core/src/*.test.ts`      | 107 tests : dates et semaines ISO, chaîne des dates d'une série, semences et plaques, **matrice des permissions**, itinéraires techniques, disponibilité des planches, **placement et déplacement d'un tronçon**, rotations, rendements, commandes, CSV, montants                   |
+| Unitaire     | `apps/web/src/lib/image.test.ts`   | compression avant envoi : dimensions visées, résultat gardé seulement s'il allège, nom du fichier, repli sur l'original quand le navigateur ne sait pas faire                                                                                                                       |
+| Unitaire     | `apps/web/src/lib/outbox.test.ts`  | file d'attente hors ligne : ordre, rejeu, abandon d'une saisie refusée, reprise après panne                                                                                                                                                                                         |
+| Unitaire     | `apps/api/src/totp.test.ts`        | second facteur : **vecteurs d'essai des RFC 6238 et 4648**, fenêtre de tolérance, codes de secours lisibles et sans signe ambigu                                                                                                                                                    |
+| Intégration  | `apps/api/src/totp-routes.test.ts` | parcours complet : préparer, activer, se connecter, rejeu refusé, code de secours à usage unique, désactivation sous mot de passe                                                                                                                                                   |
+| Unitaire     | `apps/api/src/health.test.ts`      | supervision : Redis à terre laisse le service dégradé, PostgreSQL à terre le met en panne, sonde bornée dans le temps, aucun détail d'infrastructure publié                                                                                                                         |
+| Unitaire     | `apps/api/src/mail.test.ts`        | file des courriels : mise en file plutôt qu'envoi, repli en direct si Redis manque, livraison par le worker, échec relancé pour que la file réessaie                                                                                                                                |
+| Unitaire     | `apps/api/src/images.test.ts`      | photos : réduction, orientation EXIF appliquée, métadonnées GPS retirées, réencodage, contenu illisible refusé ; choix du stockage et garde-fou du dossier local                                                                                                                    |
+| Intégration  | `apps/api/src/api.test.ts`         | 41 tests sur une vraie base : inscription, **courriels transactionnels**, **rôles et permissions**, **isolation RLS**, trigger `ltree`, filtres, lot, duplication, rotations, génération et recalage des tâches, commandes CSV, statistiques, export, **type servi pour une photo** |
+| Bout en bout | `e2e/parcours.spec.ts`             | 6 parcours joués au **smartphone** et au **bureau** sur le build de production : vignette réellement décodée, photo de 14 Mo que seule la compression du navigateur fait passer, série désignée puis posée sur une planche                                                          |
 
 ```bash
 npm test          # unitaires + intégration (PostgreSQL requis)
@@ -681,8 +723,10 @@ en SVG et en CSS : aucune bibliothèque de visualisation n'est téléchargée.
 - **Tâches de fond** : la file des courriels tourne (BullMQ + Redis, worker distinct) ;
   restent à y faire passer les exports volumineux et la régénération massive des tâches.
   `apps/api/src/queue.ts` accueille les files suivantes.
-- **TOTP**, abonnements Paddle, centres de formation et fermes d'apprenants : tables et
-  relations présentes, logique à écrire.
+- **Abonnements Paddle, centres de formation et fermes d'apprenants** : tables et relations
+  présentes, logique à écrire. Contrairement au reste, ces trois-là attendent des décisions
+  qui ne sont pas techniques — compte marchand et grille tarifaire d'un côté, définition de
+  ce qu'un centre de formation fait qu'une ferme ne fait pas de l'autre.
 - **Traductions** : les fichiers `apps/web/src/i18n/locales/*.json` sont prêts pour Weblate ;
   l'espagnol et le néerlandais n'attendent qu'un fichier de plus.
 

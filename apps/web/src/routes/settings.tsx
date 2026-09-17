@@ -20,6 +20,7 @@ import {
 } from '../lib/queries.js';
 import { api } from '../lib/api.js';
 import { Field, Loading, PageHeader, Select } from '../components/ui.js';
+import { SecondFactor } from '../components/SecondFactor.js';
 
 type ResourceKey =
   'families' | 'crops' | 'varieties' | 'providers' | 'units' | 'containers' | 'tags' | 'task-types';
@@ -306,6 +307,8 @@ export function SettingsPage() {
           ) : null}
         </div>
       </section>
+
+      <SecondFactor />
     </>
   );
 }
