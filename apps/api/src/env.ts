@@ -28,6 +28,15 @@ const EnvSchema = z.object({
   APP_URL: z.string().default('http://localhost:5173'),
   /** Validité des liens de confirmation et de réinitialisation, en heures. */
   TOKEN_HOURS: z.coerce.number().int().positive().default(24),
+
+  /**
+   * Redis des files de fond, par exemple `redis://localhost:6379`. Absent, les courriels
+   * partent dans la requête qui les déclenche : pratique en développement, à éviter en
+   * production où un serveur SMTP lent se paie sur le temps de réponse.
+   */
+  REDIS_URL: z.string().min(1).optional(),
+  /** Courriels traités de front par le worker. Un SMTP domestique n'aime pas les rafales. */
+  MAIL_CONCURRENCY: z.coerce.number().int().positive().default(4),
 });
 
 export type Env = z.infer<typeof EnvSchema> & { corsOrigins: string[] };

@@ -10,10 +10,11 @@
 //     suffit à dérouler un parcours sans configurer quoi que ce soit ;
 //   * en production, `SmtpMailer` parle à un vrai serveur.
 //
-// Le brief prévoit que les envois passeront un jour par une file de fond (BullMQ) ;
-// l'interface ci-dessous s'y prête sans toucher aux routes.
+// Les envois passent par une file de fond (BullMQ) dès que `REDIS_URL` est configuré :
+// `QueuedMailer` enveloppe le transport sans que les routes le sachent.
 
 import { createTransport, type Transporter } from 'nodemailer';
+import type { JobQueue } from './queue.js';
 
 export interface MailMessage {
   to: string;
@@ -80,6 +81,82 @@ export class CaptureMailer implements Mailer {
 
   clear(): void {
     this.sent.length = 0;
+  }
+}
+
+/** Réglages de `QueuedMailer`, tous facultatifs : les défauts conviennent à la production. */
+export interface QueuedMailerOptions {
+  /** La file est-elle joignable tout de suite ? Sans réponse, on la suppose joignable. */
+  joignable?: (() => boolean) | undefined;
+  /** Au-delà, la mise en file est réputée perdue et le message part en direct. */
+  delaiMs?: number | undefined;
+  log?: ((error: unknown) => void) | undefined;
+}
+
+/**
+ * Transport de production : le message part dans une file de fond, la requête rend la main
+ * tout de suite. Un serveur SMTP lent ne ralentit plus ni l'inscription ni l'invitation.
+ *
+ * Si la file se dérobe — Redis arrêté, réseau coupé — on envoie quand même, en direct.
+ * Perdre une invitation serait bien pire que rendre la main une seconde plus tard, et le
+ * défaut serait silencieux. L'incident est journalisé pour qu'il ne passe pas inaperçu.
+ *
+ * Deux garde-fous, parce qu'un seul ne suffit pas :
+ *
+ *   * `joignable()` évite d'appeler la file quand la connexion n'est pas prête. C'est le
+ *     cas courant d'un Redis arrêté, et c'est le seul qui garantisse l'absence de doublon :
+ *     aucune commande n'est émise, donc rien ne pourra partir une seconde fois plus tard.
+ *   * le délai couvre le reste — connexion perdue en cours de route, Redis qui ne répond
+ *     plus. Il est indispensable : `Queue.add()` attend que la connexion soit prête avant
+ *     d'émettre quoi que ce soit, et sans échéance cette attente est sans fin. La requête
+ *     HTTP resterait suspendue, ce qui est exactement ce qu'on cherchait à éviter.
+ */
+export class QueuedMailer implements Mailer {
+  private readonly joignable: () => boolean;
+  private readonly delaiMs: number;
+  private readonly log: (error: unknown) => void;
+
+  constructor(
+    private readonly queue: JobQueue<MailMessage>,
+    private readonly fallback: Mailer,
+    options: QueuedMailerOptions = {},
+  ) {
+    this.joignable = options.joignable ?? (() => true);
+    this.delaiMs = options.delaiMs ?? 3_000;
+    this.log =
+      options.log ??
+      ((error) => console.error('File des courriels indisponible, envoi direct :', error));
+  }
+
+  async send(message: MailMessage): Promise<void> {
+    if (!this.joignable()) {
+      this.log(new Error('file des courriels injoignable'));
+      await this.fallback.send(message);
+      return;
+    }
+
+    try {
+      await this.avecDelai(this.queue.add('envoi', message));
+    } catch (error) {
+      this.log(error);
+      await this.fallback.send(message);
+    }
+  }
+
+  private async avecDelai(promesse: Promise<unknown>): Promise<void> {
+    let minuteur: NodeJS.Timeout | undefined;
+    const echeance = new Promise<never>((_, rejette) => {
+      minuteur = setTimeout(
+        () => rejette(new Error(`mise en file sans réponse au bout de ${this.delaiMs} ms`)),
+        this.delaiMs,
+      );
+    });
+    try {
+      // `race` a posé ses gestionnaires sur `promesse` : un rejet tardif reste traité.
+      await Promise.race([promesse, echeance]);
+    } finally {
+      clearTimeout(minuteur);
+    }
   }
 }
 

@@ -43,7 +43,8 @@ les fichiers qui en dérivent conservent son copyright (convention REUSE / SPDX)
 | Export complet des données de la ferme (RGPD, auto-service)                                                       | ✅   |
 | Abonnements, centres de formation, TOTP : **tables présentes, interface à écrire**                                | ⏳   |
 | Courriels : invitation, confirmation d'adresse, mot de passe oublié                                               | ✅   |
-| Tâches de fond BullMQ, stockage S3                                                                                | ⏳   |
+| Tâches de fond : file des courriels (BullMQ + Redis), worker distinct                                             | ✅   |
+| Stockage objet S3                                                                                                 | ⏳   |
 
 Les points marqués ⏳ ont leur place dans le schéma et dans l'architecture, mais pas encore
 d'implémentation : voir « Ce qui reste à faire ».
@@ -174,12 +175,45 @@ En production, `SMTP_URL` bascule sur un vrai serveur. S'il est absent, l'API le
 démarrage — une invitation qui ne part pas est un défaut silencieux, et c'est bien le
 genre de chose qu'on découvre trop tard.
 
-| Variable      | Rôle                                                      | Défaut                               |
-| ------------- | --------------------------------------------------------- | ------------------------------------ |
-| `SMTP_URL`    | `smtps://utilisateur:motdepasse@serveur:465`              | _absent_ → console                   |
-| `MAIL_FROM`   | Expéditeur                                                | `Sillon <ne-pas-repondre@localhost>` |
-| `APP_URL`     | Adresse publique de l'interface, base des liens envoyés   | `http://localhost:5173`              |
-| `TOKEN_HOURS` | Validité des liens de confirmation et de réinitialisation | `24`                                 |
+**Avec `REDIS_URL`, les envois sortent du chemin de la requête.** Le message part dans une
+file BullMQ et un worker distinct s'en charge : un serveur SMTP lent ne fait plus attendre
+la personne qui s'inscrit ou qui invite un collègue. Les routes n'ont pas changé — elles
+appellent toujours `app.mailer.send()`, c'est le transport qui est enveloppé.
+
+```bash
+npm run dev -w @sillon/api          # l'API met en file
+npm run dev:worker -w @sillon/api   # le worker la vide
+```
+
+Sous `docker compose`, le service `worker` fait ce travail ; il partage l'image de l'API.
+**Sans worker, les courriels s'empilent dans Redis sans jamais partir.** Avec une file, c'est
+lui qui parle à SMTP : `SMTP_URL` et `MAIL_FROM` doivent être donnés **au worker**, et la
+sortie du transport console s'y lit (`docker compose logs worker`). L'API garde ces variables
+pour le seul cas où elle doit envoyer elle-même, Redis étant injoignable ; `APP_URL`, qui
+fabrique les liens, reste de son côté.
+
+Chaque envoi est retenté cinq fois, à intervalle exponentiel à partir de dix secondes, soit
+un peu plus de deux minutes et demie — de quoi traverser le redémarrage d'un serveur SMTP.
+Les travaux réussis disparaissent au bout d'une heure, les échoués restent une semaine :
+c'est la trace qui permet de répondre à « je n'ai jamais reçu l'invitation ».
+
+Si Redis est injoignable au moment de la mise en file, l'API **envoie quand même**, en
+direct, et le journalise. Perdre une invitation serait pire que rendre la main une seconde
+plus tard. Deux garde-fous s'en chargent, et il en faut bien deux : l'API ne s'adresse pas à
+une file dont la connexion n'est pas prête — c'est le cas courant d'un Redis arrêté, et le
+seul qui garantisse l'absence de doublon — et elle borne l'attente à trois secondes pour le
+reste, car `Queue.add()` commence par attendre une connexion prête, sans échéance. La
+connexion étant par ailleurs paresseuse et ouverte en tâche de fond, l'API démarre aussi
+lorsque Redis est absent.
+
+| Variable           | Rôle                                                      | Défaut                               |
+| ------------------ | --------------------------------------------------------- | ------------------------------------ |
+| `SMTP_URL`         | `smtps://utilisateur:motdepasse@serveur:465`              | _absent_ → console                   |
+| `MAIL_FROM`        | Expéditeur                                                | `Sillon <ne-pas-repondre@localhost>` |
+| `APP_URL`          | Adresse publique de l'interface, base des liens envoyés   | `http://localhost:5173`              |
+| `TOKEN_HOURS`      | Validité des liens de confirmation et de réinitialisation | `24`                                 |
+| `REDIS_URL`        | File de fond ; absent, l'envoi se fait dans la requête    | _absent_ → envoi direct              |
+| `MAIL_CONCURRENCY` | Courriels traités de front par le worker                  | `4`                                  |
 
 Les liens sont à usage unique : le jeton est détruit dès qu'il est validé, et une nouvelle
 demande annule la précédente. Réinitialiser un mot de passe ferme toutes les sessions
@@ -231,6 +265,7 @@ Le port de l'API derrière le proxy se change avec `API_PORT` (3000 par défaut)
 | `npm run typecheck`                     | TypeScript strict sur les trois paquets                                          |
 | `npm run build`                         | Construit `@sillon/core`, l'API et l'interface                                   |
 | `npm run db:migrate:dev -w @sillon/api` | Crée une migration après modification du schéma                                  |
+| `npm run dev:worker -w @sillon/api`     | Worker des files de fond (courriels) ; exige `REDIS_URL`                         |
 
 ---
 
@@ -319,6 +354,19 @@ Deux mécanismes complémentaires :
 Les écritures structurantes (créer une série, déplacer une planche) exigent le réseau : elles
 ont besoin d'une réponse du serveur (identifiants, contrôles de rotation).
 
+### Files de fond : un second processus
+
+Avec `REDIS_URL`, un déploiement compte **deux processus** issus de la même image : le
+serveur web (`dist/server.js`) et le worker (`dist/worker.js`). L'un remplit les files, l'autre
+les vide. Oublier le worker ne casse rien de visible — les courriels s'accumulent simplement
+dans Redis sans jamais partir, ce qui est exactement le genre de panne qu'on découvre trois
+jours plus tard.
+
+Les deux bouts ne configurent pas Redis pareil, et c'est délibéré : côté API la mise en file
+échoue tout de suite si Redis manque, pour que l'envoi direct prenne le relais sans faire
+attendre la requête ; côté worker la connexion est patiente, parce qu'il n'a personne à faire
+patienter. `apps/api/src/queue.ts` porte le détail.
+
 ---
 
 ## Portage depuis Brinjel : ce qui a été vérifié
@@ -372,6 +420,7 @@ fichier Elixir dont la formule est tirée.
 | ------------ | --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Unitaire     | `packages/core/src/*.test.ts`     | 99 tests : dates et semaines ISO, chaîne des dates d'une série, semences et plaques, **matrice des permissions**, itinéraires techniques, disponibilité des planches, rotations, rendements, commandes, CSV, montants                                |
 | Unitaire     | `apps/web/src/lib/outbox.test.ts` | file d'attente hors ligne : ordre, rejeu, abandon d'une saisie refusée, reprise après panne                                                                                                                                                          |
+| Unitaire     | `apps/api/src/mail.test.ts`       | file des courriels : mise en file plutôt qu'envoi, repli en direct si Redis manque, livraison par le worker, échec relancé pour que la file réessaie                                                                                                 |
 | Intégration  | `apps/api/src/api.test.ts`        | 37 tests sur une vraie base : inscription, **courriels transactionnels**, **rôles et permissions**, **isolation RLS**, trigger `ltree`, filtres, lot, duplication, rotations, génération et recalage des tâches, commandes CSV, statistiques, export |
 | Bout en bout | `e2e/parcours.spec.ts`            | 3 parcours joués au **smartphone** et au **bureau** sur le build de production                                                                                                                                                                       |
 
@@ -486,11 +535,9 @@ en SVG et en CSS : aucune bibliothèque de visualisation n'est téléchargée.
 
 ## Ce qui reste à faire
 
-- **File d'envoi** : les courriels partent aujourd'hui dans la requête qui les déclenche.
-  Un serveur SMTP lent ralentit donc l'invitation ou l'inscription. Le passage par BullMQ
-  ne demandera pas de toucher aux routes : `Mailer` est déjà une dépendance injectée.
-- **Tâches de fond** (BullMQ + Redis) : exports volumineux, envoi des courriels, régénération
-  massive des tâches. Le service Redis est déjà dans `docker-compose.yml`.
+- **Tâches de fond** : la file des courriels tourne (BullMQ + Redis, worker distinct) ;
+  restent à y faire passer les exports volumineux et la régénération massive des tâches.
+  `apps/api/src/queue.ts` accueille les files suivantes.
 - **Stockage objet S3** : `apps/api/src/storage.ts` définit l'interface et une implémentation
   locale ; il reste à écrire l'implémentation S3 et le redimensionnement à l'upload.
 - **TOTP**, abonnements Paddle, centres de formation et fermes d'apprenants : tables et
