@@ -16,6 +16,7 @@ import { Worker, type Job } from 'bullmq';
 import { loadEnv } from './env.js';
 import { createMailer, type Mailer, type MailMessage } from './mail.js';
 import { createRedis, MAIL_QUEUE } from './queue.js';
+import { initSupervision, signaler, viderSupervision } from './observability.js';
 
 /**
  * Traitement d'un courriel. Isolé du câblage BullMQ pour être joué tel quel dans les
@@ -33,6 +34,9 @@ function horodatage(): string {
 
 async function main(): Promise<void> {
   const env = loadEnv();
+  // Le worker est un processus sans requête HTTP : sans supervision, un envoi qui échoue
+  // cinq fois de suite ne laisse qu'une ligne dans un journal que personne ne lit.
+  initSupervision(env);
   if (!env.REDIS_URL) {
     console.error(
       'REDIS_URL est absent : le worker n’a pas de file à vider.\n' +
@@ -56,6 +60,9 @@ async function main(): Promise<void> {
     console.info(`${horodatage()} courriel envoyé à ${job.data.to} (travail ${job.id})`);
   });
   worker.on('failed', (job, error) => {
+    // Seul l'échec définitif est un incident : les tentatives intermédiaires sont le
+    // fonctionnement normal d'une file qui réessaie.
+    if (job && job.attemptsMade >= (job.opts.attempts ?? 1)) signaler(error);
     // `attemptsMade` sur le total dit tout de suite s'il reste de l'espoir.
     const reste = job ? `${job.attemptsMade}/${job.opts.attempts ?? 1}` : '?';
     console.error(
@@ -79,6 +86,7 @@ async function main(): Promise<void> {
         // à moitié parti serait réessayé, donc envoyé deux fois.
         await worker.close();
         connection.disconnect();
+        await viderSupervision();
         process.exit(0);
       })();
     });

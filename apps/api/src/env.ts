@@ -60,6 +60,17 @@ const EnvSchema = z.object({
     .string()
     .default('true')
     .transform((value) => value === 'true'),
+
+  /**
+   * Supervision des erreurs (§6 du brief). Absent, rien n'est envoyé nulle part et le
+   * module de supervision reste inerte : un déploiement auto-hébergé n'a rien à configurer,
+   * et rien ne sort de la machine sans qu'on l'ait demandé.
+   */
+  SENTRY_DSN: z.string().min(1).optional(),
+  /** Nom de l'environnement dans Sentry : « production », « recette »… */
+  SENTRY_ENVIRONMENT: z.string().min(1).optional(),
+  /** Part des transactions tracées, entre 0 et 1. Zéro par défaut : seules les erreurs partent. */
+  SENTRY_TRACES_SAMPLE_RATE: z.coerce.number().min(0).max(1).default(0),
 });
 
 export type Env = z.infer<typeof EnvSchema> & { corsOrigins: string[] };
