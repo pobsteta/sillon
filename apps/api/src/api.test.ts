@@ -317,7 +317,9 @@ describe('plan de culture', () => {
       headers: headers(),
       payload: { ids: [first.id, second.id], shiftDays: 14, data: { pricePerUnit: 500 } },
     });
-    expect(response.json()).toEqual({ updated: 2 });
+    // Aucune tâche n'a été engendrée pour ces deux séries : il n'y a donc rien à recaler.
+    // `recalage.test.ts` tient l'autre bord, celui où les tâches suivent les dates.
+    expect(response.json()).toEqual({ updated: 2, rescheduled: 0 });
 
     const list = await app.inject({
       method: 'GET',

@@ -10,7 +10,10 @@ import { z } from 'zod';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import { inFarm } from '../scope.js';
 import { notFound } from '../errors.js';
-import { EXPORT_TABLES, archiveName, readme, tableToCsv } from '../export.js';
+import { EXPORT_TABLES, archiveName, parTranches, readme, tableToCsv } from '../export.js';
+
+/** Photos récupérées de front. Huit : assez pour masquer la latence, sans gonfler la mémoire. */
+const PHOTOS_DE_FRONT = 8;
 
 const FarmParams = z.object({ farmId: z.coerce.number().int().positive() });
 
@@ -73,16 +76,28 @@ export async function exportRoutes(app: FastifyInstance): Promise<void> {
       reply.header('cache-control', 'private, no-store');
 
       const manquantes: string[] = [];
-      for (const photo of photos) {
-        try {
-          const content = await storage.get(`${farm.id}/${photo.uuid}`);
-          archive.append(content, { name: `photos/${photo.id}-${photo.name}` });
-        } catch {
-          // Un fichier absent du stockage ne doit pas priver la ferme du reste de son
-          // export : on le note dans la notice et on continue.
-          manquantes.push(`${photo.id}-${photo.name}`);
-        }
-      }
+      // Huit photos de front, et l'archive les reçoit dans l'ordre. Une par une, un
+      // stockage objet transformait l'export d'une ferme bien documentée en plusieurs
+      // dizaines de secondes de requête. Voir `parTranches`.
+      await parTranches(
+        photos,
+        PHOTOS_DE_FRONT,
+        async (photo) => {
+          try {
+            return { photo, content: await storage.get(`${farm.id}/${photo.uuid}`) };
+          } catch {
+            // Un fichier absent du stockage ne doit pas priver la ferme du reste de son
+            // export : on le note dans la notice et on continue.
+            return { photo, content: null };
+          }
+        },
+        (tranche) => {
+          for (const { photo, content } of tranche) {
+            if (content) archive.append(content, { name: `photos/${photo.id}-${photo.name}` });
+            else manquantes.push(`${photo.id}-${photo.name}`);
+          }
+        },
+      );
 
       for (const table of tables) archive.append(table.csv, { name: `${table.file}.csv` });
 

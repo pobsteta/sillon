@@ -11,21 +11,19 @@ import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import {
   defaultTasksForPlanting,
   generateTasksFromTemplate,
-  rescheduleGeneratedTask,
   taskStatus,
   toIsoDate,
   today,
   weekRange,
   type GeneratedTask,
-  type PlantingSchedule,
-  type PlantingType as PlantingTypeValue,
   type TemplateStep,
 } from '@sillon/core';
 import { inFarm } from '../scope.js';
+import { recalerTaches, scheduleOf } from '../task-scheduling.js';
 import { notFound } from '../errors.js';
 import { assertReferences } from '../references.js';
 import type { Tx } from '../db.js';
-import { datesFromRows, harvestPeriodsFromRows, isoDate, toDbDate } from '../planting-io.js';
+import { isoDate, toDbDate } from '../planting-io.js';
 import { defaultTaskTypeIds } from '../farm-setup.js';
 
 const FarmParams = z.object({ farmId: z.coerce.number().int().positive() });
@@ -41,18 +39,6 @@ const taskInclude = {
 } as const;
 
 /** Contexte temporel d'une série, tel que l'attendent les fonctions d'itinéraire. */
-function scheduleOf(planting: {
-  plantingType: string;
-  dates: { type: string; planned: Date; effective: Date | null }[];
-  harvestPeriods: { begin: Date; end: Date }[];
-}): PlantingSchedule {
-  return {
-    plantingType: planting.plantingType as PlantingTypeValue,
-    dates: datesFromRows(planting.dates),
-    harvestPeriods: harvestPeriodsFromRows(planting.harvestPeriods),
-  };
-}
-
 /** Insère une tâche générée et, le cas échéant, le lien vers l'étape d'itinéraire. */
 async function insertGeneratedTask(
   db: Tx,
@@ -451,38 +437,8 @@ export async function taskRoutes(app: FastifyInstance): Promise<void> {
           include: { dates: true, harvestPeriods: true },
         });
         if (!planting) throw notFound('Série introuvable');
-        const schedule = scheduleOf(planting);
 
-        const links = await db.plantingTask.findMany({
-          where: { plantingId: planting.id, task: { done: false } },
-          include: { task: { include: { templateLink: true } } },
-        });
-
-        let rescheduled = 0;
-        for (const link of links) {
-          const templateLink = link.task.templateLink;
-          const plannedDate = templateLink
-            ? rescheduleGeneratedTask(
-                {
-                  linkDays: templateLink.linkDays,
-                  templateDateType: templateLink.templateDateType as any,
-                },
-                schedule,
-              )
-            : // Une tâche engendrée depuis le plan suit le semis, ou la mise en place.
-              link.task.defaultType === 'greenhouse_sow' || link.task.defaultType === 'direct_sow'
-              ? (schedule.dates.sowing?.planned ?? null)
-              : link.task.defaultType === 'transplant'
-                ? (schedule.dates.planting?.planned ?? null)
-                : null;
-          if (!plannedDate) continue;
-          await db.task.update({
-            where: { id: link.taskId },
-            data: { plannedDate: toDbDate(plannedDate), effectiveDate: toDbDate(plannedDate) },
-          });
-          rescheduled += 1;
-        }
-        return { rescheduled };
+        return { rescheduled: await recalerTaches(db, planting) };
       }),
   );
 

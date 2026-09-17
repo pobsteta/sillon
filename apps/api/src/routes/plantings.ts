@@ -20,6 +20,7 @@ import {
   type PlantingType as PlantingTypeValue,
 } from '@sillon/core';
 import { inFarm } from '../scope.js';
+import { recalerPlusieursSeries } from '../task-scheduling.js';
 import { notFound } from '../errors.js';
 import { assertReferences } from '../references.js';
 import type { Tx } from '../db.js';
@@ -563,6 +564,19 @@ export async function plantingRoutes(app: FastifyInstance): Promise<void> {
           }
         }
 
+        // Les tâches suivent les dates. Sans ce recalage, décaler un printemps d'une
+        // semaine laissait la feuille de tâches aux anciennes dates : le plan disait une
+        // chose et le travail du jour en disait une autre. Les tâches déjà faites ne
+        // bougent pas — c'est `recalerPlusieursSeries` qui s'en charge.
+        let rescheduled = 0;
+        if (shiftDays) {
+          const decalees = await db.planting.findMany({
+            where: { id: { in: owned.map((planting) => planting.id) } },
+            include: { dates: true, harvestPeriods: true },
+          });
+          rescheduled = await recalerPlusieursSeries(db, decalees);
+        }
+
         if (removeTagIds?.length) {
           await db.plantingTag.deleteMany({
             where: { plantingId: { in: owned.map((p) => p.id) }, tagId: { in: removeTagIds } },
@@ -577,7 +591,7 @@ export async function plantingRoutes(app: FastifyInstance): Promise<void> {
           });
         }
 
-        return { updated: owned.length };
+        return { updated: owned.length, rescheduled };
       }),
   );
 

@@ -332,3 +332,27 @@ export function archiveName(farmName: string, generatedAt: Date): string {
   const stamp = generatedAt.toISOString().slice(0, 19).replace(/[:T]/g, '-');
   return `sillon-${slug}-${stamp}.zip`;
 }
+
+/**
+ * Applique `traiter` par tranches de `taille`, en préservant l'ordre.
+ *
+ * L'export récupérait ses photos une par une. Sur un disque local, invisible ; sur un
+ * stockage objet, chaque photo est un aller-retour réseau — cinq cents photos à 80 ms font
+ * quarante secondes, au-delà de ce que laisse passer un proxy. Huit de front ramènent cela
+ * à cinq, au prix de huit photos en mémoire au lieu d'une : après normalisation, quelques
+ * mégaoctets.
+ *
+ * Par tranches plutôt qu'en réservoir : une tranche lente retarde la suivante, mais l'ordre
+ * est garanti sans compteur ni file, et des lectures d'objets de tailles voisines ne
+ * gagneraient rien à mieux.
+ */
+export async function parTranches<T, R>(
+  items: readonly T[],
+  taille: number,
+  traiter: (item: T) => Promise<R>,
+  surTranche: (resultats: R[]) => void,
+): Promise<void> {
+  for (let debut = 0; debut < items.length; debut += taille) {
+    surTranche(await Promise.all(items.slice(debut, debut + taille).map(traiter)));
+  }
+}

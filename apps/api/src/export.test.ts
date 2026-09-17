@@ -17,7 +17,7 @@ import {
   type TestAccount,
 } from './test-support.js';
 import { disconnectPrisma, getPrisma } from './db.js';
-import { EXPORT_EXCLUSIONS, EXPORT_TABLES, archiveName } from './export.js';
+import { EXPORT_EXCLUSIONS, EXPORT_TABLES, archiveName, parTranches } from './export.js';
 
 let app: FastifyInstance;
 let account: TestAccount;
@@ -237,5 +237,60 @@ describe('export complet de la ferme', () => {
     expect(archiveName('Jardin d’Été', quand)).toBe('sillon-jardin-d-ete-2026-07-14-09-30-15.zip');
     // Un nom qui ne laisserait aucun caractère ne doit pas produire « sillon--… ».
     expect(archiveName('🌱', quand)).toBe('sillon-ferme-2026-07-14-09-30-15.zip');
+  });
+});
+
+describe('récupération par tranches', () => {
+  it('préserve l’ordre malgré la concurrence', async () => {
+    const recus: number[] = [];
+    // Les premiers éléments mettent le plus de temps : sans garantie d'ordre, ils
+    // arriveraient en dernier.
+    await parTranches(
+      [50, 40, 30, 20, 10, 0],
+      3,
+      async (attente) => {
+        await new Promise((r) => setTimeout(r, attente));
+        return attente;
+      },
+      (tranche) => recus.push(...tranche),
+    );
+
+    expect(recus).toEqual([50, 40, 30, 20, 10, 0]);
+  });
+
+  it('ne lance jamais plus que la taille de tranche à la fois', async () => {
+    let enCours = 0;
+    let pic = 0;
+
+    await parTranches(
+      Array.from({ length: 20 }, (_, i) => i),
+      4,
+      async (i) => {
+        enCours += 1;
+        pic = Math.max(pic, enCours);
+        await new Promise((r) => setTimeout(r, 1));
+        enCours -= 1;
+        return i;
+      },
+      () => undefined,
+    );
+
+    // C'est tout l'objet du bornage : huit photos en mémoire, pas cinq cents.
+    expect(pic).toBeLessThanOrEqual(4);
+  });
+
+  it('ne fait rien sur une liste vide', async () => {
+    let appels = 0;
+
+    await parTranches(
+      [],
+      4,
+      async (x) => x,
+      () => {
+        appels += 1;
+      },
+    );
+
+    expect(appels).toBe(0);
   });
 });
