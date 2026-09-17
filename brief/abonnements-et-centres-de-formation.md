@@ -65,45 +65,65 @@ manuelle.
 
 ---
 
-## 3. Le paiement, européen
+## 3. L'encaissement : une échéance réglementaire décide à notre place
 
-### L'argument de la TVA, corrigé
+### La facturation électronique, et ce qu'elle interdit
 
-Le _vendeur de référence_ (Paddle, Lemon Squeezy) prend en charge la déclaration de TVA, ce
-qui pèse lourd en **B2C**. Les clients de Sillon sont des **fermes**, donc des professionnels
-avec un numéro de TVA intracommunautaire : la vente relève de l'**autoliquidation**, on
-facture hors taxe et le client déclare. L'avantage du vendeur de référence fond, et rester
-européen ne coûte presque rien.
+| Échéance               | Qui                                         | Quoi                                    |
+| ---------------------- | ------------------------------------------- | --------------------------------------- |
+| **1ᵉʳ septembre 2026** | toutes les entreprises assujetties à la TVA | **recevoir** des factures électroniques |
+| **Septembre 2027**     | TPE, PME, micro-entreprises                 | **émettre** des factures électroniques  |
 
-Le guichet unique **OSS** ne devient obligatoire qu'au-delà de 10 000 € par an de services
-numériques vendus à des **particuliers** dans d'autres pays de l'UE — un seuil qu'un produit
-vendu à des exploitations agricoles n'approchera pas de sitôt.
+« Facture électronique » ne veut pas dire PDF : il faut un format **structuré** — Factur-X,
+UBL ou CII — transmis par une **Plateforme Agréée** certifiée par l'administration. Un PDF
+envoyé par courriel ne sera plus conforme.
 
-### Le choix
+**Conséquence : Sillon n'écrira jamais de facturation.** Dans un an il faudrait émettre du
+Factur-X via une plateforme agréée ; ce n'est pas le métier d'un logiciel de planification
+maraîchère, et ce serait une dette permanente pour un projet qui vise d'abord l'usage au
+champ.
 
-**[Mollie](https://www.mollie.com/)** (Pays-Bas), pour trois raisons :
+### Le paysage, et pourquoi on n'en prend rien
 
-- **européen**, y compris pour les données de facturation — cohérent avec l'engagement
-  d'hébergement UE du brief du projet ;
-- **prélèvement SEPA** natif, qui est le moyen de paiement des abonnements professionnels en
-  France, bien avant la carte ;
-- une API d'abonnements récurrents suffisante pour un prix fixe par ferme, ce qui est le
-  besoin — Sillon ne vend pas à l'usage.
+| Approche                 | Qui                               | Ce qu'on obtient                                                   | Ce qu'il reste à écrire             |
+| ------------------------ | --------------------------------- | ------------------------------------------------------------------ | ----------------------------------- |
+| Plateforme complète      | Stripe Billing (US)               | catalogue, portail hébergé, factures, prorata, TVA, SEPA et cartes | presque rien                        |
+| Vendeur de référence     | Paddle (UK)                       | idem, plus la TVA déclarée                                         | rien                                |
+| Moteur de prélèvement UE | Mollie (NL)                       | mandats et prélèvements                                            | portail, factures, catalogue        |
+| Spécialiste SEPA         | SlimPay (FR), GoCardless (UK)     | mandats SEPA, ~1 % plafonné à 2 €                                  | portail, factures, cartes           |
+| **Aucun prestataire**    | **outil de facturation français** | **factures conformes et prélèvement SEPA**                         | **la logique d'abonnement, minime** |
 
-Alternatives françaises si Mollie ne convient pas : **Payplug** (groupe BPCE) et **Stancer**
-(Iliad), plus orientées encaissement que abonnement.
+Mollie, d'abord retenu, est un **moteur de prélèvement et non une plateforme de
+facturation** : pas de catalogue, pas de prorata, pas de factures, **pas de portail client**.
+Tout cela resterait à écrire — au moment même où la réforme interdit d'écrire des factures
+soi-même.
 
-**Le schéma n'a pas à changer.** Les champs sont génériques (`providerSubscriptionId`,
-`providerPriceId`…) ; seuls `scheduledChangeAction` et `scheduledChangeAt`, de forme Paddle,
-resteront nuls avec Mollie. Le prestataire est remplaçable sans migration.
+### Le choix : pas de prestataire de paiement dans le code
 
-### Ce que l'intégration demande vraiment
+Un outil de facturation agréé sera **de toute façon nécessaire** d'ici septembre 2027. Or
+les outils français du marché émettent déjà des **factures récurrentes conformes** et
+encaissent par **prélèvement SEPA**. Autrement dit : **l'outil de facturation est le moteur
+d'abonnement**, et Sillon n'intègre rien.
 
-1. une route de webhook, **idempotente par `lastEventOccurredAt`**, qui écrit le miroir ;
-2. un lien « gérer mon abonnement » vers le portail du prestataire ;
-3. la politique `abonnement` qui lit le miroir et rend oui ou non.
+La politique `abonnement` lit alors un état simple — _cette ferme est à jour jusqu'au 31
+mars 2027_ — posé à la main au début, puis par une synchronisation si le volume le justifie.
+Trois bénéfices :
 
-Rien d'autre. Pas d'écran de paiement maison, pas de stockage de données bancaires.
+- **la facturation reste hors du produit**, ce qui est le principe de la section 2 ;
+- **rien à intégrer, rien à maintenir** : aucune clé d'API, aucun webhook, aucune dépendance
+  dans un dépôt AGPL que d'autres auto-hébergeront ;
+- **le coût est celui de l'outil comptable** qu'il faudra payer de toute manière.
+
+Pour dix à cinquante fermes, c'est amplement suffisant. Si un prélèvement automatisé est
+souhaité avant que le volume ne le justifie, **SlimPay** est l'équivalent français de
+GoCardless et garde tout en France.
+
+### Quand rouvrir la question
+
+Le jour où Sillon devient du libre-service à l'échelle : des centaines d'inscriptions,
+paiement par carte, activation immédiate sans intervention humaine. **Stripe Billing**
+deviendrait alors difficile à battre — au prix de la contrainte européenne. C'est un
+arbitrage à refaire à ce moment-là, pas avant.
 
 ---
 
@@ -201,15 +221,16 @@ Trois petites choses, une demi-journée :
 
 ## 6. Découpage proposé
 
-| Lot                          | Contenu                                                                             | Dépend de            |
-| ---------------------------- | ----------------------------------------------------------------------------------- | -------------------- |
-| **1 — Le verrou vivant**     | politique d'accès (`ouverte` par défaut), lecture seule à l'expiration, essais      | rien                 |
-| **2 — Centres de formation** | duplication d'une ferme, modèles multiples, fermes d'apprenants, adhésion formateur | lot 1                |
-| **3 — Déploiement d'essai**  | interface servie par l'API, limite de connexions, notice                            | rien                 |
-| **4 — Abonnements Mollie**   | webhook idempotent, miroir, politique `abonnement`, portail                         | lot 1, compte Mollie |
+| Lot                          | Contenu                                                                             | Dépend de |
+| ---------------------------- | ----------------------------------------------------------------------------------- | --------- |
+| **1 — Le verrou vivant**     | politique d'accès (`ouverte` par défaut), lecture seule à l'expiration, essais      | rien      |
+| **2 — Centres de formation** | duplication d'une ferme, modèles multiples, fermes d'apprenants, adhésion formateur | lot 1     |
+| **3 — Déploiement d'essai**  | interface servie par l'API, limite de connexions, notice                            | rien      |
+| **4 — Abonnements**          | politique `abonnement` lisant une échéance, écran d'administration                  | lot 1     |
 
-Les lots 1 à 3 ne dépendent d'aucune décision commerciale ni d'aucun compte : ils peuvent
-être faits tout de suite. Le lot 4 attend un compte Mollie.
+**Aucun lot n'attend plus de compte à ouvrir.** Le lot 4, qui devait intégrer un
+prestataire, se réduit à lire une échéance et à l'administrer : une journée, pas trois
+semaines.
 
 ---
 
@@ -222,4 +243,5 @@ Les lots 1 à 3 ne dépendent d'aucune décision commerciale ni d'aucun compte :
 3. **La durée de l'essai** : `farm-setup.ts` fixe une valeur aujourd'hui inutilisée.
 4. **Le centre paie-t-il pour ses apprenants**, ou les fermes d'apprenants sont-elles
    toujours gratuites ?
-5. **Le nom de domaine et l'entité** qui encaisse — prérequis du compte Mollie.
+5. **L'outil de facturation** : lequel, et à partir de quand ? Il faudra qu'il soit agréé
+   avant septembre 2027, et il vaut mieux le choisir avant d'avoir des clients.
