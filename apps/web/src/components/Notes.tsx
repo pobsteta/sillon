@@ -16,6 +16,7 @@ import { useCurrentSession } from '../lib/session.js';
 import { useLocale } from '../lib/locale.js';
 import { formatDate } from '../lib/format.js';
 import { EmptyState, ErrorNotice, Loading } from './ui.js';
+import { compresserPhoto } from '../lib/image.js';
 import type { Note, Photo } from '../lib/types.js';
 
 /** Vignette d'une photo ; la route de contenu exige la session, d'où l'URL directe. */
@@ -95,7 +96,13 @@ function NoteForm({
       // En série plutôt qu'en parallèle : sur un partage de connexion au champ, trois
       // téléversements concurrents se gênent plus qu'ils ne s'aident.
       for (const file of Array.from(files)) {
-        const photo = await upload<Photo>(`/api/farms/${farmId}/photos`, file);
+        // Réduite avant d'être envoyée : au champ, c'est le transfert qui coûte. Si le
+        // navigateur ne sait pas faire, `compresserPhoto` rend le fichier d'origine et
+        // l'API s'en charge à l'arrivée.
+        const photo = await upload<Photo>(
+          `/api/farms/${farmId}/photos`,
+          await compresserPhoto(file),
+        );
         setPhotos((current) => [...current, photo]);
       }
     } catch (cause) {
