@@ -105,6 +105,10 @@ model Farm {
   defaultProviderId     Int?        @map("default_provider_id")
   taskOverdueWindowValue Int        @default(1) @map("task_overdue_window_value")
   taskOverdueWindowUnit OverdueUnit @default(year) @map("task_overdue_window_unit")
+  /// Échéance d'abonnement, quand le déploiement en tient une. Source de vérité du droit
+  /// d'écrire sous la politique `abonnement` ; `Subscription` n'est qu'un miroir facultatif
+  /// de prestataire, qui viendrait l'alimenter.
+  paidUntil             DateTime?   @map("paid_until") @db.Date
   insertedAt            DateTime    @default(now()) @map("inserted_at")
   updatedAt             DateTime    @updatedAt @map("updated_at")
 

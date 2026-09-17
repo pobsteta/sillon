@@ -6,6 +6,7 @@
 
 export * from './types.js';
 export * from './roles.js';
+export * from './access.js';
 export * from './units.js';
 export * from './dates.js';
 export * from './planting.js';

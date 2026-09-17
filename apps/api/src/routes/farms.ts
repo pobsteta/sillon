@@ -64,7 +64,9 @@ export async function farmRoutes(app: FastifyInstance): Promise<void> {
           },
         }),
       );
-      return { ...farm, role: currentRole };
+      // L'état d'accès voyage avec la ferme : l'interface doit pouvoir dire « lecture seule »
+      // avant que la personne ne se heurte à un refus en essayant d'enregistrer.
+      return { ...farm, role: currentRole, access: request.farm!.access };
     },
   );
 

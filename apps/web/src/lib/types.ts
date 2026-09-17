@@ -12,6 +12,12 @@ export interface Farm {
   slug: string;
   role: 'owner' | 'manager' | 'employee' | 'seasonal' | 'consultant';
   countryCode?: string;
+  /** Droit d'écrire sur la ferme, absent des déploiements sans politique d'accès. */
+  access?: {
+    canWrite: boolean;
+    reason: 'ouverte' | 'essai' | 'essai_expire' | 'abonnement' | 'abonnement_expire' | 'suspendue';
+    until: string | null;
+  };
 }
 
 export interface CurrentUser {

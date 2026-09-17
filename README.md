@@ -222,6 +222,57 @@ demande annule la précédente. Réinitialiser un mot de passe ferme toutes les 
 ouvertes, y compris sur d'autres appareils. Enfin, la demande de réinitialisation répond
 la même chose que l'adresse soit inscrite ou non.
 
+### Déployer
+
+Sillon se déploie normalement en **deux conteneurs** — `apps/api/Dockerfile` et
+`apps/web/Dockerfile`, comme le montre `docker-compose.yml` — plus un worker si `REDIS_URL`
+est configuré. Nginx sert les fichiers statiques mieux que Node, et le worker tourne à part :
+c'est la façon recommandée.
+
+Les hébergements gratuits n'accordent en général **qu'un seul service web**. D'où une
+seconde image, `apps/api/Dockerfile.monoservice`, où l'API sert aussi l'interface : c'est
+`WEB_DIST` qui l'active, et le comportement reproduit celui de la configuration Nginx —
+repli sur `index.html` pour les routes du navigateur, `sw.js` jamais mis en cache, fichiers
+d'`assets` gardés un an.
+
+#### Sur Koyeb, gratuitement
+
+[Koyeb](https://www.koyeb.com/) est une société française ; choisissez la région
+**Francfort** pour rester dans l'UE.
+
+1. **La base** — créez un PostgreSQL depuis la console. Le palier gratuit offre 1 Go, mais
+   **5 heures de calcul par mois** : la base s'endort. C'est fait pour montrer
+   l'application, pas pour qu'une ferme s'en serve.
+2. **Le service** — « Create Web Service », depuis le dépôt GitHub, en choisissant le
+   **Dockerfile** `apps/api/Dockerfile.monoservice` et le port **3000**.
+3. **Les variables** :
+
+   | Variable         | Valeur                                                    |
+   | ---------------- | --------------------------------------------------------- |
+   | `DATABASE_URL`   | celle de la base, **avec `?connection_limit=3`** à la fin |
+   | `SESSION_SECRET` | 32 caractères au moins, propres à ce déploiement          |
+   | `APP_URL`        | l'URL publique du service                                 |
+   | `CORS_ORIGINS`   | la même URL                                               |
+   | `COOKIE_SECURE`  | `true`                                                    |
+   | `NODE_ENV`       | `production`                                              |
+
+`connection_limit` n'est pas une coquetterie : les paliers gratuits plafonnent les
+connexions, et Prisma en ouvre par défaut davantage que la base n'en accepte.
+
+Ni `REDIS_URL` ni `S3_BUCKET` ne sont nécessaires : sans eux, les courriels partent dans la
+requête et les photos vont sur le disque du conteneur. **Les photos disparaîtront à chaque
+redéploiement** — acceptable pour un essai, pas au-delà.
+
+#### Pour une vraie bêta
+
+Un VPS à 4 ou 5 € par mois — [Hetzner](https://www.hetzner.com/) en Allemagne,
+[Scaleway](https://www.scaleway.com/) en France — et le `docker-compose.yml` de ce dépôt.
+Tout fonctionne alors, y compris ce que les paliers gratuits ne permettent pas : Redis, le
+worker, les photos qui survivent, les sauvegardes. C'est la configuration pour laquelle
+Sillon est bâti, et elle coûte moins d'efforts qu'un palier gratuit n'en épargne.
+
+---
+
 ### Tester sur un smartphone
 
 Le téléphone et l'ordinateur doivent être sur le même réseau local. Relevez l'adresse
@@ -490,6 +541,46 @@ chiffrer au repos supposerait une clé à gérer : liée à `SESSION_SECRET`, sa
 aujourd'hui sans conséquence, elle ne fait que déconnecter — enfermerait tout le monde
 dehors. Le choix est assumé, et la base doit être protégée comme elle l'est déjà pour le
 reste des données d'une ferme.
+
+---
+
+### Le droit d'écrire : une question, trois réponses
+
+Sillon sert trois modèles — auto-hébergement, gratuit, service payant — et l'AGPL garantit
+qu'il sera auto-hébergé, que le service existe ou non. La facturation est donc une propriété
+d'un **déploiement**, pas du produit : l'application pose une seule question, _cette ferme
+peut-elle écrire ?_, et `ACCESS_POLICY` désigne qui répond.
+
+| Politique    | Réponse                         | Pour qui                                         |
+| ------------ | ------------------------------- | ------------------------------------------------ |
+| `ouverte`    | toujours oui                    | **défaut** — auto-hébergement, lycée, associatif |
+| `essai`      | oui jusqu'à `trial_expiry_date` | démonstration, formation                         |
+| `abonnement` | oui tant que `paid_until` court | le service payant                                |
+
+**Sans configuration, rien ne change** : aucune échéance ne s'applique et aucun code de
+facturation n'entre en jeu. C'est la même façon de faire que `Mailer` et `PhotoStorage`.
+
+Deux règles ne se négocient pas :
+
+- **on ne refuse jamais la lecture.** Une échéance dépassée met la ferme en lecture seule,
+  **export compris** — c'est une saison entière de travail, et l'export en libre-service est
+  promis par ailleurs. Un essai de bout en bout le vérifie ;
+- **l'essai reste acquis.** Sous `abonnement`, un abonnement échu ne reprend pas un essai
+  encore en cours : on garde ce qu'on avait donné.
+
+Le verrou tient en **un seul endroit**, `resoudreFerme`, par où passe toute route liée à une
+ferme, et la méthode HTTP dit si la requête écrit. Le qualifier route par route donnerait une
+liste qu'on oublierait de compléter — et un trou qui ne se verrait pas.
+
+L'état d'accès accompagne chaque ferme dès la session : l'interface affiche un bandeau et
+**désarme ses boutons**, plutôt que de laisser saisir une journée de relevés pour découvrir
+au moment d'enregistrer qu'on ne peut plus écrire. Le refus, s'il survient, porte le code
+`farm_read_only` — distinct d'un `forbidden` ordinaire, parce que ce n'est pas la personne
+qui manque de droits mais la ferme qui est en lecture seule.
+
+`Farm.paid_until` est la source de vérité de l'échéance. La table `Subscription`, portée
+depuis Brinjel, n'est qu'un miroir de prestataire, qui viendrait l'alimenter le jour où il y
+en aurait un — voir `brief/abonnements-et-centres-de-formation.md`.
 
 ---
 

@@ -6,7 +6,10 @@
     "pending": "{{count}} saisie en attente",
     "pending_other": "{{count}} saisies en attente",
     "synchronized": "{{count}} saisie synchronisée",
-    "synchronized_other": "{{count}} saisies synchronisées"
+    "synchronized_other": "{{count}} saisies synchronisées",
+    "readOnly": "Cette ferme est en lecture seule. Vos données restent lisibles et exportables.",
+    "readOnlyTrial": "La période d’essai est terminée : lecture seule. Vos données restent lisibles et exportables.",
+    "readOnlySuspended": "Cette ferme est suspendue : lecture seule."
   },
   "nav": {
     "dashboard": "Tableau de bord",

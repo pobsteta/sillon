@@ -6,7 +6,16 @@
 import fp from 'fastify-plugin';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
-import { can, type Action, type Resource } from '@sillon/core';
+import {
+  can,
+  ecritureHttp,
+  farmAccess,
+  today,
+  toIsoDate,
+  type Action,
+  type FarmAccess,
+  type Resource,
+} from '@sillon/core';
 import {
   SESSION_COOKIE,
   roleAtLeast,
@@ -14,19 +23,28 @@ import {
   type Role,
   type SessionUser,
 } from '../auth.js';
-import { forbidden, notFound, unauthorized } from '../errors.js';
+import { forbidden, notFound, readOnly, unauthorized } from '../errors.js';
 import { withoutFarmScope } from '../tenant.js';
 import type { Env } from '../env.js';
 
 declare module 'fastify' {
   interface FastifyRequest {
     currentUser: SessionUser | null;
-    /** Ferme résolue depuis `:farmId`, avec le rôle de l'utilisateur dessus. */
-    farm: { id: number; role: Role } | null;
+    /** Ferme résolue depuis `:farmId`, avec le rôle de l'utilisateur et l'état d'accès. */
+    farm: { id: number; role: Role; access: FarmAccess } | null;
   }
 }
 
 const FarmParams = z.object({ farmId: z.coerce.number().int().positive() });
+
+/** Ce qu'on dit à qui ne peut plus écrire. Sobre, et sans jargon de facturation. */
+function messageLectureSeule(reason: FarmAccess['reason'], until: string | null): string {
+  if (reason === 'suspendue') return 'Cette ferme est suspendue : lecture seule.';
+  const fin = until ? ` (échéance : ${until})` : '';
+  return reason === 'abonnement_expire'
+    ? `L’abonnement de cette ferme a pris fin${fin} : lecture seule. Vos données restent lisibles et exportables.`
+    : `La période d’essai de cette ferme est terminée${fin} : lecture seule. Vos données restent lisibles et exportables.`;
+}
 
 export const authPlugin = fp(async (app, options: { env: Env }) => {
   app.decorateRequest('currentUser', null);
@@ -55,14 +73,37 @@ export const authPlugin = fp(async (app, options: { env: Env }) => {
   const resoudreFerme = async (request: FastifyRequest): Promise<Role> => {
     if (!request.currentUser) throw unauthorized();
     const { farmId } = FarmParams.parse(request.params);
-    const membership = await withoutFarmScope((db) =>
-      db.farmMembership.findUnique({
+    const { membership, ferme } = await withoutFarmScope(async (db) => ({
+      membership: await db.farmMembership.findUnique({
         where: { farmId_userId: { farmId, userId: request.currentUser!.id } },
       }),
-    );
-    if (!membership) throw notFound('Ferme introuvable');
+      ferme: await db.farm.findUnique({
+        where: { id: farmId },
+        select: { locked: true, trialExpiryDate: true, paidUntil: true },
+      }),
+    }));
+    if (!membership || !ferme) throw notFound('Ferme introuvable');
+
+    const acces = farmAccess({
+      policy: options.env.ACCESS_POLICY,
+      locked: ferme.locked,
+      trialExpiryDate: toIsoDate(ferme.trialExpiryDate),
+      paidUntil: ferme.paidUntil ? toIsoDate(ferme.paidUntil) : null,
+      on: today(),
+    });
+
     const role = membership.role as Role;
-    request.farm = { id: farmId, role };
+    request.farm = { id: farmId, role, access: acces };
+
+    // Le verrou tient ici, et nulle part ailleurs : toute route liée à une ferme passe par
+    // cette fonction. Le qualifier route par route donnerait une liste qu'on oublierait de
+    // compléter à la prochaine route ajoutée — et un trou qui ne se verrait pas.
+    if (!acces.canWrite && ecritureHttp(request.method)) {
+      throw readOnly(messageLectureSeule(acces.reason, acces.until), {
+        reason: acces.reason,
+        until: acces.until,
+      });
+    }
     return role;
   };
 
