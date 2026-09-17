@@ -141,7 +141,15 @@ test('écrit une note avec photo et la retrouve au journal', async ({ page }, te
   const note = page.getByRole('article').filter({ hasText: 'Limaces sur la planche du fond' });
   await expect(note).toBeVisible();
   // La photo est bien rattachée à la note enregistrée, pas seulement au formulaire.
-  await expect(note.getByRole('img', { name: 'limace.png' })).toBeVisible();
+  const vignette = note.getByRole('img', { name: 'limace.png' });
+  await expect(vignette).toBeVisible();
+  // « Visible » ne dit rien du décodage : une image que le navigateur refuse d'afficher
+  // occupe quand même sa place. C'est `naturalWidth` qui tranche — et c'est ce contrôle
+  // qui manquait quand la route servait les photos en `application/octet-stream`, type
+  // qu'interdit `X-Content-Type-Options: nosniff`.
+  await expect
+    .poll(() => vignette.evaluate((img) => (img as HTMLImageElement).naturalWidth))
+    .toBeGreaterThan(0);
 
   // Archivée, elle quitte le journal courant et reparaît sous le filtre.
   await note.getByRole('button', { name: 'Archiver' }).click();

@@ -36,7 +36,7 @@ les fichiers qui en dérivent conservent son copyright (convention REUSE / SPDX)
 | Itinéraires techniques : génération des tâches et **recalage** quand les dates de la série bougent                | ✅   |
 | Assolement : arbre jardins → planches (`ltree`), placement, emplacements disponibles, contrôle des rotations      | ✅   |
 | Commandes de semences et de plants, export CSV                                                                    | ✅   |
-| Récoltes, notes, photos                                                                                           | ✅   |
+| Récoltes, notes, photos (réduites, réorientées, purgées de leurs métadonnées)                                     | ✅   |
 | Statistiques : rendements prévu/réalisé, temps de travail, avancement                                             | ✅   |
 | PWA : installation, cache des lectures, file d'attente des saisies hors ligne                                     | ✅   |
 | Interface fr/en, mode sombre, cibles tactiles ≥ 44 px, feuilles d'impression                                      | ✅   |
@@ -44,7 +44,7 @@ les fichiers qui en dérivent conservent son copyright (convention REUSE / SPDX)
 | Abonnements, centres de formation, TOTP : **tables présentes, interface à écrire**                                | ⏳   |
 | Courriels : invitation, confirmation d'adresse, mot de passe oublié                                               | ✅   |
 | Tâches de fond : file des courriels (BullMQ + Redis), worker distinct                                             | ✅   |
-| Stockage objet S3                                                                                                 | ⏳   |
+| Stockage objet compatible S3 (Scaleway, OVH, Hetzner) ou dossier local                                            | ✅   |
 
 Les points marqués ⏳ ont leur place dans le schéma et dans l'architecture, mais pas encore
 d'implémentation : voir « Ce qui reste à faire ».
@@ -354,6 +354,50 @@ Deux mécanismes complémentaires :
 Les écritures structurantes (créer une série, déplacer une planche) exigent le réseau : elles
 ont besoin d'une réponse du serveur (identifiants, contrôles de rotation).
 
+### Photos : normalisées à l'arrivée, puis rangées
+
+Une photo prise au champ pèse 4 à 8 Mo pour 4 000 pixels de large, porte son orientation
+dans une étiquette EXIF plutôt que dans ses pixels, et emporte les **coordonnées GPS de la
+parcelle**. Les trois posent problème, et `apps/api/src/images.ts` les règle en une passe :
+orientation appliquée puis retirée, métadonnées non recopiées, côté long ramené à
+2 048 pixels, réencodage en JPEG. Une photo de téléphone y perd plus de la moitié de son
+poids sans rien de visible en moins — ce qui compte quand on la recharge au champ.
+
+Le format de sortie est unique, et c'est délibéré : le stockage devient homogène et le type
+servi n'est plus une devinette. Le JPEG l'emporte sur le WebP parce que le brief compte
+parmi ses utilisateurs des « appareils parfois anciens ou bas de gamme », et qu'une photo
+qu'on ne peut pas ouvrir ne vaut rien.
+
+Le type est enregistré en base et servi tel quel. Il ne l'était pas : la route répondait
+`application/octet-stream`, que `X-Content-Type-Options: nosniff` — posé par `helmet` sur
+toutes les réponses — interdit d'afficher. La vignette existait dans le code et restait
+blanche à l'écran.
+
+Les photos vont sur un stockage objet compatible S3 dès que `S3_BUCKET` est décrit, et dans
+un dossier local sinon. C'est la même interface des deux côtés : les routes ne savent pas
+laquelle elles ont sous la main.
+
+| Variable               | Rôle                                                              | Défaut                   |
+| ---------------------- | ----------------------------------------------------------------- | ------------------------ |
+| `S3_BUCKET`            | Seau du stockage objet ; absent, les photos vont sur disque       | _absent_ → dossier local |
+| `S3_ENDPOINT`          | Serveur compatible S3, hors AWS                                   | _absent_                 |
+| `S3_REGION`            | Région                                                            | `fr-par`                 |
+| `S3_ACCESS_KEY_ID`     | Clé d'accès ; absente, la chaîne d'identification habituelle joue | _absent_                 |
+| `S3_SECRET_ACCESS_KEY` | Secret associé                                                    | _absent_                 |
+| `S3_PREFIX`            | Préfixe des clés, pour partager un seau                           | _absent_                 |
+| `S3_FORCE_PATH_STYLE`  | URL en `serveur/seau/clé` plutôt qu'en sous-domaine               | `true`                   |
+| `UPLOAD_DIR`           | Dossier des photos sans stockage objet                            | `uploads/`               |
+
+L'aller-retour — dépôt, relecture, préfixe, type, suppression — a été joué contre un MinIO
+local, forme chemin comprise :
+
+```bash
+docker run -d -p 9000:9000 -e MINIO_ROOT_USER=… -e MINIO_ROOT_PASSWORD=… \
+  quay.io/minio/minio server /data
+```
+
+---
+
 ### Files de fond : un second processus
 
 Avec `REDIS_URL`, un déploiement compte **deux processus** issus de la même image : le
@@ -416,19 +460,27 @@ fichier Elixir dont la formule est tirée.
 
 ## Tests
 
-| Niveau       | Où                                | Contenu                                                                                                                                                                                                                                              |
-| ------------ | --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Unitaire     | `packages/core/src/*.test.ts`     | 99 tests : dates et semaines ISO, chaîne des dates d'une série, semences et plaques, **matrice des permissions**, itinéraires techniques, disponibilité des planches, rotations, rendements, commandes, CSV, montants                                |
-| Unitaire     | `apps/web/src/lib/outbox.test.ts` | file d'attente hors ligne : ordre, rejeu, abandon d'une saisie refusée, reprise après panne                                                                                                                                                          |
-| Unitaire     | `apps/api/src/mail.test.ts`       | file des courriels : mise en file plutôt qu'envoi, repli en direct si Redis manque, livraison par le worker, échec relancé pour que la file réessaie                                                                                                 |
-| Intégration  | `apps/api/src/api.test.ts`        | 37 tests sur une vraie base : inscription, **courriels transactionnels**, **rôles et permissions**, **isolation RLS**, trigger `ltree`, filtres, lot, duplication, rotations, génération et recalage des tâches, commandes CSV, statistiques, export |
-| Bout en bout | `e2e/parcours.spec.ts`            | 3 parcours joués au **smartphone** et au **bureau** sur le build de production                                                                                                                                                                       |
+| Niveau       | Où                                | Contenu                                                                                                                                                                                                                                                                             |
+| ------------ | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Unitaire     | `packages/core/src/*.test.ts`     | 99 tests : dates et semaines ISO, chaîne des dates d'une série, semences et plaques, **matrice des permissions**, itinéraires techniques, disponibilité des planches, rotations, rendements, commandes, CSV, montants                                                               |
+| Unitaire     | `apps/web/src/lib/outbox.test.ts` | file d'attente hors ligne : ordre, rejeu, abandon d'une saisie refusée, reprise après panne                                                                                                                                                                                         |
+| Unitaire     | `apps/api/src/mail.test.ts`       | file des courriels : mise en file plutôt qu'envoi, repli en direct si Redis manque, livraison par le worker, échec relancé pour que la file réessaie                                                                                                                                |
+| Unitaire     | `apps/api/src/images.test.ts`     | photos : réduction, orientation EXIF appliquée, métadonnées GPS retirées, réencodage, contenu illisible refusé ; choix du stockage et garde-fou du dossier local                                                                                                                    |
+| Intégration  | `apps/api/src/api.test.ts`        | 41 tests sur une vraie base : inscription, **courriels transactionnels**, **rôles et permissions**, **isolation RLS**, trigger `ltree`, filtres, lot, duplication, rotations, génération et recalage des tâches, commandes CSV, statistiques, export, **type servi pour une photo** |
+| Bout en bout | `e2e/parcours.spec.ts`            | 4 parcours joués au **smartphone** et au **bureau** sur le build de production, vignette réellement décodée comprise                                                                                                                                                                |
 
 ```bash
 npm test          # unitaires + intégration (PostgreSQL requis)
 npm run test:e2e  # Playwright ; PLAYWRIGHT_CHROMIUM_PATH permet d'utiliser un Chromium déjà installé
 npm run lint      # ESLint : peu de règles, mais qui attrapent de vraies fautes
 ```
+
+Les fichiers d'essai sont **typés comme le reste**. Ils ne l'étaient pas : le `tsconfig` de
+construction les écarte — ils n'ont rien à faire dans `dist` — et le typage suivait cette
+exclusion. Un essai pouvait donc appeler une méthode avec le mauvais nombre d'arguments
+sans que rien ne le dise avant l'exécution, ce qui est précisément arrivé en écrivant
+`images.test.ts`. `tsconfig.typecheck.json` reprend la même configuration sans rien exclure ;
+il n'a révélé aucune erreur existante, ce qui rendait la correction gratuite.
 
 Le style est l'affaire de Prettier, pas d'ESLint : la configuration ne contient aucune
 règle de mise en forme. Elle vise les fautes que le typage ne voit pas — promesse oubliée,
@@ -538,8 +590,9 @@ en SVG et en CSS : aucune bibliothèque de visualisation n'est téléchargée.
 - **Tâches de fond** : la file des courriels tourne (BullMQ + Redis, worker distinct) ;
   restent à y faire passer les exports volumineux et la régénération massive des tâches.
   `apps/api/src/queue.ts` accueille les files suivantes.
-- **Stockage objet S3** : `apps/api/src/storage.ts` définit l'interface et une implémentation
-  locale ; il reste à écrire l'implémentation S3 et le redimensionnement à l'upload.
+- **Compression côté client** (§7.3 du brief) : la photo est réduite à l'arrivée, donc le
+  téléphone envoie encore l'original. Au champ, sur un réseau qui hoquette, c'est le
+  transfert qui coûte, pas le stockage.
 - **TOTP**, abonnements Paddle, centres de formation et fermes d'apprenants : tables et
   relations présentes, logique à écrire.
 - **Glisser-déposer** de l'assolement sur PC : le placement se fait aujourd'hui par la liste

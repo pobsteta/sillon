@@ -20,9 +20,11 @@ import {
 } from 'fastify-type-provider-zod';
 import { loadEnv, type Env } from './env.js';
 import type { Mailer } from './mail.js';
+import type { PhotoStorage } from './storage.js';
 import { registerErrorHandler } from './errors.js';
 import { authPlugin } from './plugins/auth.js';
 import { mailPlugin } from './plugins/mail.js';
+import { storagePlugin } from './plugins/storage.js';
 import { authRoutes } from './routes/auth.js';
 import { farmRoutes } from './routes/farms.js';
 import { referenceRoutes } from './routes/reference.js';
@@ -42,6 +44,8 @@ const VERSION = (createRequire(import.meta.url)('../package.json') as { version:
 export interface BuildOptions {
   /** Transport de courriels ; sans lui, il est choisi d'après la configuration. */
   mailer?: Mailer | undefined;
+  /** Stockage des photos ; sans lui, il est choisi d'après la configuration. */
+  storage?: PhotoStorage | undefined;
 }
 
 export async function buildApp(
@@ -94,6 +98,7 @@ export async function buildApp(
 
   await app.register(authPlugin, { env });
   await app.register(mailPlugin, { env, mailer: options.mailer });
+  await app.register(storagePlugin, { env, storage: options.storage });
 
   app.get(
     '/health',

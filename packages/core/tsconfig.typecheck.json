@@ -1,0 +1,10 @@
+{
+  // Le tsconfig de construction écarte les essais : ils n'ont rien à faire dans `dist`.
+  // Les écarter du *typage* est un autre sujet — un essai qui appelle une méthode avec le
+  // mauvais nombre d'arguments passait alors inaperçu jusqu'à l'exécution. Ce fichier
+  // reprend la même configuration et n'exclut rien.
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "noEmit": true },
+  "include": ["src/**/*.ts"],
+  "exclude": []
+}
