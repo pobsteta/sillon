@@ -273,6 +273,21 @@ export function SettingsPage() {
         </section>
       ) : null}
 
+      {/* §3.6 : « export complet des données de la ferme, auto-service, à tout moment ».
+          Un lien nu plutôt qu'un appel fetch : le navigateur enchaîne le téléchargement
+          avec le cookie de session, et l'archive ne transite pas par la mémoire de la page. */}
+      {canEdit ? (
+        <section className="card mb-6">
+          <h2 className="mb-3 text-lg font-semibold">{t('settings.export')}</h2>
+          <p className="mb-3 text-sm text-earth-700 dark:text-earth-200">
+            {t('settings.exportHint')}
+          </p>
+          <a className="btn-ghost" href={`/api/farms/${farm?.id}/export.zip`} download>
+            {t('settings.exportDownload')}
+          </a>
+        </section>
+      ) : null}
+
       <section className="card">
         <h2 className="mb-3 text-lg font-semibold">{t('settings.account')}</h2>
         <div className="flex flex-wrap items-end gap-3">

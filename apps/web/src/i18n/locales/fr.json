@@ -319,7 +319,10 @@
     "account": "Compte",
     "changePassword": "Changer de mot de passe",
     "currentPassword": "Mot de passe actuel",
-    "newPassword": "Nouveau mot de passe"
+    "newPassword": "Nouveau mot de passe",
+    "export": "Export des données",
+    "exportHint": "Une archive ZIP contenant toutes les données de la ferme : un fichier CSV par table, les photos, et une notice qui donne les unités. Ces données vous appartiennent.",
+    "exportDownload": "Télécharger l’archive"
   },
   "notes": {
     "title": "Notes",

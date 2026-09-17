@@ -319,7 +319,10 @@
     "account": "Account",
     "changePassword": "Change password",
     "currentPassword": "Current password",
-    "newPassword": "New password"
+    "newPassword": "New password",
+    "export": "Data export",
+    "exportHint": "A ZIP archive with all of the farm’s data: one CSV file per table, the photos, and a note explaining the units. This data is yours.",
+    "exportDownload": "Download the archive"
   },
   "notes": {
     "title": "Notes",
