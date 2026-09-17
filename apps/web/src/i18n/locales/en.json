@@ -18,7 +18,8 @@
     "stats": "Statistics",
     "settings": "Settings",
     "menu": "Menu",
-    "more": "More"
+    "more": "More",
+    "notes": "Notes"
   },
   "common": {
     "add": "Add",
@@ -58,7 +59,8 @@
     "meters": "m",
     "centimeters": "cm",
     "days": "days",
-    "minutes": "min"
+    "minutes": "min",
+    "date": "Date"
   },
   "auth": {
     "signIn": "Sign in",
@@ -309,5 +311,22 @@
     "changePassword": "Change password",
     "currentPassword": "Current password",
     "newPassword": "New password"
+  },
+  "notes": {
+    "title": "Notes",
+    "content": "Note",
+    "placeholder": "What you saw in the field: pest, weather, crop condition…",
+    "save": "Save note",
+    "pin": "Pin",
+    "unpin": "Unpin",
+    "pinned": "Pinned note",
+    "archive": "Archive",
+    "unarchive": "Unarchive",
+    "showArchived": "Show archived notes",
+    "empty": "No notes yet",
+    "addPhoto": "Add a photo",
+    "removePhoto": "Remove photo {{name}}",
+    "uploadFailed": "The photo could not be uploaded",
+    "confirmDelete": "Delete this note and its photos?"
   }
 }

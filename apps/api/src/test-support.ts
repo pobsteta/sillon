@@ -4,6 +4,9 @@
 // Utilitaires des tests d'intégration : base vidée entre chaque fichier, application
 // construite une fois, et un compte de travail déjà connecté.
 
+import { mkdtemp } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import type { FastifyInstance } from 'fastify';
 import { buildApp } from './app.js';
 import { getPrisma } from './db.js';
@@ -29,6 +32,9 @@ export async function resetDatabase(): Promise<void> {
 export const mailbox = new CaptureMailer();
 
 export async function createTestApp(): Promise<FastifyInstance> {
+  // `createStorage()` lit UPLOAD_DIR au moment où les routes s'enregistrent. Sans ça, les
+  // photos des essais atterriraient dans `uploads/` à la racine du dépôt.
+  process.env.UPLOAD_DIR ??= await mkdtemp(join(tmpdir(), 'sillon-photos-'));
   const app = await buildApp(
     { NODE_ENV: 'test', APP_URL: 'https://sillon.example', TOKEN_HOURS: 24 },
     { mailer: mailbox },

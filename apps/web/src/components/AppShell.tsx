@@ -28,6 +28,8 @@ const NAVIGATION: NavEntry[] = [
   { to: '/taches', labelKey: 'nav.tasks', icon: '✓', primary: true },
   { to: '/assolement', labelKey: 'nav.beds', icon: '▦', primary: true },
   { to: '/recoltes', labelKey: 'nav.harvests', icon: '⚖', primary: false },
+  // Le consultant lit tout sauf les notes : elles ne figurent pas dans sa matrice.
+  { to: '/notes', labelKey: 'nav.notes', icon: '✎', primary: false, permission: ['notes', 'read'] },
   // Le saisonnier ne voit pas les commandes ; l'employé ne voit pas les statistiques.
   {
     to: '/commandes',

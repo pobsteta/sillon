@@ -18,7 +18,8 @@
     "stats": "Statistiques",
     "settings": "Paramètres",
     "menu": "Menu",
-    "more": "Plus"
+    "more": "Plus",
+    "notes": "Notes"
   },
   "common": {
     "add": "Ajouter",
@@ -58,7 +59,8 @@
     "meters": "m",
     "centimeters": "cm",
     "days": "jours",
-    "minutes": "min"
+    "minutes": "min",
+    "date": "Date"
   },
   "auth": {
     "signIn": "Se connecter",
@@ -309,5 +311,22 @@
     "changePassword": "Changer de mot de passe",
     "currentPassword": "Mot de passe actuel",
     "newPassword": "Nouveau mot de passe"
+  },
+  "notes": {
+    "title": "Notes",
+    "content": "Note",
+    "placeholder": "Ce qui a été vu au champ : ravageur, météo, état de la culture…",
+    "save": "Enregistrer la note",
+    "pin": "Épingler",
+    "unpin": "Désépingler",
+    "pinned": "Note épinglée",
+    "archive": "Archiver",
+    "unarchive": "Désarchiver",
+    "showArchived": "Voir les notes archivées",
+    "empty": "Aucune note pour l’instant",
+    "addPhoto": "Ajouter une photo",
+    "removePhoto": "Retirer la photo {{name}}",
+    "uploadFailed": "La photo n’a pas pu être envoyée",
+    "confirmDelete": "Supprimer cette note et ses photos ?"
   }
 }

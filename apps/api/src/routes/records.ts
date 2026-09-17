@@ -293,7 +293,11 @@ export async function recordRoutes(app: FastifyInstance): Promise<void> {
   app.post(
     '/api/farms/:farmId/photos',
     {
-      onRequest: app.requireFarm('employee'),
+      // Une photo n'existe que pour être jointe à une note : c'est donc la permission
+      // `notes` qui la commande, pas l'échelle des rôles. La matrice Brinjel donne au
+      // saisonnier `notes: [create, read, update, delete]` — lui refuser le téléversement
+      // le laissait écrire une note sans pouvoir y joindre la photo qui la motive.
+      onRequest: app.requirePermission('notes', 'create'),
       schema: { tags: photoTags, summary: 'Téléverser une photo' },
     },
     async (request, reply) => {

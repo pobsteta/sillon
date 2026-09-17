@@ -439,6 +439,76 @@ describe('plan de culture', () => {
     });
     expect(saisie.statusCode, 'le consultant ne saisit pas de récolte').toBe(403);
   });
+
+  /** Corps multipart minimal : un PNG de 1×1 pixel, suffisant pour franchir le contrôle de type. */
+  function photoPayload(boundary: string) {
+    const pixel = Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+      'base64',
+    );
+    return Buffer.concat([
+      Buffer.from(
+        `--${boundary}\r\n` +
+          'content-disposition: form-data; name="file"; filename="planche.png"\r\n' +
+          'content-type: image/png\r\n\r\n',
+      ),
+      pixel,
+      Buffer.from(`\r\n--${boundary}--\r\n`),
+    ]);
+  }
+
+  it('laisse le saisonnier joindre une photo à sa note', async () => {
+    // Une photo n'existe que rattachée à une note, et la matrice donne au saisonnier
+    // `notes: [create, read, update, delete]`. Le garde-fou hiérarchique `employee` le
+    // laissait écrire la note et lui refusait la photo qui la motive.
+    const guest = await memberWithRole('seasonal', 'photo-saisonnier@example.org');
+    const cookie = { cookie: guest.cookie };
+    const boundary = 'sillon-essai-multipart';
+
+    const televersement = await app.inject({
+      method: 'POST',
+      url: farmUrl('/photos'),
+      headers: { ...cookie, 'content-type': `multipart/form-data; boundary=${boundary}` },
+      payload: photoPayload(boundary),
+    });
+    expect(televersement.statusCode, 'le saisonnier téléverse').toBe(201);
+    const photo = televersement.json();
+
+    const note = await app.inject({
+      method: 'POST',
+      url: farmUrl('/notes'),
+      headers: cookie,
+      payload: { content: 'Limaces sur la planche 3', photoIds: [photo.id] },
+    });
+    expect(note.statusCode, 'et la joint à sa note').toBe(201);
+    expect(note.json().photos).toHaveLength(1);
+
+    // Et il relit l'image qu'il vient de déposer.
+    const contenu = await app.inject({
+      method: 'GET',
+      url: farmUrl(`/photos/${photo.id}/content`),
+      headers: cookie,
+    });
+    expect(contenu.statusCode, 'relecture de la photo').toBe(200);
+    expect(contenu.rawPayload.length).toBeGreaterThan(0);
+  });
+
+  it('refuse la photo au consultant, qui ne tient pas de notes', async () => {
+    // L'autre bord de la même règle : le consultant lit tout mais n'écrit aucune note.
+    const guest = await memberWithRole('consultant', 'photo-consultant@example.org');
+    const boundary = 'sillon-essai-multipart';
+
+    const refus = await app.inject({
+      method: 'POST',
+      url: farmUrl('/photos'),
+      headers: {
+        cookie: guest.cookie,
+        'content-type': `multipart/form-data; boundary=${boundary}`,
+      },
+      payload: photoPayload(boundary),
+    });
+    expect(refus.statusCode).toBe(403);
+  });
 });
 
 describe('assolement', () => {

@@ -14,3 +14,6 @@ apps/web/dev-dist/
 apps/api/prisma/.generated/
 playwright-report/
 test-results/
+
+# Photos téléversées en développement (stockage local)
+uploads/

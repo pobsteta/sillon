@@ -142,10 +142,14 @@ export async function deleteSession(db: Tx, token: string): Promise<void> {
 }
 
 /**
- * Hiérarchie des rôles, reprise de `Brinjel.Admin.Role`. Brinjel attache à chacun un
- * jeu de permissions par domaine ; Sillon garde l'ordre et le fait respecter route par
- * route. Le consultant ne saisit rien, le saisonnier saisit récoltes et tâches,
- * l'employé y ajoute les notes, le chef de culture touche au plan de culture.
+ * Ordre d'administration des rôles. Il ne dit **pas** qui a le droit de quoi : c'est la
+ * matrice de `@sillon/core/roles` qui fait foi, et elle ne se range pas sur une échelle
+ * — le saisonnier saisit les récoltes et écrit les notes, ce que le consultant, placé
+ * « au-dessous » de lui ici, ne peut pas faire ; l'employé n'ajoute au saisonnier que la
+ * lecture des commandes, pas les notes.
+ *
+ * Ce rang ne sert donc qu'aux quelques routes où `owner > manager` est bien ce que
+ * décrit Brinjel : réglages, équipe, zone dangereuse. Partout ailleurs, `requirePermission`.
  */
 const ROLE_RANK = { consultant: 1, seasonal: 2, employee: 3, manager: 4, owner: 5 } as const;
 export type Role = keyof typeof ROLE_RANK;

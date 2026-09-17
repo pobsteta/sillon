@@ -104,3 +104,48 @@ test('le mot de passe oublié ne dit pas qui a un compte', async ({ page }) => {
   await expect(page.getByRole('status')).toContainText('Si un compte correspond à cette adresse');
   await expect(page.getByRole('status')).not.toContainText('inconnu');
 });
+
+test('écrit une note avec photo et la retrouve au journal', async ({ page }, testInfo) => {
+  const email = uniqueEmail(`notes-${testInfo.project.name}`);
+
+  await page.goto('/connexion');
+  await page.getByRole('button', { name: 'Pas encore de compte ?' }).click();
+  await page.getByLabel('Adresse électronique').fill(email);
+  await page.getByLabel('Mot de passe').fill(password);
+  await page.getByRole('button', { name: 'Créer un compte', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Tableau de bord' })).toBeVisible();
+
+  // Les entrées secondaires tiennent derrière « Plus » au smartphone, et à même la
+  // barre latérale au bureau : le parcours passe par la navigation réelle des deux.
+  const more = page.getByRole('button', { name: 'Plus' });
+  if (await more.isVisible()) await more.click();
+  await page.getByRole('link', { name: 'Notes' }).first().click();
+  await expect(page.getByRole('heading', { name: 'Notes', level: 1 })).toBeVisible();
+  await expect(page.getByText('Aucune note pour l’instant')).toBeVisible();
+
+  // Un PNG de 1×1 pixel : le plus petit fichier qui franchisse le contrôle de type.
+  await page.getByLabel('Ajouter une photo').setInputFiles({
+    name: 'limace.png',
+    mimeType: 'image/png',
+    buffer: Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+      'base64',
+    ),
+  });
+  // La vignette n'apparaît qu'une fois le téléversement accepté par l'API.
+  await expect(page.getByRole('img', { name: 'limace.png' })).toBeVisible();
+
+  await page.getByLabel('Note', { exact: true }).fill('Limaces sur la planche du fond');
+  await page.getByRole('button', { name: 'Enregistrer la note' }).click();
+
+  const note = page.getByRole('article').filter({ hasText: 'Limaces sur la planche du fond' });
+  await expect(note).toBeVisible();
+  // La photo est bien rattachée à la note enregistrée, pas seulement au formulaire.
+  await expect(note.getByRole('img', { name: 'limace.png' })).toBeVisible();
+
+  // Archivée, elle quitte le journal courant et reparaît sous le filtre.
+  await note.getByRole('button', { name: 'Archiver' }).click();
+  await expect(page.getByText('Aucune note pour l’instant')).toBeVisible();
+  await page.getByLabel('Voir les notes archivées').check();
+  await expect(page.getByText('Limaces sur la planche du fond')).toBeVisible();
+});

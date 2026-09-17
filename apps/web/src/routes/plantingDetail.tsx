@@ -39,6 +39,7 @@ import {
 } from '../lib/queries.js';
 import { api } from '../lib/api.js';
 import { Field, Loading, PageHeader, Select, StatTile, Toggle } from '../components/ui.js';
+import { NoteList } from '../components/Notes.js';
 import {
   formatDate,
   formatLength,
@@ -104,7 +105,7 @@ export function PlantingDetailPage({ plantingId }: { plantingId: number | null }
   const { t } = useTranslation();
   const locale = useLocale();
   const farmId = useFarmId();
-  const { canEdit } = useCurrentSession();
+  const { canEdit, can } = useCurrentSession();
   const navigate = useNavigate();
 
   const existing = usePlanting(farmId, plantingId ?? Number.NaN);
@@ -654,6 +655,15 @@ export function PlantingDetailPage({ plantingId }: { plantingId: number | null }
           ) : null}
         </aside>
       </div>
+
+      {/* Les notes d'une série n'ont de sens qu'une fois la série créée : sur l'écran de
+          création, il n'y a pas encore d'identifiant auquel les rattacher. */}
+      {plantingId && can('notes', 'read') ? (
+        <section className="mt-6">
+          <h2 className="mb-2 text-lg font-semibold">{t('notes.title')}</h2>
+          <NoteList farmId={farmId} plantingId={plantingId} />
+        </section>
+      ) : null}
     </>
   );
 }
