@@ -1,0 +1,42 @@
+# SPDX-FileCopyrightText: © 2026 Sillon contributors
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# Image « tout-en-un » : l'API sert aussi l'interface. Un seul conteneur, un seul port —
+# ce qu'exigent les hébergements gratuits, qui n'accordent qu'un service web.
+#
+# Ce n'est PAS l'image de production recommandée. `apps/api/Dockerfile` et
+# `apps/web/Dockerfile` restent la bonne façon de déployer : Nginx sert les fichiers
+# statiques mieux que Node, et le worker tourne à part. Voir le README.
+FROM node:22-alpine AS build
+WORKDIR /app
+COPY package.json package-lock.json ./
+COPY packages/core/package.json packages/core/
+COPY apps/api/package.json apps/api/
+COPY apps/web/package.json apps/web/
+# Le postinstall de @sillon/api lance `prisma generate` : le schéma doit précéder `npm ci`.
+COPY apps/api/prisma apps/api/prisma
+RUN npm ci --include-workspace-root
+COPY tsconfig.base.json ./
+COPY packages/core packages/core
+COPY apps/api apps/api
+COPY apps/web apps/web
+RUN npm run build -w @sillon/core \
+ && npm run build -w @sillon/api \
+ && npm run build -w @sillon/web
+
+FROM node:22-alpine
+WORKDIR /app
+ENV NODE_ENV=production
+COPY --from=build /app/node_modules node_modules
+COPY --from=build /app/package.json ./
+COPY --from=build /app/packages/core/dist packages/core/dist
+COPY --from=build /app/packages/core/package.json packages/core/
+COPY --from=build /app/apps/api/dist apps/api/dist
+COPY --from=build /app/apps/api/package.json apps/api/
+COPY --from=build /app/apps/api/prisma apps/api/prisma
+COPY --from=build /app/apps/web/dist apps/web/dist
+WORKDIR /app/apps/api
+# L'interface est servie depuis l'API : c'est `WEB_DIST` qui l'active.
+ENV WEB_DIST=/app/apps/web/dist
+EXPOSE 3000
+CMD ["sh", "-c", "npx prisma migrate deploy && node dist/server.js"]

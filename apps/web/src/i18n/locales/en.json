@@ -6,7 +6,10 @@
     "pending": "{{count}} entry pending",
     "pending_other": "{{count}} entries pending",
     "synchronized": "{{count}} entry synchronized",
-    "synchronized_other": "{{count}} entries synchronized"
+    "synchronized_other": "{{count}} entries synchronized",
+    "readOnly": "This farm is read-only. Your data stays readable and exportable.",
+    "readOnlyTrial": "The trial has ended: read-only. Your data stays readable and exportable.",
+    "readOnlySuspended": "This farm is suspended: read-only."
   },
   "nav": {
     "dashboard": "Dashboard",

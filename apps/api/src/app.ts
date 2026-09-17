@@ -5,11 +5,13 @@
 
 import './json.js';
 import { createRequire } from 'node:module';
+import { resolve } from 'node:path';
 import Fastify, { type FastifyInstance } from 'fastify';
 import cookie from '@fastify/cookie';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import multipart from '@fastify/multipart';
+import fastifyStatic from '@fastify/static';
 import rateLimit from '@fastify/rate-limit';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
@@ -68,7 +70,7 @@ export async function buildApp(
 
   app.setValidatorCompiler(validatorCompiler);
   app.setSerializerCompiler(serializerCompiler);
-  registerErrorHandler(app);
+  registerErrorHandler(app, { serveWeb: env.WEB_DIST !== undefined });
 
   await app.register(helmet, {
     // L'interface est servie séparément (Vite en développement, Nginx en production) :
@@ -99,6 +101,32 @@ export async function buildApp(
     transform: jsonSchemaTransform,
   });
   await app.register(swaggerUi, { routePrefix: '/docs' });
+
+  // L'interface servie par l'API : un seul service, ce qu'exigent les hébergements
+  // gratuits. En déploiement ordinaire, `WEB_DIST` est absent et Nginx s'en charge —
+  // il le fait mieux, mais il coûte un second conteneur.
+  if (env.WEB_DIST) {
+    await app.register(fastifyStatic, {
+      root: resolve(env.WEB_DIST),
+      // Pas de route fourre-tout : les URL inconnues passent par le gestionnaire de 404,
+      // qui distingue une route d'API d'une route du navigateur.
+      wildcard: false,
+    });
+
+    // Les en-têtes de cache par un crochet Fastify plutôt que par l'option `setHeaders` du
+    // greffon : celle-ci reçoit tantôt la réponse brute de Node, tantôt celle de Fastify
+    // selon le chemin pris, et les deux n'ont pas les mêmes méthodes — un `sw.js` répondait
+    // 500 d'un côté ou de l'autre. `onSend` a une signature stable et documentée.
+    app.addHook('onSend', async (request, reply) => {
+      // Le service worker ne doit jamais venir d'un cache périmé, sans quoi une version
+      // ancienne de l'application survivrait à son remplacement. Les fichiers d'`assets`
+      // portent une empreinte dans leur nom : ils peuvent être gardés un an.
+      if (request.url === '/sw.js') reply.header('cache-control', 'no-cache');
+      else if (request.url.startsWith('/assets/')) {
+        reply.header('cache-control', 'public, max-age=31536000, immutable');
+      }
+    });
+  }
 
   await app.register(authPlugin, { env });
   await app.register(mailPlugin, { env, mailer: options.mailer });

@@ -38,20 +38,26 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     if (farm) localStorage.setItem(STORAGE_KEY, String(farm.id));
   }, [farm]);
 
+  // Absent d'un déploiement sans politique d'accès : on écrit alors, comme avant.
+  const peutEcrire = farm?.access?.canWrite ?? true;
+
   const value = useMemo<SessionContextValue>(
     () => ({
       session,
       isLoading,
       farm,
       selectFarm: setFarmId,
-      canEdit: farm?.role === 'owner' || farm?.role === 'manager',
-      canManageFarm: farm?.role === 'owner',
+      // Une ferme en lecture seule retire le droit d'écrire à tout le monde, quel que soit
+      // le rôle : c'est l'état de la ferme, pas celui de la personne. Sans cette ligne,
+      // l'interface proposerait des boutons que l'API refuserait.
+      canEdit: peutEcrire && (farm?.role === 'owner' || farm?.role === 'manager'),
+      canManageFarm: peutEcrire && farm?.role === 'owner',
       // La matrice de Brinjel fait foi : le saisonnier ne voit pas les commandes,
       // le consultant si. Une échelle de rôles ne saurait pas l'exprimer.
       can: (resource: Resource, action: Action) =>
-        farm ? can(farm.role, resource, action) : false,
+        farm ? (peutEcrire || action === 'read') && can(farm.role, resource, action) : false,
     }),
-    [session, isLoading, farm],
+    [session, isLoading, farm, peutEcrire],
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;

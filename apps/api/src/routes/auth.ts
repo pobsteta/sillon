@@ -30,6 +30,7 @@ import {
   versBase32,
 } from '../totp.js';
 import { withoutFarmScope } from '../tenant.js';
+import { farmAccess, today, toIsoDate } from '@sillon/core';
 import type { Tx } from '../db.js';
 import { createFarm } from '../farm-setup.js';
 import type { Env } from '../env.js';
@@ -368,10 +369,23 @@ export async function authRoutes(app: FastifyInstance, options: { env: Env }): P
       const memberships = await withoutFarmScope((db) =>
         db.farmMembership.findMany({
           where: { userId: user.id },
-          include: { farm: { select: { id: true, name: true, slug: true, countryCode: true } } },
+          include: {
+            farm: {
+              select: {
+                id: true,
+                name: true,
+                slug: true,
+                countryCode: true,
+                locked: true,
+                trialExpiryDate: true,
+                paidUntil: true,
+              },
+            },
+          },
           orderBy: { farmId: 'asc' },
         }),
       );
+      const jour = today();
       return {
         user: {
           id: user.id,
@@ -379,7 +393,23 @@ export async function authRoutes(app: FastifyInstance, options: { env: Env }): P
           locale: user.locale,
           confirmedAt: user.confirmedAt,
         },
-        farms: memberships.map((membership) => ({ ...membership.farm, role: membership.role })),
+        farms: memberships.map(({ farm, role }) => {
+          // L'état d'accès accompagne chaque ferme dès la session : l'interface doit pouvoir
+          // désarmer ses boutons, et non laisser quelqu'un saisir une journée de relevés
+          // pour découvrir au moment d'enregistrer qu'il ne peut plus écrire.
+          const { locked, trialExpiryDate, paidUntil, ...visible } = farm;
+          return {
+            ...visible,
+            role,
+            access: farmAccess({
+              policy: options.env.ACCESS_POLICY,
+              locked,
+              trialExpiryDate: toIsoDate(trialExpiryDate),
+              paidUntil: paidUntil ? toIsoDate(paidUntil) : null,
+              on: jour,
+            }),
+          };
+        }),
       };
     },
   );

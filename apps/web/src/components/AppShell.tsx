@@ -196,6 +196,21 @@ export function AppShell({ children }: { children: ReactNode }) {
           </p>
         ) : null}
 
+        {farm?.access && !farm.access.canWrite ? (
+          <p
+            role="status"
+            className="no-print bg-amber-200 px-3 py-2 text-center text-sm text-amber-950 dark:bg-amber-800 dark:text-amber-50"
+          >
+            {/* Le dire avant le refus : se heurter à une erreur en enregistrant une journée
+                de relevés serait la pire façon d'apprendre qu'on ne peut plus écrire. */}
+            {farm.access.reason === 'suspendue'
+              ? t('app.readOnlySuspended')
+              : farm.access.reason === 'essai_expire'
+                ? t('app.readOnlyTrial')
+                : t('app.readOnly')}
+          </p>
+        ) : null}
+
         {session?.user && !session.user.confirmedAt ? (
           <p
             role="status"

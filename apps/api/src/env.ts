@@ -39,6 +39,23 @@ const EnvSchema = z.object({
   MAIL_CONCURRENCY: z.coerce.number().int().positive().default(4),
 
   /**
+   * Qui décide du droit d'écrire sur une ferme. `ouverte` par défaut : sans configuration,
+   * la réponse est toujours oui, et aucun code de facturation n'entre en jeu. C'est ce qui
+   * permet à ce dépôt AGPL d'être auto-hébergé sans porter une logique commerciale dont
+   * personne n'a l'usage. Voir `brief/abonnements-et-centres-de-formation.md`.
+   */
+  ACCESS_POLICY: z.enum(['ouverte', 'essai', 'abonnement']).default('ouverte'),
+
+  /**
+   * Dossier du build de l'interface, pour la servir **depuis l'API**. Absent, l'API ne rend
+   * que du JSON et l'interface est servie à part (Nginx, comme dans `docker-compose.yml`).
+   *
+   * Cette option existe pour les hébergements gratuits, qui n'accordent qu'un seul service
+   * web : voir la section « Déployer » du README.
+   */
+  WEB_DIST: z.string().min(1).optional(),
+
+  /**
    * Dossier des photos quand aucun stockage objet n'est configuré. Relatif au processus,
    * donc à préciser dès qu'on dépasse le développement.
    */
