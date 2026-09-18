@@ -653,7 +653,10 @@ export async function plantingRoutes(app: FastifyInstance): Promise<void> {
           });
         }
 
-        return { updated: owned.length, rescheduled, aligned };
+        // `aligned` n'apparaît que si on a demandé un calage : ajouter un champ à la
+        // réponse de tout le monde pour une option que presque personne n'emploie change
+        // un contrat sans raison.
+        return { updated: owned.length, rescheduled, ...(alignToMoonDay ? { aligned } : {}) };
       }),
   );
 

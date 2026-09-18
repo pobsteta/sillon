@@ -23,7 +23,8 @@
     "menu": "Menu",
     "more": "More",
     "notes": "Notes",
-    "training": "Training"
+    "training": "Training",
+    "moon": "Moon"
   },
   "common": {
     "add": "Add",
@@ -444,6 +445,26 @@
       "perigee": "perigee",
       "apogee": "apogee",
       "noeud": "node"
-    }
+    },
+    "align": "Align to the crop’s day",
+    "alignHint": "Each planting moves by at most three days, to a day of the type its crop calls for. Those with nowhere to go stay put.",
+    "aligned": "{{count}} planting(s) aligned out of {{total}} selected.",
+    "disabled": "The lunar calendar is off. Turn it on in the settings.",
+    "previousMonth": "Previous month",
+    "nextMonth": "Next month",
+    "monthGrid": "Lunar calendar for {{month}}",
+    "tasksOnDay": "{{count}} task(s)",
+    "disclaimer": "Sillon computes the Moon’s position from ephemerides and shows the state of the sky. It copies no published calendar and draws no recommendation from it.",
+    "weekday": {
+      "0": "Mon",
+      "1": "Tue",
+      "2": "Wed",
+      "3": "Thu",
+      "4": "Fri",
+      "5": "Sat",
+      "6": "Sun"
+    },
+    "matchesCrop": "matches the crop",
+    "nearby": "nearby {{type}} days:"
   }
 }

@@ -101,6 +101,8 @@ export interface Crop {
   color: string;
   familyId: number;
   family?: Family;
+  /** Ce qu'on récolte, pour le calendrier lunaire. Nul tant que personne ne l'a renseigné. */
+  harvestedPart?: 'root' | 'leaf' | 'flower' | 'fruit' | null;
 }
 
 export interface Variety {

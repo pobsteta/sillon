@@ -61,7 +61,11 @@ describe('politique par défaut', () => {
     await fixerEcheances(compte.farmId, { essai: '2020-01-01' });
 
     expect((await creerSerie(app, compte)).statusCode).toBe(201);
-    expect(lireFerme(app, compte).then((r) => r.json().access.reason)).resolves.toBe('ouverte');
+    // `await` : sans lui, l'assertion n'est pas attendue et l'essai passerait même si la
+    // ferme répondait autre chose. Vitest le signale, et a raison.
+    await expect(lireFerme(app, compte).then((r) => r.json().access.reason)).resolves.toBe(
+      'ouverte',
+    );
   });
 });
 

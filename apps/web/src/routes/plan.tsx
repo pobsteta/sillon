@@ -37,7 +37,7 @@ export function PlanPage() {
   const { t } = useTranslation();
   const locale = useLocale();
   const farmId = useFarmId();
-  const { canEdit } = useCurrentSession();
+  const { canEdit, farm } = useCurrentSession();
   const navigate = useNavigate();
 
   const currentYear = Number(today().slice(0, 4));
@@ -56,6 +56,7 @@ export function PlanPage() {
   const [bulkOpen, setBulkOpen] = useState(false);
   const [shiftDays, setShiftDays] = useState('7');
   const [shiftNotice, setShiftNotice] = useState<number | null>(null);
+  const [moonNotice, setMoonNotice] = useState<number | null>(null);
 
   const params = {
     year,
@@ -143,6 +144,15 @@ export function PlanPage() {
           </button>
         ) : null}
       </div>
+
+      {moonNotice !== null ? (
+        <p
+          role="status"
+          className="no-print mb-4 rounded-lg border border-earth-200 bg-white p-3 text-sm dark:border-earth-700 dark:bg-earth-800"
+        >
+          {t('moon.aligned', { count: moonNotice, total: selection.length })}
+        </p>
+      ) : null}
 
       {shiftNotice !== null ? (
         <p
@@ -374,6 +384,38 @@ export function PlanPage() {
               </button>
             </div>
           </div>
+          {/* Le calage lunaire n'apparaît que si la ferme l'a allumé : qui ne pratique pas
+              ne doit pas voir un bouton de plus. Il ne remplace pas le décalage en jours,
+              il s'y ajoute — et les deux ne se combinent pas, l'API le refuse. */}
+          {farm?.moonCalendar ? (
+            <div>
+              <button
+                type="button"
+                className="btn-ghost w-full"
+                onClick={() =>
+                  bulkUpdate.mutate(
+                    { ids: selection, alignToMoonDay: { maxShift: 3 } },
+                    {
+                      onSuccess: (reponse) => {
+                        setBulkOpen(false);
+                        const calees = (reponse as { aligned?: unknown[] })?.aligned?.length ?? 0;
+                        // Dire combien de séries ont bougé, et donc combien n'ont pas
+                        // bougé : sans ce compte, un calage sans effet ressemblerait à un
+                        // bouton cassé.
+                        setMoonNotice(calees);
+                      },
+                    },
+                  )
+                }
+              >
+                {t('moon.align')}
+              </button>
+              <p className="mt-1 text-xs text-earth-700 dark:text-earth-200">
+                {t('moon.alignHint')}
+              </p>
+            </div>
+          ) : null}
+
           <Toggle
             label={t('planting.finished')}
             checked={false}
