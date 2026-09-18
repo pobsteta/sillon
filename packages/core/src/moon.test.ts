@@ -264,7 +264,7 @@ describe('le pivot : la partie récoltée', () => {
     // La règle du brief : « le décalage proposé est borné ». Au-delà, c'est l'agronomie
     // qui commande, et le plan reste maître.
     const jourFruit = annee.find((jour) => jour.dayType === 'fruit')!;
-    const loin = nearestMatchingDay(annee, jourFruit.date, 'racine', 0);
+    const loin = nearestMatchingDay(annee, jourFruit.date, 'root', 0);
     expect(loin).toBeNull();
   });
 });
