@@ -288,6 +288,30 @@ Sillon est bâti, et elle coûte moins d'efforts qu'un palier gratuit n'en épar
 
 ---
 
+### Un jardin d'exemple
+
+Un écran de plan de culture vide ne dit rien de ce que fait l'outil : les statistiques,
+l'assolement et la feuille de commande ne se comprennent qu'avec une saison sous les yeux.
+
+```bash
+node scripts/jardin-exemple.mjs --email vous@example.org --password '…' --annee 2026
+```
+
+Trente-huit séries du 10 janvier au 5 novembre, quarante planches, les tâches, les récoltes
+des fenêtres déjà passées et quelques notes de saison. Le script **passe par l'API** : les
+dates dérivées, les durées et les quantités de semences sont donc calculées par le vrai
+code — un jeu de données posé en SQL serait cohérent avec lui-même et faux vis-à-vis de
+l'application.
+
+Le placement respecte la **rotation** : une famille botanique ne revient pas sur une planche
+avant son délai de retour. C'est ce qui dimensionne le parcellaire, et non la surface — une
+saison de trente-huit séries demande au moins autant de planches distinctes que la famille
+la plus représentée en compte.
+
+Il refuse de tourner sur une année qui contient déjà des séries, sauf `--force` : un jeu de
+démonstration posé sur des données réelles serait difficile à distinguer du travail de
+quelqu'un.
+
 ### Tester sur un smartphone
 
 Le téléphone et l'ordinateur doivent être sur le même réseau local. Relevez l'adresse
@@ -334,6 +358,7 @@ Le port de l'API derrière le proxy se change avec `API_PORT` (3000 par défaut)
 | `npm run build`                         | Construit `@sillon/core`, l'API et l'interface                                   |
 | `npm run db:migrate:dev -w @sillon/api` | Crée une migration après modification du schéma                                  |
 | `npm run dev:worker -w @sillon/api`     | Worker des files de fond (courriels) ; exige `REDIS_URL`                         |
+| `node scripts/jardin-exemple.mjs`       | Peuple une ferme d'une saison complète, pour montrer Sillon plein                |
 
 ---
 
@@ -346,7 +371,7 @@ sillon/
 ├── apps/web/          React 19 + Vite + TanStack Router/Query + Tailwind 4 (PWA)
 ├── e2e/               Parcours Playwright (smartphone et bureau)
 ├── specs/             Brief, modèle de données, schéma Prisma d'origine
-├── scripts/           Outils de développement multiplateformes (dev.mjs)
+├── scripts/           Outils de développement multiplateformes (dev.mjs, jardin-exemple.mjs)
 └── infra/             Initialisation PostgreSQL pour Docker
 ```
 

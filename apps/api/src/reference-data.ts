@@ -268,4 +268,31 @@ export const SUGGESTED_PROVIDERS: {
     notes: 'Semences biologiques reproductibles, sélectionnées pour la rusticité (Hérault).',
     notesEn: 'Organic reproducible seeds, selected for hardiness (Hérault, France).',
   },
+  {
+    name: 'Germinance',
+    type: 'seed',
+    url: 'https://www.germinance.com/',
+    notes:
+      'Semences biologiques et biodynamiques, produites par un réseau de producteurs français (Maine-et-Loire).',
+    notesEn:
+      'Organic and biodynamic seeds, grown by a network of French producers (Maine-et-Loire).',
+  },
+  {
+    name: 'Graines del Païs',
+    type: 'seed',
+    url: 'https://grainesdelpais.com/',
+    notes:
+      'Coopérative d’artisans semenciers (Aude). Variétés population, reproductibles et libres de droits.',
+    notesEn:
+      'Cooperative of artisan seed growers (Aude, France). Open-pollinated, reproducible, royalty-free varieties.',
+  },
+  {
+    name: 'Agrosemens',
+    type: 'seed',
+    url: 'https://www.agrosemens.com/',
+    notes:
+      'Semences maraîchères biologiques ; catalogue destiné aux maraîchers professionnels (Bouches-du-Rhône).',
+    notesEn:
+      'Organic market-garden seeds; catalogue aimed at professional growers (Bouches-du-Rhône, France).',
+  },
 ];
