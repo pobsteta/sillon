@@ -124,7 +124,23 @@ export function OrdersPage() {
               <tbody>
                 {orders.data.lines.map((line) => (
                   <tr key={line.key} className="border-b border-earth-100 dark:border-earth-700">
-                    <td className="p-2">{line.providerName ?? '—'}</td>
+                    <td className="p-2">
+                      {/* Depuis la feuille de commande, on va sur le site du semencier.
+                          `rel` fermé : la page ouverte ne doit rien pouvoir faire de
+                          l'onglet qui l'a ouverte, et le référent ne la regarde pas. */}
+                      {line.providerName && line.providerUrl ? (
+                        <a
+                          href={line.providerUrl}
+                          target="_blank"
+                          rel="noreferrer noopener"
+                          className="underline underline-offset-2"
+                        >
+                          {line.providerName}
+                        </a>
+                      ) : (
+                        (line.providerName ?? '—')
+                      )}
+                    </td>
                     <td className="p-2 font-medium">{line.cropName}</td>
                     <td className="p-2">{line.varietyName ?? '—'}</td>
                     <td className="p-2 text-right tabular-nums">{line.plantingCount}</td>

@@ -22,6 +22,8 @@ export interface OrderablePlanting extends PlantingSpec {
   varietyName: string | null;
   providerId: number | null;
   providerName: string | null;
+  /** Site du fournisseur, quand la ferme l'a renseigné : la feuille de commande y mène. */
+  providerUrl?: string | null;
   dates: PlantingDates;
   /** Longueur déjà posée sur l'assolement, en millimètres. */
   assignedLength: number;
@@ -35,6 +37,8 @@ export interface OrderLine {
   varietyName: string | null;
   providerId: number | null;
   providerName: string | null;
+  /** Site du fournisseur, quand la ferme l'a renseigné : la feuille de commande y mène. */
+  providerUrl?: string | null;
   /** Nombre de séries concernées. */
   plantingCount: number;
   /** Graines à commander, marge de sécurité comprise. */
@@ -115,6 +119,7 @@ export function buildOrderLines(
         varietyName: planting.varietyName,
         providerId: planting.providerId,
         providerName: planting.providerName,
+        providerUrl: planting.providerUrl ?? null,
         plantingCount: 1,
         seedsNumber: quantity.seedsNumber,
         seedsQuantityGrams: quantity.seedsQuantityGrams,

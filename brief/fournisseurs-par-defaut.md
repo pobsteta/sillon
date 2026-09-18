@@ -151,10 +151,26 @@ commerciaux dans des données saisies sans intention.
 
 ---
 
-## 7. Ce qui reste à trancher
+## 7. Ce qui a été fait
 
-1. **A, B ou C** — la recommandation est A écrit comme C, mais c'est ton projet et ton nom
-   sur le dépôt.
+_Mise à jour du 18 septembre 2026._ Les trois lots sont implémentés, sur **l'option A écrite
+comme C** : les deux maisons figurent dans `SUGGESTED_PROVIDERS`
+(`apps/api/src/reference-data.ts`), une liste ouverte dont le commentaire dit ce que
+l'inscription n'est pas. Aucune autre maison n'a été ajoutée — c'est une décision éditoriale
+qui appartient au dépôt, pas à l'implémentation (voir le point 2 ci-dessous).
+
+Une chose a changé en cours de route. Le brief disait « reconnaître par le nom » ; c'est
+faux dès qu'une ferme renomme une maison — « Kokopelli (commande groupée) » pour une
+commande collective. Le geste aurait alors fait réapparaître « Kokopelli » à côté du sien,
+c'est-à-dire **défait son choix en croyant l'aider**. La reconnaissance se fait donc sur le
+**nom ou l'adresse** : l'adresse identifie la maison, le nom n'est que l'étiquette que la
+ferme lui donne. Un essai porte ce cas.
+
+---
+
+## 8. Ce qui reste à trancher
+
+1. ~~**A, B ou C**~~ — tranché : A écrit comme C. À revoir si tu préfères autrement.
 2. **D'autres maisons dès le départ ?** Germinance, La Ferme de Sainte Marthe, Graines del
    Païs, Agrosemens (celle-ci vise les professionnels) — en ajouter dilue l'effet éditorial,
    et rend la liste plus juste. Trois à cinq noms me semblent mieux que deux.

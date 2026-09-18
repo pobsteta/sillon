@@ -42,6 +42,7 @@ import { statsRoutes } from './routes/stats.js';
 import { exportRoutes } from './routes/export.js';
 import { trainingRoutes } from './routes/training.js';
 import { moonRoutes } from './routes/moon.js';
+import { providerRoutes } from './routes/providers.js';
 
 /**
  * Version publiée, lue dans le package.json que release-please tient à jour : `/health`
@@ -198,6 +199,7 @@ export async function buildApp(
   await app.register(exportRoutes);
   await app.register(trainingRoutes);
   await app.register(moonRoutes);
+  await app.register(providerRoutes);
 
   return app;
 }

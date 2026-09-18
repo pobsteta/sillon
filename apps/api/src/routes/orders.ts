@@ -60,6 +60,7 @@ async function collectOrderLines(db: Tx, farmId: number, query: z.infer<typeof O
     varietyName: row.variety?.name ?? null,
     providerId: row.variety?.providerId ?? null,
     providerName: row.variety?.provider?.name ?? null,
+    providerUrl: row.variety?.provider?.url ?? null,
     dates: datesFromRows(row.dates),
     assignedLength: row.assignments.reduce((total, a) => total + a.length, 0),
   }));

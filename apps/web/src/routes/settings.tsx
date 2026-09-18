@@ -6,7 +6,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useCurrentSession, useFarmId } from '../lib/session.js';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   keys,
   useContainers,
@@ -58,7 +58,12 @@ export function SettingsPage() {
     api(`/api/farms/${farmId}/invitations`, { method: 'POST', body: { email } }),
   );
 
-  const lists: Record<ResourceKey, { id: number; name: string }[]> = {
+  // `url` et `notes` n'existent que sur les fournisseurs : facultatifs sur la forme
+  // commune, plutôt qu'un type par ressource pour deux champs.
+  const lists: Record<
+    ResourceKey,
+    { id: number; name: string; url?: string | null; notes?: string | null }[]
+  > = {
     families: families.data ?? [],
     crops: crops.data ?? [],
     varieties: varieties.data ?? [],
@@ -94,6 +99,13 @@ export function SettingsPage() {
         return draft.cropId && draft.providerId
           ? { name, cropId: Number(draft.cropId), providerId: Number(draft.providerId) }
           : null;
+      case 'providers': {
+        // Champs vides omis plutôt qu'envoyés vides : l'API valide l'adresse, et une
+        // chaîne vide serait refusée alors que la personne n'a simplement rien saisi.
+        const url = (draft.url ?? '').trim();
+        const notes = (draft.notes ?? '').trim();
+        return { name, ...(url ? { url } : {}), ...(notes ? { notes } : {}) };
+      }
       case 'containers':
         return { name, size: Number(draft.size ?? 60) };
       case 'tags':
@@ -186,6 +198,25 @@ export function SettingsPage() {
                 </Select>
               </>
             ) : null}
+            {tab === 'providers' ? (
+              <>
+                <Field
+                  label={t('settings.providerUrl')}
+                  type="url"
+                  inputMode="url"
+                  placeholder="https://"
+                  value={draft.url ?? ''}
+                  onChange={(event) => setDraft({ ...draft, url: event.target.value })}
+                  hint={t('settings.providerUrlHint')}
+                />
+                <Field
+                  label={t('settings.providerNotes')}
+                  value={draft.notes ?? ''}
+                  onChange={(event) => setDraft({ ...draft, notes: event.target.value })}
+                  hint={t('settings.providerNotesHint')}
+                />
+              </>
+            ) : null}
             {tab === 'containers' ? (
               <Field
                 label={t('planting.holes')}
@@ -221,7 +252,25 @@ export function SettingsPage() {
         <ul className="divide-y divide-earth-100 dark:divide-earth-700">
           {lists[tab].map((item) => (
             <li key={item.id} className="flex min-h-11 items-center justify-between gap-3 py-2">
-              <span>{item.name}</span>
+              <span className="min-w-0">
+                {item.url ? (
+                  <a
+                    href={item.url}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    className="underline underline-offset-2"
+                  >
+                    {item.name}
+                  </a>
+                ) : (
+                  item.name
+                )}
+                {item.notes ? (
+                  <span className="block truncate text-xs text-earth-700 dark:text-earth-200">
+                    {item.notes}
+                  </span>
+                ) : null}
+              </span>
               {canEdit ? (
                 <button
                   type="button"
@@ -277,6 +326,8 @@ export function SettingsPage() {
           ) : null}
         </section>
       ) : null}
+
+      {canEdit ? <SuggestedProviders /> : null}
 
       {canManageFarm ? <MoonSettings /> : null}
 
@@ -383,6 +434,87 @@ function MoonSettings() {
         </div>
       ) : null}
       {enregistrer.error ? <ErrorNotice error={enregistrer.error} /> : null}
+    </section>
+  );
+}
+
+/**
+ * Semenciers proposés, pour une ferme créée avant que la liste n'existe.
+ *
+ * Un geste **offert**, et non une migration qui écrirait dans le référentiel de chacun sans
+ * rien demander. Le texte dit ce que l'inscription n'est pas — ni partenariat, ni
+ * recommandation — parce que livrer des noms commerciaux dans un logiciel libre n'est pas
+ * neutre et qu'il vaut mieux l'écrire que le laisser supposer.
+ */
+function SuggestedProviders() {
+  const { t } = useTranslation();
+  const farmId = useFarmId();
+  const queryClient = useQueryClient();
+  const [bilan, setBilan] = useState<number | null>(null);
+
+  const proposes = useQuery({
+    queryKey: keys.list(farmId, 'providers/suggested'),
+    queryFn: () =>
+      api<{ name: string; url: string; present: boolean }[]>(
+        `/api/farms/${farmId}/providers/suggested`,
+      ),
+    enabled: farmId > 0,
+  });
+
+  const ajouter = useMutation({
+    mutationFn: () =>
+      api<{ added: { id: number }[] }>(`/api/farms/${farmId}/providers/suggested`, {
+        method: 'POST',
+      }),
+    onSuccess: (reponse) => {
+      setBilan(reponse.added.length);
+      void queryClient.invalidateQueries({ queryKey: ['farm', farmId] });
+    },
+  });
+
+  const manquants = (proposes.data ?? []).filter((semencier) => !semencier.present);
+
+  return (
+    <section className="card mb-6">
+      <h2 className="mb-1 text-lg font-semibold">{t('settings.suggestedProviders')}</h2>
+      <p className="mb-3 text-sm text-earth-700 dark:text-earth-200">
+        {t('settings.suggestedProvidersHint')}
+      </p>
+      <ul className="mb-3 space-y-1 text-sm">
+        {(proposes.data ?? []).map((semencier) => (
+          <li key={semencier.name} className="flex flex-wrap items-center gap-2">
+            <a
+              href={semencier.url}
+              target="_blank"
+              rel="noreferrer noopener"
+              className="underline underline-offset-2"
+            >
+              {semencier.name}
+            </a>
+            {semencier.present ? (
+              <span className="chip bg-earth-100 dark:bg-earth-700">
+                {t('settings.alreadyPresent')}
+              </span>
+            ) : null}
+          </li>
+        ))}
+      </ul>
+      <button
+        type="button"
+        className="btn-ghost"
+        disabled={manquants.length === 0 || ajouter.isPending}
+        onClick={() => ajouter.mutate()}
+      >
+        {t('settings.addSuggested')}
+      </button>
+      {bilan !== null ? (
+        <p role="status" className="mt-2 text-sm">
+          {bilan > 0
+            ? t('settings.suggestedAdded', { count: bilan })
+            : t('settings.suggestedNothing')}
+        </p>
+      ) : null}
+      {ajouter.error ? <ErrorNotice error={ajouter.error} /> : null}
     </section>
   );
 }

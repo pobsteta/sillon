@@ -12,6 +12,7 @@ import {
   DEFAULT_PROVIDER,
   DEFAULT_TASK_TYPES,
   DEFAULT_UNITS,
+  SUGGESTED_PROVIDERS,
 } from './reference-data.js';
 
 /** Identifiant d'URL lisible, unique par ferme. */
@@ -95,7 +96,11 @@ export async function seedFarmReference(db: Tx, farmId: number, locale = 'fr'): 
   const provider = await db.provider.create({
     data: { farmId, name: label(DEFAULT_PROVIDER.name, DEFAULT_PROVIDER.nameEn), type: 'seed' },
   });
+  // Le fournisseur par défaut reste le générique : c'est lui qui accueille les variétés
+  // dont on ne sait pas encore d'où elles viennent.
   await db.farm.update({ where: { id: farmId }, data: { defaultProviderId: provider.id } });
+
+  await ajouterSemenciersProposes(db, farmId, locale);
 
   for (const family of DEFAULT_FAMILIES) {
     await db.family.create({
@@ -143,6 +148,51 @@ export async function seedFarmReference(db: Tx, farmId: number, locale = 'fr'): 
       }
     }
   }
+}
+
+/**
+ * Ajoute les semenciers proposés qui manquent, et renvoie ceux qui ont été créés.
+ *
+ * Idempotent par construction : `@@unique([farmId, name, type])` interdit le doublon, et on
+ * ne recrée pas ce qui existe. C'est ce qui permet d'offrir le même geste à une ferme
+ * ancienne sans risquer d'abîmer un référentiel déjà rangé — et une maison que la ferme a
+ * renommée n'est pas rétablie sous son ancien nom, ce qui reviendrait à défaire son choix.
+ */
+export async function ajouterSemenciersProposes(
+  db: Tx,
+  farmId: number,
+  locale = 'fr',
+): Promise<{ id: number; name: string }[]> {
+  const english = locale.startsWith('en');
+  const crees: { id: number; name: string }[] = [];
+
+  for (const semencier of SUGGESTED_PROVIDERS) {
+    // Reconnue au nom **ou à l'adresse**. C'est l'adresse qui identifie la maison ; le nom
+    // n'est que l'étiquette que la ferme lui donne, et elle a le droit de la changer —
+    // « Kokopelli (commande groupée) » reste Kokopelli. Sans cette seconde clause, le
+    // geste ferait réapparaître l'ancien nom à côté du sien, c'est-à-dire défairait son
+    // choix en croyant l'aider.
+    const existe = await db.provider.findFirst({
+      where: {
+        farmId,
+        type: semencier.type,
+        OR: [{ name: semencier.name }, { url: semencier.url }],
+      },
+    });
+    if (existe) continue;
+    const cree = await db.provider.create({
+      data: {
+        farmId,
+        name: semencier.name,
+        type: semencier.type,
+        url: semencier.url,
+        notes: english ? semencier.notesEn : semencier.notes,
+      },
+      select: { id: true, name: true },
+    });
+    crees.push(cree);
+  }
+  return crees;
 }
 
 /**

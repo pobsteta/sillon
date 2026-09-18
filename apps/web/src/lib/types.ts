@@ -119,6 +119,15 @@ export interface Named {
   name: string;
 }
 
+/** Un fournisseur : un nom, un type, et de quoi le joindre. */
+export interface Provider extends Named {
+  type: 'seed' | 'transplant';
+  /** Le site où l'on commande ; rend le nom cliquable sur la feuille de commande. */
+  url?: string | null;
+  /** Ce que la ferme sait de lui : délai, minimum de commande, date de clôture. */
+  notes?: string | null;
+}
+
 export interface Container extends Named {
   size: number;
 }
@@ -280,6 +289,8 @@ export interface OrderLine {
   cropName: string;
   varietyName: string | null;
   providerName: string | null;
+  /** Site du fournisseur : la feuille de commande y mène, quand il est renseigné. */
+  providerUrl?: string | null;
   plantingCount: number;
   seedsNumber: number;
   /** Masse de semences, en grammes. */
