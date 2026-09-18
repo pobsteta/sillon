@@ -171,9 +171,10 @@ ferme lui donne. Un essai porte ce cas.
 ## 8. Ce qui reste à trancher
 
 1. ~~**A, B ou C**~~ — tranché : A écrit comme C. À revoir si tu préfères autrement.
-2. **D'autres maisons dès le départ ?** Germinance, La Ferme de Sainte Marthe, Graines del
-   Païs, Agrosemens (celle-ci vise les professionnels) — en ajouter dilue l'effet éditorial,
-   et rend la liste plus juste. Trois à cinq noms me semblent mieux que deux.
+2. ~~**D'autres maisons dès le départ ?**~~ — tranché le 18 septembre 2026 : **Germinance,
+   Graines del Païs et Agrosemens** rejoignent les deux premières, soit cinq maisons. La
+   liste reste ouverte ; La Ferme de Sainte Marthe n'y figure pas, faute d'avoir été
+   demandée.
 3. **Le type.** Les deux maisons vendent des **semences** (`seed`). Aucun plant, donc rien à
    poser en `transplant` pour l'instant.
 

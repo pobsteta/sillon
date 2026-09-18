@@ -43,8 +43,12 @@ test('les semenciers proposés se disent pour ce qu’ils sont', async ({ page }
 
   await test.step('une ferme neuve les a déjà, donc le bouton ne fait rien', async () => {
     const section = page.locator('section').filter({ hasText: 'Semenciers proposés' }).first();
-    // Deux fois « déjà présent » : la ferme vient d'être créée avec eux.
-    await expect(section.getByText('déjà présent')).toHaveCount(2);
+    // Autant de « déjà présent » que de maisons proposées : la ferme vient d'être créée
+    // avec elles. Le compte se lit sur la liste plutôt que d'être écrit en dur, sans quoi
+    // ajouter une maison casserait cet essai sans rien dire du produit.
+    const proposees = await section.getByRole('listitem').count();
+    expect(proposees, 'la liste n’est pas vide').toBeGreaterThanOrEqual(2);
+    await expect(section.getByText('déjà présent')).toHaveCount(proposees);
     await expect(
       section.getByRole('button', { name: 'Ajouter les semenciers proposés' }),
     ).toBeDisabled();
