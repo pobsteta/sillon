@@ -13,9 +13,26 @@ function SillonMark() {
   return (
     <div className="login-mark" aria-hidden="true">
       <svg viewBox="0 0 64 64" fill="none">
-        <path d="M8 19c12 0 19 5 24 13 5-8 12-13 24-13" stroke="currentColor" strokeWidth="5" strokeLinecap="round" />
-        <path d="M8 31c12 0 19 5 24 13 5-8 12-13 24-13" stroke="currentColor" strokeWidth="5" strokeLinecap="round" opacity=".72" />
-        <path d="M8 43c12 0 19 5 24 13 5-8 12-13 24-13" stroke="currentColor" strokeWidth="5" strokeLinecap="round" opacity=".42" />
+        <path
+          d="M8 19c12 0 19 5 24 13 5-8 12-13 24-13"
+          stroke="currentColor"
+          strokeWidth="5"
+          strokeLinecap="round"
+        />
+        <path
+          d="M8 31c12 0 19 5 24 13 5-8 12-13 24-13"
+          stroke="currentColor"
+          strokeWidth="5"
+          strokeLinecap="round"
+          opacity=".72"
+        />
+        <path
+          d="M8 43c12 0 19 5 24 13 5-8 12-13 24-13"
+          stroke="currentColor"
+          strokeWidth="5"
+          strokeLinecap="round"
+          opacity=".42"
+        />
       </svg>
     </div>
   );
@@ -24,8 +41,18 @@ function SillonMark() {
 function LeafIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M20.5 3.5C11 3.8 5.4 7.4 5.4 13.2c0 3.5 2.4 5.8 5.5 5.8 5.6 0 9-5.8 9.6-15.5Z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
-      <path d="M4 21c2.1-4.3 5.5-7.4 10.4-9.9" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+      <path
+        d="M20.5 3.5C11 3.8 5.4 7.4 5.4 13.2c0 3.5 2.4 5.8 5.5 5.8 5.6 0 9-5.8 9.6-15.5Z"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M4 21c2.1-4.3 5.5-7.4 10.4-9.9"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }
@@ -93,7 +120,13 @@ export function LoginPage() {
           <span className="login-tree login-tree-d" />
         </div>
         <div className="login-field-lines">
-          <i /><i /><i /><i /><i /><i /><i />
+          <i />
+          <i />
+          <i />
+          <i />
+          <i />
+          <i />
+          <i />
         </div>
         <div className="login-visual-content">
           <div className="flex items-center gap-3">
@@ -109,11 +142,13 @@ export function LoginPage() {
               <span>Votre ferme, au fil des saisons</span>
             </div>
             <p className="text-4xl font-semibold leading-[1.08] tracking-tight lg:text-5xl">
-              Cultiver mieux.<br />Planifier simplement.
+              Cultiver mieux.
+              <br />
+              Planifier simplement.
             </p>
             <p className="mt-5 max-w-lg text-base leading-7 opacity-80">
-              Un espace de travail pensé pour le maraîchage : plan de culture, tâches,
-              assolement, commandes et récoltes réunis au même endroit.
+              Un espace de travail pensé pour le maraîchage : plan de culture, tâches, assolement,
+              commandes et récoltes réunis au même endroit.
             </p>
           </div>
         </div>
@@ -122,7 +157,9 @@ export function LoginPage() {
       <section className="login-panel">
         <div className="login-panel-top">
           <div className="flex items-center gap-2 text-sm font-medium text-sillon-700 dark:text-sillon-300">
-            <span className="login-mobile-mark"><SillonMark /></span>
+            <span className="login-mobile-mark">
+              <SillonMark />
+            </span>
             {t('app.name')}
           </div>
           <select
@@ -197,12 +234,20 @@ export function LoginPage() {
               {busy ? t('common.loading') : t(`auth.${mode}`)}
               {!busy ? (
                 <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
-                  <path d="M4 10h11M10.5 5.5 15 10l-4.5 4.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                  <path
+                    d="M4 10h11M10.5 5.5 15 10l-4.5 4.5"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
                 </svg>
               ) : null}
             </button>
 
-            <div className="login-divider"><span>ou</span></div>
+            <div className="login-divider">
+              <span>ou</span>
+            </div>
 
             <button
               type="button"
@@ -229,8 +274,21 @@ export function LoginPage() {
           <span>{t('auth.credits')}</span>
           <span className="login-secure">
             <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
-              <rect x="4.5" y="8.5" width="11" height="8" rx="2" stroke="currentColor" strokeWidth="1.4" />
-              <path d="M7 8.5V6.7a3 3 0 0 1 6 0v1.8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+              <rect
+                x="4.5"
+                y="8.5"
+                width="11"
+                height="8"
+                rx="2"
+                stroke="currentColor"
+                strokeWidth="1.4"
+              />
+              <path
+                d="M7 8.5V6.7a3 3 0 0 1 6 0v1.8"
+                stroke="currentColor"
+                strokeWidth="1.4"
+                strokeLinecap="round"
+              />
             </svg>
             Connexion sécurisée
           </span>
