@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.6.0](https://github.com/pobsteta/sillon/compare/v0.5.1...v0.6.0) (2026-09-18)
+
+
+### Fonctionnalités
+
+* **api:** le droit d'écrire devient une question posée une fois ([80677a8](https://github.com/pobsteta/sillon/commit/80677a8aba535d111671539c56037a5bbeb578cc))
+
+
+### Corrections
+
+* **docker:** le lien de confirmation devient cliquable ([3661268](https://github.com/pobsteta/sillon/commit/3661268db6e4c59d2fc74cb967431049325f35cc))
+* **docker:** les ports publiés cessent d'être en dur ([1ee7008](https://github.com/pobsteta/sillon/commit/1ee7008b546ebe97405e889eb3bb8ebe1868714f))
+
+
+### Documentation
+
+* brief des abonnements, des centres de formation et de l'hébergement ([43b46e8](https://github.com/pobsteta/sillon/commit/43b46e87caef43fe0e520ed3ac31b00f24b4cc42))
+* l'encaissement sort du code, la réforme de la facturation le décide ([3e0bf6d](https://github.com/pobsteta/sillon/commit/3e0bf6d5ad85861182fd17d9314f806a691c9082))
+* le dépôt est enregistré auprès de l'API REUSE ([eae36c5](https://github.com/pobsteta/sillon/commit/eae36c538317d0265306f9d8b084dd7a6940c3dd))
+
 ## [0.5.1](https://github.com/pobsteta/sillon/compare/v0.5.0...v0.5.1) (2026-09-17)
 
 
