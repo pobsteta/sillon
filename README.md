@@ -72,6 +72,21 @@ L'API se connecte sous `sillon_app`, un rôle **ordinaire** créé par
 ignorerait les politiques RLS et rendrait l'isolation des fermes inopérante sans rien
 signaler.
 
+#### Si un port est déjà pris
+
+`docker compose` publie la base sur 5432, Redis sur 6379, l'API sur 3000 et l'interface sur 8080. Un poste de développement en occupe souvent l'un ou l'autre — auquel cas le démarrage
+échoue sur `Bind for 127.0.0.1:5432 failed: port is already allocated`.
+
+Les quatre sont configurables, et il suffit de changer celui qui gêne :
+
+```bash
+DB_PORT=5433 docker compose up          # ponctuellement
+echo 'DB_PORT=5433' >> .env             # ou une fois pour toutes
+```
+
+Les conteneurs se joignent entre eux par le réseau interne de Compose : ces ports ne servent
+qu'à les atteindre **depuis la machine hôte**, et les changer n'affecte rien d'autre.
+
 ### Sans Docker
 
 Prérequis : Node 22+, PostgreSQL 16 avec les extensions `citext`, `unaccent` et `ltree`.
