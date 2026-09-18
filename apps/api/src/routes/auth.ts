@@ -379,6 +379,12 @@ export async function authRoutes(app: FastifyInstance, options: { env: Env }): P
                 locked: true,
                 trialExpiryDate: true,
                 paidUntil: true,
+                // Un booléen plutôt qu'une requête de plus : la navigation doit savoir
+                // montrer l'entrée « Formation » dès le premier rendu, et la plupart des
+                // fermes ne sont pas des centres — interroger chacune coûterait un 404
+                // par ouverture de l'application.
+                trainingCenter: { select: { farmId: true } },
+                studentFarm: { select: { endedAt: true } },
               },
             },
           },
@@ -397,10 +403,16 @@ export async function authRoutes(app: FastifyInstance, options: { env: Env }): P
           // L'état d'accès accompagne chaque ferme dès la session : l'interface doit pouvoir
           // désarmer ses boutons, et non laisser quelqu'un saisir une journée de relevés
           // pour découvrir au moment d'enregistrer qu'il ne peut plus écrire.
-          const { locked, trialExpiryDate, paidUntil, ...visible } = farm;
+          const { locked, trialExpiryDate, paidUntil, trainingCenter, studentFarm, ...visible } =
+            farm;
           return {
             ...visible,
             role,
+            trainingCenter: trainingCenter !== null,
+            // Une ferme d'apprenant dont la formation court : l'interface le dit, pour que
+            // personne ne découvre la présence d'un formateur dans son équipe sans savoir
+            // d'où elle vient.
+            training: studentFarm ? { ended: studentFarm.endedAt !== null } : null,
             access: farmAccess({
               policy: options.env.ACCESS_POLICY,
               locked,

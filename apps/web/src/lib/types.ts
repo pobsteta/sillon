@@ -18,6 +18,46 @@ export interface Farm {
     reason: 'ouverte' | 'essai' | 'essai_expire' | 'abonnement' | 'abonnement_expire' | 'suspendue';
     until: string | null;
   };
+  /** La ferme est un centre de formation : la navigation en dépend. */
+  trainingCenter?: boolean;
+  /** La ferme est une ferme d'apprenant, et si la formation court encore. */
+  training?: { ended: boolean } | null;
+}
+
+/** Une ferme modèle d'un centre, telle que `GET /training-center` la renvoie. */
+export interface TrainingTemplate {
+  id: number;
+  name: string;
+  slug: string;
+  label: string | null;
+  isDefault: boolean;
+}
+
+export interface TrainingCenter {
+  farmId: number;
+  defaultTemplateFarmId: number;
+  defaultTrainingDuration: number;
+  maximumTrainingDuration: number;
+  templates: TrainingTemplate[];
+  studentCount: number;
+  activeStudentCount: number;
+}
+
+export interface StudentFarm {
+  farmId: number;
+  templateFarmId: number | null;
+  endedAt: string | null;
+  insertedAt: string;
+  farm: {
+    id: number;
+    name: string;
+    slug: string;
+    trialExpiryDate: string;
+    owner: { id: number; email: string } | null;
+  };
+  templateFarm: { id: number; name: string } | null;
+  /** Adresse invitée, tant que la personne n'a pas de compte. */
+  pendingEmail: string | null;
 }
 
 export interface CurrentUser {

@@ -339,6 +339,16 @@ export async function farmRoutes(app: FastifyInstance): Promise<void> {
         await db.farmMembership.create({
           data: { farmId: invitation.farmId, userId: user.id, role: invitation.role },
         });
+        // Une invitation au rôle propriétaire installe aussi le propriétaire de la ferme.
+        // Ce cas n'existe que pour les fermes d'apprenants (`routes/training.ts`), créées
+        // sans propriétaire en attendant que la personne accepte : sans cette ligne, la
+        // ferme resterait orpheline et son « propriétaire » n'en serait qu'un membre.
+        if (invitation.role === 'owner') {
+          await db.farm.updateMany({
+            where: { id: invitation.farmId, ownerId: null },
+            data: { ownerId: user.id },
+          });
+        }
         await db.invitation.delete({ where: { id: invitation.id } });
         return db.farm.findUniqueOrThrow({
           where: { id: invitation.farmId },

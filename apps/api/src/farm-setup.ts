@@ -46,21 +46,41 @@ export interface CreateFarmInput {
   trialDays?: number;
 }
 
-/** Crée la ferme, son propriétaire et son référentiel. Renvoie la ferme créée. */
-export async function createFarm(db: Tx, input: CreateFarmInput) {
-  const locale = input.locale ?? 'fr';
+/**
+ * Crée la ligne `farms` seule : ni référentiel, ni réglages de planches, et un propriétaire
+ * facultatif. C'est ce dont a besoin une ferme qui va **recevoir une copie**
+ * (`farm-copy.ts`), où tout vient du modèle — y compris les réglages de planches, qu'une
+ * amorce ici ferait entrer en collision.
+ *
+ * Un `ownerId` nul est un cas réel et non une négligence : une ferme d'apprenant existe
+ * avant que l'apprenant n'ait accepté son invitation.
+ */
+export async function createEmptyFarm(
+  db: Tx,
+  input: Omit<CreateFarmInput, 'ownerId' | 'locale'> & { ownerId?: number | null },
+) {
   const trialDays = input.trialDays ?? 90;
-  const farm = await db.farm.create({
+  return db.farm.create({
     data: {
       name: input.name.trim(),
       slug: await uniqueSlug(db, input.name),
-      ownerId: input.ownerId,
+      ownerId: input.ownerId ?? null,
       countryCode: input.countryCode ?? 'FR',
       trialExpiryDate: new Date(Date.now() + trialDays * 86_400_000),
-      memberships: { create: { userId: input.ownerId, role: 'owner' } },
-      // Planches de 30 m sur 80 cm, passe-pied de 40 cm — en millimètres, comme Brinjel.
-      bedSettings: { create: { bedLength: 30_000, bedWidth: 800, pathWidth: 400 } },
+      ...(input.ownerId
+        ? { memberships: { create: { userId: input.ownerId, role: 'owner' } } }
+        : {}),
     },
+  });
+}
+
+/** Crée la ferme, son propriétaire et son référentiel. Renvoie la ferme créée. */
+export async function createFarm(db: Tx, input: CreateFarmInput) {
+  const locale = input.locale ?? 'fr';
+  const farm = await createEmptyFarm(db, input);
+  // Planches de 30 m sur 80 cm, passe-pied de 40 cm — en millimètres, comme Brinjel.
+  await db.bedSettings.create({
+    data: { farmId: farm.id, bedLength: 30_000, bedWidth: 800, pathWidth: 400 },
   });
 
   await seedFarmReference(db, farm.id, locale);

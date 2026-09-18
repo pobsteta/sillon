@@ -46,11 +46,11 @@ model User {
 }
 
 model UserToken {
-  id        Int      @id @default(autoincrement())
-  userId    Int      @map("user_id")
-  token     Bytes
-  context   String // session | confirm | reset_password | change:<email>
-  sentTo    String?  @map("sent_to")
+  id         Int      @id @default(autoincrement())
+  userId     Int      @map("user_id")
+  token      Bytes
+  context    String // session | confirm | reset_password | change:<email>
+  sentTo     String?  @map("sent_to")
   insertedAt DateTime @default(now()) @map("inserted_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -95,33 +95,34 @@ enum OverdueUnit {
 }
 
 model Farm {
-  id                    Int         @id @default(autoincrement()) @map("farm_id")
-  name                  String
-  slug                  String      @unique
-  ownerId               Int?        @map("owner_id")
-  countryCode           String      @default("FR") @map("country_code")
-  locked                Boolean     @default(false)
-  trialExpiryDate       DateTime    @map("trial_expiry_date") @db.Date
-  defaultProviderId     Int?        @map("default_provider_id")
-  taskOverdueWindowValue Int        @default(1) @map("task_overdue_window_value")
-  taskOverdueWindowUnit OverdueUnit @default(year) @map("task_overdue_window_unit")
+  id                     Int         @id @default(autoincrement()) @map("farm_id")
+  name                   String
+  slug                   String      @unique
+  ownerId                Int?        @map("owner_id")
+  countryCode            String      @default("FR") @map("country_code")
+  locked                 Boolean     @default(false)
+  trialExpiryDate        DateTime    @map("trial_expiry_date") @db.Date
+  defaultProviderId      Int?        @map("default_provider_id")
+  taskOverdueWindowValue Int         @default(1) @map("task_overdue_window_value")
+  taskOverdueWindowUnit  OverdueUnit @default(year) @map("task_overdue_window_unit")
   /// Échéance d'abonnement, quand le déploiement en tient une. Source de vérité du droit
   /// d'écrire sous la politique `abonnement` ; `Subscription` n'est qu'un miroir facultatif
   /// de prestataire, qui viendrait l'alimenter.
-  paidUntil             DateTime?   @map("paid_until") @db.Date
-  insertedAt            DateTime    @default(now()) @map("inserted_at")
-  updatedAt             DateTime    @updatedAt @map("updated_at")
+  paidUntil              DateTime?   @map("paid_until") @db.Date
+  insertedAt             DateTime    @default(now()) @map("inserted_at")
+  updatedAt              DateTime    @updatedAt @map("updated_at")
 
-  owner           User?            @relation("Owner", fields: [ownerId], references: [id], onDelete: Cascade)
-  memberships     FarmMembership[]
-  invitations     Invitation[]
-  bedSettings     BedSettings?
-  subscriptions   Subscription[]
-  billingDetails  BillingDetails?
-  trainingCenter  TrainingCenter?
-  studentFarm     StudentFarm?
-  templateForCenters  TrainingCenter[] @relation("DefaultTemplate")
-  templateForStudents StudentFarm[]    @relation("StudentTemplate")
+  owner                 User?                    @relation("Owner", fields: [ownerId], references: [id], onDelete: Cascade)
+  memberships           FarmMembership[]
+  invitations           Invitation[]
+  bedSettings           BedSettings?
+  subscriptions         Subscription[]
+  billingDetails        BillingDetails?
+  trainingCenter        TrainingCenter?
+  studentFarm           StudentFarm?
+  templateForCenters    TrainingCenter[]         @relation("DefaultTemplate")
+  templateForStudents   StudentFarm[]            @relation("StudentTemplate")
+  templateForCenterList TrainingCenterTemplate[] @relation("CenterTemplate")
 
   // Données de culture
   families       Family[]
@@ -208,23 +209,23 @@ model BedSettings {
 // ─────────────────────── Abonnements (Paddle → à adapter) ───────────────────────
 
 model Subscription {
-  id                    Int       @id @default(autoincrement())
-  farmId                Int       @map("farm_id")
-  providerSubscriptionId String   @unique @map("provider_subscription_id")
-  providerProductId     String    @map("provider_product_id")
-  providerPriceId       String    @map("provider_price_id")
-  status                String
-  nextBilledAt          DateTime? @map("next_billed_at") @db.Date
-  previouslyBilledAt    DateTime  @map("previously_billed_at") @db.Date
-  canceledAt            DateTime? @map("canceled_at") @db.Date
-  pausedAt              DateTime? @map("paused_at") @db.Date
-  nextBillAmount        Int?      @map("next_bill_amount") // centimes
-  currencyCode          String    @map("currency_code")
-  scheduledChangeAction String?   @map("scheduled_change_action")
-  scheduledChangeAt     DateTime? @map("scheduled_change_at")
-  lastEventOccurredAt   DateTime  @map("last_event_occurred_at")
-  insertedAt            DateTime  @default(now()) @map("inserted_at")
-  updatedAt             DateTime  @updatedAt @map("updated_at")
+  id                     Int       @id @default(autoincrement())
+  farmId                 Int       @map("farm_id")
+  providerSubscriptionId String    @unique @map("provider_subscription_id")
+  providerProductId      String    @map("provider_product_id")
+  providerPriceId        String    @map("provider_price_id")
+  status                 String
+  nextBilledAt           DateTime? @map("next_billed_at") @db.Date
+  previouslyBilledAt     DateTime  @map("previously_billed_at") @db.Date
+  canceledAt             DateTime? @map("canceled_at") @db.Date
+  pausedAt               DateTime? @map("paused_at") @db.Date
+  nextBillAmount         Int?      @map("next_bill_amount") // centimes
+  currencyCode           String    @map("currency_code")
+  scheduledChangeAction  String?   @map("scheduled_change_action")
+  scheduledChangeAt      DateTime? @map("scheduled_change_at")
+  lastEventOccurredAt    DateTime  @map("last_event_occurred_at")
+  insertedAt             DateTime  @default(now()) @map("inserted_at")
+  updatedAt              DateTime  @updatedAt @map("updated_at")
 
   farm Farm @relation(fields: [farmId], references: [id], onDelete: Cascade)
 
@@ -253,20 +254,24 @@ model TrainingCenter {
   insertedAt              DateTime @default(now()) @map("inserted_at")
   updatedAt               DateTime @updatedAt @map("updated_at")
 
-  farm                Farm          @relation(fields: [farmId], references: [id], onDelete: Cascade)
-  defaultTemplateFarm Farm          @relation("DefaultTemplate", fields: [defaultTemplateFarmId], references: [id])
+  farm                Farm                     @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  defaultTemplateFarm Farm                     @relation("DefaultTemplate", fields: [defaultTemplateFarmId], references: [id])
   studentFarms        StudentFarm[]
+  templates           TrainingCenterTemplate[]
 
   @@index([defaultTemplateFarmId])
   @@map("training_centers")
 }
 
 model StudentFarm {
-  farmId           Int      @id @map("farm_id")
-  trainingCenterId Int      @map("training_center_id")
-  templateFarmId   Int?     @map("template_farm_id")
-  insertedAt       DateTime @default(now()) @map("inserted_at")
-  updatedAt        DateTime @updatedAt @map("updated_at")
+  farmId           Int       @id @map("farm_id")
+  trainingCenterId Int       @map("training_center_id")
+  templateFarmId   Int?      @map("template_farm_id")
+  /// Fin de formation. La ferme n'est pas supprimée : elle redevient personnelle, et les
+  /// formateurs en sont retirés. La ligne reste, comme trace du cursus côté centre.
+  endedAt          DateTime? @map("ended_at")
+  insertedAt       DateTime  @default(now()) @map("inserted_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
 
   farm           Farm           @relation(fields: [farmId], references: [id], onDelete: Cascade)
   trainingCenter TrainingCenter @relation(fields: [trainingCenterId], references: [farmId], onDelete: Cascade)
@@ -275,6 +280,23 @@ model StudentFarm {
   @@index([trainingCenterId])
   @@index([templateFarmId])
   @@map("student_farms")
+}
+
+/// Modèles d'un centre de formation : une ferme modèle par promotion, par module ou par
+/// niveau. `TrainingCenter.defaultTemplateFarmId` désigne celui proposé par défaut, et il
+/// figure toujours ici aussi — lister les modèles se lit alors sur cette seule table.
+model TrainingCenterTemplate {
+  trainingCenterId Int      @map("training_center_id")
+  templateFarmId   Int      @map("template_farm_id")
+  label            String?
+  insertedAt       DateTime @default(now()) @map("inserted_at")
+
+  trainingCenter TrainingCenter @relation(fields: [trainingCenterId], references: [farmId], onDelete: Cascade)
+  templateFarm   Farm           @relation("CenterTemplate", fields: [templateFarmId], references: [id], onDelete: Cascade)
+
+  @@id([trainingCenterId, templateFarmId])
+  @@index([templateFarmId])
+  @@map("training_center_templates")
 }
 
 // ───────────────────────────── Référentiel ─────────────────────────────
@@ -407,58 +429,58 @@ model Tag {
 /// `Planting.@planting_types`. `seedling` est une production de plants : elle
 /// n'occupe jamais de planche au champ.
 enum PlantingType {
-  direct_seeded     // 1
+  direct_seeded // 1
   transplant_bought // 2
   transplant_raised // 3
-  seedling          // 4
+  seedling // 4
 }
 
 /// `Planting.@finish_reasons`.
 enum FinishReason {
   harvesting_finished // 1
-  crop_failure        // 2
-  crop_never_seeded   // 3
-  crop_never_planted  // 4
+  crop_failure // 2
+  crop_never_seeded // 3
+  crop_never_planted // 4
 }
 
 /// `PlantingDate.@types`. Les dates de récolte n'en font pas partie : elles se
 /// déduisent des durées et vivent dans `harvest_periods`.
 enum PlantingDateType {
-  sowing   // 1 — en pépinière ou en place selon le mode d'implantation
+  sowing // 1 — en pépinière ou en place selon le mode d'implantation
   planting // 2 — repiquage au champ
-  potting  // 3 — rempotage
+  potting // 3 — rempotage
 }
 
 /// `Duration.@types`, en jours.
 enum PlantingDurationType {
   days_to_transplant // 1 — du semis à la plantation
-  days_to_maturity   // 2 — de la mise en place à la première récolte
-  harvest_window     // 3 — durée de la période de récolte
+  days_to_maturity // 2 — de la mise en place à la première récolte
+  harvest_window // 3 — durée de la période de récolte
 }
 
 model Planting {
-  id                     Int           @id @default(autoincrement())
-  farmId                 Int           @map("farm_id")
-  cropId                 Int           @map("crop_id")
-  varietyId              Int?          @map("variety_id")
-  unitId                 Int?          @map("unit_id")
-  containerId            Int?          @map("container_id")
-  plantingType           PlantingType  @map("planting_type")
-  inGreenhouse           Boolean?      @map("in_greenhouse")
-  length                 BigInt? // mm
-  rows                   Int?
-  spacingPlants          BigInt?       @map("spacing_plants") // dixièmes de mm
-  yieldPerBedMeter       BigInt?       @map("yield_per_bed_meter") // millièmes d'unité, par mètre
-  pricePerUnit           BigInt?       @map("price_per_unit") // centimes
-  seedsPerGram           Int?          @map("seeds_per_gram") // graines par kilogramme
-  seedsPerHoleSeedling   Int?          @map("seeds_per_hole_seedling")
-  seedsPerHoleDirect     Int?          @map("seeds_per_hole_direct")
-  seedsExtraPercentage   Int?          @map("seeds_extra_percentage")
-  estimatedGreenhouseLoss Int?         @map("estimated_greenhouse_loss") // %
-  finished               Boolean       @default(false)
-  finishReason           FinishReason? @map("finish_reason")
-  insertedAt             DateTime      @default(now()) @map("inserted_at")
-  updatedAt              DateTime      @updatedAt @map("updated_at")
+  id                      Int           @id @default(autoincrement())
+  farmId                  Int           @map("farm_id")
+  cropId                  Int           @map("crop_id")
+  varietyId               Int?          @map("variety_id")
+  unitId                  Int?          @map("unit_id")
+  containerId             Int?          @map("container_id")
+  plantingType            PlantingType  @map("planting_type")
+  inGreenhouse            Boolean?      @map("in_greenhouse")
+  length                  BigInt? // mm
+  rows                    Int?
+  spacingPlants           BigInt?       @map("spacing_plants") // dixièmes de mm
+  yieldPerBedMeter        BigInt?       @map("yield_per_bed_meter") // millièmes d'unité, par mètre
+  pricePerUnit            BigInt?       @map("price_per_unit") // centimes
+  seedsPerGram            Int?          @map("seeds_per_gram") // graines par kilogramme
+  seedsPerHoleSeedling    Int?          @map("seeds_per_hole_seedling")
+  seedsPerHoleDirect      Int?          @map("seeds_per_hole_direct")
+  seedsExtraPercentage    Int?          @map("seeds_extra_percentage")
+  estimatedGreenhouseLoss Int?          @map("estimated_greenhouse_loss") // %
+  finished                Boolean       @default(false)
+  finishReason            FinishReason? @map("finish_reason")
+  insertedAt              DateTime      @default(now()) @map("inserted_at")
+  updatedAt               DateTime      @updatedAt @map("updated_at")
 
   farm      Farm       @relation(fields: [farmId], references: [id], onDelete: Cascade)
   crop      Crop       @relation(fields: [cropId], references: [id], onDelete: Cascade)
@@ -544,19 +566,19 @@ model PlantingTag {
 // ───────────────────────────── Parcellaire ─────────────────────────────
 
 model Location {
-  id         Int      @id @default(autoincrement())
-  farmId     Int      @map("farm_id")
-  parentId   Int?     @map("parent_id")
+  id         Int                   @id @default(autoincrement())
+  farmId     Int                   @map("farm_id")
+  parentId   Int?                  @map("parent_id")
   name       String
-  bedLength  Int      @map("bed_length") // mm
-  bedWidth   Int?     @map("bed_width") // mm
+  bedLength  Int                   @map("bed_length") // mm
+  bedWidth   Int?                  @map("bed_width") // mm
   greenhouse Boolean
   position   Int
   /// Chemin matérialisé (ltree), maintenu par trigger SQL : lpad(position,5,'0') à chaque niveau.
   /// Prisma ne connaît pas ltree : déclaré Unsupported, index GiST à créer en migration manuelle.
   path       Unsupported("ltree")?
-  insertedAt DateTime @default(now()) @map("inserted_at")
-  updatedAt  DateTime @updatedAt @map("updated_at")
+  insertedAt DateTime              @default(now()) @map("inserted_at")
+  updatedAt  DateTime              @updatedAt @map("updated_at")
 
   farm        Farm                 @relation(fields: [farmId], references: [id], onDelete: Cascade)
   parent      Location?            @relation("LocationTree", fields: [parentId], references: [id], onDelete: Cascade)
@@ -644,10 +666,10 @@ model TaskImplement {
 
 /// `Task.@task_types` : les trois premières natures sont engendrées depuis le plan.
 enum TaskDefaultType {
-  direct_sow     // 1
+  direct_sow // 1
   greenhouse_sow // 2
-  transplant     // 3
-  custom         // 4
+  transplant // 3
+  custom // 4
 }
 
 model Task {
@@ -672,10 +694,10 @@ model Task {
   method    TaskMethod?    @relation(fields: [methodId], references: [id], onDelete: SetNull)
   implement TaskImplement? @relation(fields: [implementId], references: [id], onDelete: SetNull)
 
-  plantings     PlantingTask[]
-  locations     LocationTask[]
-  templateLink  TemplateTaskLink?  @relation("LinkedTask")
-  linkedFrom    TemplateTaskLink[] @relation("LinkSource")
+  plantings    PlantingTask[]
+  locations    LocationTask[]
+  templateLink TemplateTaskLink?  @relation("LinkedTask")
+  linkedFrom   TemplateTaskLink[] @relation("LinkSource")
 
   @@index([farmId, plannedDate])
   @@index([farmId, done])
@@ -717,9 +739,9 @@ model LocationTask {
 /// d'itinéraire se rattache. Ce n'est pas le même jeu que `PlantingDateType`.
 enum TemplateDateType {
   field_sowing_planting // 1 — mise en place au champ
-  greenhouse_sowing     // 2 — semis en pépinière
-  first_harvest         // 3
-  last_harvest          // 4
+  greenhouse_sowing // 2 — semis en pépinière
+  first_harvest // 3
+  last_harvest // 4
 }
 
 model TaskTemplate {
@@ -750,10 +772,10 @@ model TemplateTask {
   insertedAt       DateTime         @default(now()) @map("inserted_at")
   updatedAt        DateTime         @updatedAt @map("updated_at")
 
-  template  TaskTemplate   @relation(fields: [taskTemplateId], references: [id], onDelete: Cascade)
-  type      TaskType       @relation(fields: [typeId], references: [id], onDelete: Cascade)
-  method    TaskMethod?    @relation(fields: [methodId], references: [id], onDelete: SetNull)
-  implement TaskImplement? @relation(fields: [implementId], references: [id], onDelete: SetNull)
+  template  TaskTemplate       @relation(fields: [taskTemplateId], references: [id], onDelete: Cascade)
+  type      TaskType           @relation(fields: [typeId], references: [id], onDelete: Cascade)
+  method    TaskMethod?        @relation(fields: [methodId], references: [id], onDelete: SetNull)
+  implement TaskImplement?     @relation(fields: [implementId], references: [id], onDelete: SetNull)
   links     TemplateTaskLink[]
 
   @@index([taskTemplateId])
@@ -850,10 +872,10 @@ model LocationNote {
 }
 
 model Photo {
-  id     Int    @id @default(autoincrement())
-  farmId Int    @map("farm_id")
-  name   String
-  uuid   String // clé de l'objet sur le stockage S3
+  id          Int      @id @default(autoincrement())
+  farmId      Int      @map("farm_id")
+  name        String
+  uuid        String // clé de l'objet sur le stockage S3
   /// Type MIME de l'objet stocké. Servi tel quel : sans lui, la route répondait
   /// `application/octet-stream`, que `X-Content-Type-Options: nosniff` interdit d'afficher.
   contentType String   @map("content_type")
