@@ -18,6 +18,7 @@ import type {
   Note,
   OrderLine,
   Planting,
+  Provider,
   Session,
   MoonDay,
   Stats,
@@ -59,7 +60,7 @@ export const useFamilies = (farmId: number) => useQuery(farmList<Family[]>(farmI
 export const useCrops = (farmId: number) => useQuery(farmList<Crop[]>(farmId, 'crops'));
 export const useVarieties = (farmId: number, params: Record<string, unknown> = {}) =>
   useQuery(farmList<Variety[]>(farmId, 'varieties', params));
-export const useProviders = (farmId: number) => useQuery(farmList<Named[]>(farmId, 'providers'));
+export const useProviders = (farmId: number) => useQuery(farmList<Provider[]>(farmId, 'providers'));
 export const useUnits = (farmId: number) => useQuery(farmList<Named[]>(farmId, 'units'));
 export const useContainers = (farmId: number) =>
   useQuery(farmList<Container[]>(farmId, 'containers'));

@@ -376,6 +376,12 @@ model Provider {
   farmId     Int          @map("farm_id")
   name       String
   type       ProviderType
+  /// Le site où l'on commande : rend la colonne « Fournisseur » de la feuille de commande
+  /// cliquable. Facultatif, et jamais rempli automatiquement pour une maison inconnue.
+  url        String?
+  /// Ce que la ferme sait de son fournisseur — délai, minimum de commande, date de
+  /// clôture. L'information qui finit aujourd'hui sur un papier.
+  notes      String?
   insertedAt DateTime     @default(now()) @map("inserted_at")
   updatedAt  DateTime     @updatedAt @map("updated_at")
 

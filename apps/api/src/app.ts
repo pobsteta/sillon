@@ -42,6 +42,7 @@ import { statsRoutes } from './routes/stats.js';
 import { exportRoutes } from './routes/export.js';
 import { trainingRoutes } from './routes/training.js';
 import { moonRoutes } from './routes/moon.js';
+import { providerRoutes } from './routes/providers.js';
 
 /**
  * Version publiée, lue dans le package.json que release-please tient à jour : `/health`
@@ -82,7 +83,7 @@ export async function buildApp(
   await app.register(cors, { origin: env.corsOrigins, credentials: true });
   await app.register(cookie, { secret: env.SESSION_SECRET });
   await app.register(multipart, { limits: { fileSize: 8 * 1024 * 1024, files: 1 } });
-  await app.register(rateLimit, { max: 600, timeWindow: '1 minute' });
+  await app.register(rateLimit, { max: env.RATE_LIMIT_MAX, timeWindow: '1 minute' });
 
   await app.register(swagger, {
     openapi: {
@@ -198,6 +199,7 @@ export async function buildApp(
   await app.register(exportRoutes);
   await app.register(trainingRoutes);
   await app.register(moonRoutes);
+  await app.register(providerRoutes);
 
   return app;
 }

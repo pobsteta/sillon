@@ -156,6 +156,17 @@ const color = z
   .regex(/^#[0-9a-fA-F]{6}$/, 'Couleur attendue au format #rrggbb')
   .default('#4d7c0f');
 const name = z.string().trim().min(1).max(120);
+/**
+ * Le site d'un fournisseur. Restreint à http(s) : la colonne devient un lien cliquable, et
+ * un `javascript:` s'y glisserait sans cela — la personne qui saisit n'est pas forcément
+ * celle qui clique.
+ */
+const url = z
+  .string()
+  .trim()
+  .max(500)
+  .refine((valeur) => /^https?:\/\//i.test(valeur), { message: 'Adresse http(s) attendue' });
+const notes = z.string().trim().max(2000);
 /** Ce qu'on récolte de l'espèce, pour le calendrier lunaire (`brief/jardinage-lunaire.md` §4). */
 const harvestedPart = z.enum(['root', 'leaf', 'flower', 'fruit']);
 
@@ -201,8 +212,18 @@ export async function referenceRoutes(app: FastifyInstance): Promise<void> {
     path: 'providers',
     label: 'Fournisseur',
     delegate: (db) => db.provider as unknown as SimpleDelegate,
-    create: z.object({ name, type: z.enum(['seed', 'transplant']).default('seed') }),
-    update: z.object({ name: name.optional(), type: z.enum(['seed', 'transplant']).optional() }),
+    create: z.object({
+      name,
+      type: z.enum(['seed', 'transplant']).default('seed'),
+      url: url.nullish(),
+      notes: notes.nullish(),
+    }),
+    update: z.object({
+      name: name.optional(),
+      type: z.enum(['seed', 'transplant']).optional(),
+      url: url.nullish(),
+      notes: notes.nullish(),
+    }),
   });
 
   registerResource(app, {

@@ -47,6 +47,17 @@ const EnvSchema = z.object({
   ACCESS_POLICY: z.enum(['ouverte', 'essai', 'abonnement']).default('ouverte'),
 
   /**
+   * Requêtes admises par minute et par adresse. La valeur par défaut protège d'un abus
+   * sans gêner personne — un poste seul ne s'en approche pas.
+   *
+   * Elle se règle parce qu'**une adresse n'est pas une personne** : derrière un routeur ou
+   * un proxy inverse, une ferme entière partage la même adresse publique, et un lycée
+   * agricole avec vingt apprenants sur le même réseau encore davantage. Sans ce réglage,
+   * la seule réponse serait de retirer la protection.
+   */
+  RATE_LIMIT_MAX: z.coerce.number().int().positive().max(1_000_000).default(600),
+
+  /**
    * Dossier du build de l'interface, pour la servir **depuis l'API**. Absent, l'API ne rend
    * que du JSON et l'interface est servie à part (Nginx, comme dans `docker-compose.yml`).
    *

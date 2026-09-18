@@ -333,7 +333,17 @@
     "newPassword": "New password",
     "export": "Data export",
     "exportHint": "A ZIP archive with all of the farm’s data: one CSV file per table, the photos, and a note explaining the units. This data is yours.",
-    "exportDownload": "Download the archive"
+    "exportDownload": "Download the archive",
+    "providerUrl": "Ordering website",
+    "providerUrlHint": "Makes the name clickable from the order sheet.",
+    "providerNotes": "Notes",
+    "providerNotesHint": "Lead time, minimum order, cut-off date…",
+    "suggestedProviders": "Suggested seed suppliers",
+    "suggestedProvidersHint": "Sillon can add a few seed suppliers to your reference data, to save you typing their names. This is neither a partnership nor a recommendation, and nothing is sent to them.",
+    "addSuggested": "Add the suggested suppliers",
+    "suggestedAdded": "{{count}} supplier(s) added.",
+    "suggestedNothing": "They are all in your reference data already.",
+    "alreadyPresent": "already there"
   },
   "notes": {
     "title": "Notes",

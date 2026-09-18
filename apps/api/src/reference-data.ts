@@ -223,4 +223,49 @@ export const DEFAULT_CONTAINERS = [
   { name: 'Motte 4 cm', size: 150 },
 ];
 
+/**
+ * Fournisseur générique, qui reste celui par défaut de la ferme. Il accueille les variétés
+ * dont on ne sait pas encore d'où elles viennent : y mettre une maison précise ferait
+ * entrer un nom commercial dans des données saisies sans intention.
+ */
 export const DEFAULT_PROVIDER = { name: 'Fournisseur par défaut', nameEn: 'Default provider' };
+
+/**
+ * Semenciers proposés à la création d'une ferme.
+ *
+ * **Cette liste est un choix éditorial, et elle est ouverte.** Inscrire une maison ici
+ * n'est ni un partenariat, ni une recommandation, ni un avis sur ses produits : c'est
+ * épargner à chacun de retaper un nom que la feuille de commande utilisera de toute façon.
+ * Une contribution suffit à en ajouter une autre — une maison régionale, une coopérative,
+ * un semencier d'un autre pays.
+ *
+ * Ce que Sillon n'en fait pas, et ne doit pas en faire : aucun logo, aucun lien
+ * d'affiliation, aucune mention « suggéré par Sillon », et surtout aucune reprise des
+ * allégations commerciales de ces maisons. Sillon dit **à qui** commander, jamais **quoi**
+ * penser de ce qu'on y achète. Rien n'est envoyé nulle part : un fournisseur est une
+ * étiquette locale, et aucun de ces sites n'est contacté.
+ *
+ * Relevé le 18 septembre 2026 ; voir `brief/fournisseurs-par-defaut.md`.
+ */
+export const SUGGESTED_PROVIDERS: {
+  name: string;
+  type: 'seed' | 'transplant';
+  url: string;
+  notes: string;
+  notesEn: string;
+}[] = [
+  {
+    name: 'Kokopelli',
+    type: 'seed',
+    url: 'https://kokopelli-semences.fr/',
+    notes: 'Association loi 1901. Semences biologiques, reproductibles et libres de droits.',
+    notesEn: 'Non-profit association. Organic, reproducible, royalty-free seeds.',
+  },
+  {
+    name: 'Le Potager de Santé',
+    type: 'seed',
+    url: 'https://www.lepotagerdesante.com/',
+    notes: 'Semences biologiques reproductibles, sélectionnées pour la rusticité (Hérault).',
+    notesEn: 'Organic reproducible seeds, selected for hardiness (Hérault, France).',
+  },
+];

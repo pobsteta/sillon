@@ -333,7 +333,17 @@
     "newPassword": "Nouveau mot de passe",
     "export": "Export des données",
     "exportHint": "Une archive ZIP contenant toutes les données de la ferme : un fichier CSV par table, les photos, et une notice qui donne les unités. Ces données vous appartiennent.",
-    "exportDownload": "Télécharger l’archive"
+    "exportDownload": "Télécharger l’archive",
+    "providerUrl": "Site de commande",
+    "providerUrlHint": "Rend le nom cliquable depuis la feuille de commande.",
+    "providerNotes": "Notes",
+    "providerNotesHint": "Délai, minimum de commande, date de clôture…",
+    "suggestedProviders": "Semenciers proposés",
+    "suggestedProvidersHint": "Sillon peut ajouter quelques semenciers à votre référentiel, pour éviter de retaper leur nom. Ce n’est ni un partenariat ni une recommandation, et rien ne leur est envoyé.",
+    "addSuggested": "Ajouter les semenciers proposés",
+    "suggestedAdded": "{{count}} semencier(s) ajouté(s).",
+    "suggestedNothing": "Ils sont déjà tous dans votre référentiel.",
+    "alreadyPresent": "déjà présent"
   },
   "notes": {
     "title": "Notes",
