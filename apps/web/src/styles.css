@@ -1,8 +1,5 @@
 /* SPDX-FileCopyrightText: © 2026 Sillon contributors
-   SPDX-License-Identifier: AGPL-3.0-or-later
-
-   Charte : fond chaud, vert de sillon, contrastes élevés (WCAG AA) et cibles tactiles
-   d'au moins 44 px pour l'usage au champ, mains gantées. */
+   SPDX-License-Identifier: AGPL-3.0-or-later */
 
 @import 'tailwindcss';
 
@@ -28,34 +25,21 @@
 }
 
 @layer base {
-  :root {
-    color-scheme: light dark;
-  }
-
-  html {
-    -webkit-text-size-adjust: 100%;
-  }
-
+  :root { color-scheme: light dark; }
+  html { -webkit-text-size-adjust: 100%; }
   body {
     @apply bg-earth-50 text-earth-900 antialiased;
     @apply dark:bg-earth-900 dark:text-earth-100;
     padding-top: env(safe-area-inset-top, 0px);
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
-
   :focus-visible {
     @apply outline-2 outline-offset-2 outline-sillon-600 dark:outline-sillon-300;
   }
 }
 
 @layer components {
-  /* Cible tactile minimale : 44 px de haut, conformément au §7.3 du brief.
-     Tailwind v4 n'applique que des utilitaires : la base des boutons est donc partagée
-     par un sélecteur groupé plutôt que par `@apply .btn`. */
-  .btn,
-  .btn-primary,
-  .btn-ghost,
-  .btn-danger {
+  .btn, .btn-primary, .btn-ghost, .btn-danger {
     @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-4 text-sm font-medium transition;
     @apply disabled:cursor-not-allowed disabled:opacity-50;
   }
@@ -66,38 +50,269 @@
     @apply border border-earth-200 bg-white text-earth-800 hover:bg-earth-100;
     @apply dark:border-earth-700 dark:bg-earth-800 dark:text-earth-100 dark:hover:bg-earth-700;
   }
-  .btn-danger {
-    @apply bg-red-700 text-white hover:bg-red-800;
-  }
+  .btn-danger { @apply bg-red-700 text-white hover:bg-red-800; }
   .field {
     @apply min-h-11 w-full rounded-lg border border-earth-200 bg-white px-3 text-base;
     @apply focus:border-sillon-600 dark:border-earth-700 dark:bg-earth-800;
   }
-  .label {
-    @apply mb-1 block text-sm font-medium text-earth-700 dark:text-earth-200;
-  }
+  .label { @apply mb-1 block text-sm font-medium text-earth-700 dark:text-earth-200; }
   .card {
     @apply rounded-xl border border-earth-200 bg-white p-4 shadow-sm;
     @apply dark:border-earth-700 dark:bg-earth-800;
   }
-  .chip {
-    @apply inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium;
+  .chip { @apply inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium; }
+}
+
+@layer components {
+  .login-page {
+    min-height: 100dvh;
+    display: grid;
+    grid-template-columns: minmax(0, 1.08fr) minmax(420px, 0.92fr);
+    background: #faf9f5;
+  }
+
+  .login-visual {
+    position: relative;
+    min-height: 100dvh;
+    overflow: hidden;
+    color: #f7fbef;
+    background:
+      linear-gradient(180deg, rgba(29, 56, 20, .12) 0%, rgba(20, 43, 15, .5) 58%, rgba(18, 35, 13, .92) 100%),
+      linear-gradient(135deg, #6d9348 0%, #3e6c2e 42%, #213e1d 100%);
+  }
+
+  .login-visual-grid {
+    position: absolute;
+    inset: 0;
+    opacity: .12;
+    background-image:
+      linear-gradient(rgba(255,255,255,.35) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,.35) 1px, transparent 1px);
+    background-size: 64px 64px;
+    mask-image: linear-gradient(to bottom, black 0%, transparent 74%);
+  }
+
+  .login-sun {
+    position: absolute;
+    width: 260px;
+    height: 260px;
+    top: 11%;
+    right: 17%;
+    border-radius: 50%;
+    background: rgba(242, 222, 161, .36);
+    filter: blur(1px);
+    box-shadow: 0 0 90px 35px rgba(245, 221, 149, .14);
+  }
+
+  .login-horizon {
+    position: absolute;
+    inset: auto 0 36% 0;
+    height: 24%;
+    opacity: .72;
+  }
+
+  .login-tree {
+    position: absolute;
+    bottom: 0;
+    width: 0;
+    height: 0;
+    border-left: 30px solid transparent;
+    border-right: 30px solid transparent;
+    border-bottom: 115px solid #1e3b1b;
+    filter: drop-shadow(18px 12px 0 rgba(20, 42, 16, .35));
+  }
+  .login-tree::after {
+    content: '';
+    position: absolute;
+    left: -7px;
+    top: 70px;
+    width: 14px;
+    height: 48px;
+    background: #1b3217;
+  }
+  .login-tree-a { left: 8%; transform: scale(.72); }
+  .login-tree-b { left: 23%; transform: scale(1.12); }
+  .login-tree-c { right: 19%; transform: scale(.82); }
+  .login-tree-d { right: 7%; transform: scale(.58); }
+
+  .login-field-lines {
+    position: absolute;
+    left: -8%;
+    right: -8%;
+    bottom: -7%;
+    height: 48%;
+    transform: rotate(-4deg);
+    opacity: .34;
+  }
+  .login-field-lines i {
+    display: block;
+    height: 2px;
+    margin: 26px 0;
+    border-radius: 100%;
+    background: rgba(224, 231, 186, .75);
+    box-shadow: 0 0 0 1px rgba(40, 70, 26, .12);
+  }
+
+  .login-visual-content {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    min-height: 100dvh;
+    flex-direction: column;
+    padding: clamp(28px, 5vw, 68px);
+  }
+
+  .login-mark {
+    display: grid;
+    width: 46px;
+    height: 46px;
+    flex: 0 0 auto;
+    place-items: center;
+    border: 1px solid rgba(255,255,255,.26);
+    border-radius: 13px;
+    background: rgba(255,255,255,.10);
+    backdrop-filter: blur(8px);
+    color: #eaf5d2;
+    box-shadow: 0 10px 30px rgba(8, 24, 7, .16);
+  }
+  .login-mark svg { width: 34px; height: 34px; }
+
+  .login-panel {
+    display: flex;
+    min-height: 100dvh;
+    flex-direction: column;
+    background: #faf9f5;
+  }
+
+  .login-panel-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 28px clamp(24px, 5vw, 68px);
+  }
+
+  .login-mobile-mark { display: none; }
+
+  .login-language {
+    min-height: 36px;
+    border: 1px solid #e5e0d1;
+    border-radius: 999px;
+    background: rgba(255,255,255,.72);
+    padding: 0 12px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    color: #514a3c;
+    outline: none;
+  }
+
+  .login-form-wrap {
+    width: min(100%, 500px);
+    margin: auto;
+    padding: 28px clamp(24px, 5vw, 68px);
+  }
+
+  .login-form-wrap .field {
+    min-height: 50px;
+    border-radius: 11px;
+    box-shadow: 0 1px 2px rgba(31,29,25,.025);
+  }
+  .login-form-wrap .field:focus {
+    box-shadow: 0 0 0 3px rgba(77,124,15,.12);
+  }
+
+  .login-submit {
+    min-height: 52px;
+    border-radius: 11px;
+    box-shadow: 0 7px 18px rgba(63,100,16,.17);
+  }
+  .login-submit svg { width: 19px; height: 19px; }
+
+  .login-divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: #9a9385;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .12em;
+  }
+  .login-divider::before, .login-divider::after {
+    content: '';
+    height: 1px;
+    flex: 1;
+    background: #e5e0d1;
+  }
+
+  .login-forgot {
+    display: block;
+    width: fit-content;
+    margin: 1px auto 0;
+    color: #4d7c0f;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .login-forgot:hover { text-decoration: underline; }
+
+  .login-error {
+    border: 1px solid #fecaca;
+    border-radius: 10px;
+    background: #fff1f2;
+    padding: 12px 14px;
+    color: #881337;
+    font-size: 13px;
+    line-height: 1.45;
+  }
+
+  .login-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 24px clamp(24px, 5vw, 68px) 30px;
+    color: #817a6d;
+    font-size: 10px;
+    line-height: 1.45;
+  }
+  .login-secure {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 5px;
+    color: #6d765f;
+    font-weight: 600;
+  }
+  .login-secure svg { width: 16px; height: 16px; }
+
+  @media (max-width: 900px) {
+    .login-page { grid-template-columns: 1fr; }
+    .login-visual { display: none; }
+    .login-panel { min-height: 100dvh; }
+    .login-mobile-mark {
+      display: inline-flex;
+      transform: scale(.7);
+      transform-origin: left center;
+      margin-right: -8px;
+    }
+  }
+
+  @media (max-width: 520px) {
+    .login-panel-top { padding: 20px 20px 8px; }
+    .login-form-wrap { padding: 28px 20px; }
+    .login-footer { padding: 20px; align-items: flex-start; }
+    .login-footer > span:first-child { max-width: 70%; }
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .login-submit, .login-forgot, .btn-ghost { transition: transform .16s ease, box-shadow .16s ease, background-color .16s ease; }
+    .login-submit:hover:not(:disabled) { transform: translateY(-1px); }
   }
 }
 
 /* Feuilles de tâches, plan d'assolement et commandes doivent s'imprimer proprement. */
 @media print {
-  .no-print {
-    display: none !important;
-  }
-  body {
-    @apply bg-white text-black;
-  }
-  .card {
-    @apply border border-neutral-300 shadow-none;
-    break-inside: avoid;
-  }
-  a[href]::after {
-    content: '';
-  }
+  .no-print { display: none !important; }
+  body { @apply bg-white text-black; }
+  .card { @apply border border-neutral-300 shadow-none; break-inside: avoid; }
+  a[href]::after { content: ''; }
 }
