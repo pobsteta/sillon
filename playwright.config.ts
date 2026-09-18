@@ -51,6 +51,12 @@ export default defineConfig({
         SESSION_SECRET: 'secret-de-bout-en-bout-secret-32ch',
         CORS_ORIGINS: `http://localhost:${WEB_PORT}`,
         COOKIE_SECURE: 'false',
+        // Tous les parcours partent de la même adresse, à pleine vitesse : ils dépassent
+        // la limite par minute que l'API oppose à un abus. Ce n'est pas la limite qui est
+        // mauvaise, c'est la situation qui n'a rien d'un abus — et un plafond atteint se
+        // manifeste par un écran qui n'affiche rien, donc par un échec dont la cause n'a
+        // aucun rapport avec ce que l'essai vérifie.
+        RATE_LIMIT_MAX: '100000',
       },
     },
     {

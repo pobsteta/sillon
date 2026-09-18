@@ -15,6 +15,7 @@ import {
   type TestAccount,
 } from './test-support.js';
 import { disconnectPrisma, getPrisma } from './db.js';
+import { buildApp } from './app.js';
 
 let app: FastifyInstance;
 let account: TestAccount;
@@ -1109,5 +1110,26 @@ describe('courriels transactionnels', () => {
       `https://sillon.example/invitation/${reponse.json().invitationId}`,
     );
     expect(message!.text, "l'invitant est nommé").toContain(account.email);
+  });
+});
+
+describe('limite de requêtes', () => {
+  it('se règle, parce qu’une adresse n’est pas une personne', async () => {
+    // Derrière un routeur ou un proxy inverse, une ferme entière — ou un lycée avec vingt
+    // apprenants — partage la même adresse publique. Sans ce réglage, la seule réponse
+    // serait de retirer la protection. Et un plafond atteint ne se voit pas : l'écran
+    // n'affiche rien, sans dire pourquoi.
+    const serre = await buildApp({ NODE_ENV: 'test', RATE_LIMIT_MAX: 2 });
+    await serre.ready();
+    try {
+      const codes: number[] = [];
+      for (let essai = 0; essai < 3; essai += 1) {
+        codes.push((await serre.inject({ method: 'GET', url: '/health' })).statusCode);
+      }
+      expect(codes.slice(0, 2), 'les deux premières passent').toEqual([200, 200]);
+      expect(codes[2], 'la troisième est refusée').toBe(429);
+    } finally {
+      await serre.close();
+    }
   });
 });

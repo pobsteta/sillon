@@ -83,7 +83,7 @@ export async function buildApp(
   await app.register(cors, { origin: env.corsOrigins, credentials: true });
   await app.register(cookie, { secret: env.SESSION_SECRET });
   await app.register(multipart, { limits: { fileSize: 8 * 1024 * 1024, files: 1 } });
-  await app.register(rateLimit, { max: 600, timeWindow: '1 minute' });
+  await app.register(rateLimit, { max: env.RATE_LIMIT_MAX, timeWindow: '1 minute' });
 
   await app.register(swagger, {
     openapi: {
