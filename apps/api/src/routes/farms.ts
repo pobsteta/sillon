@@ -83,6 +83,26 @@ export async function farmRoutes(app: FastifyInstance): Promise<void> {
           countryCode: z.string().length(2).optional(),
           taskOverdueWindowValue: z.number().int().positive().max(100).optional(),
           taskOverdueWindowUnit: z.enum(['day', 'week', 'month', 'year']).optional(),
+          moonCalendar: z.boolean().optional(),
+          moonConvention: z.enum(['tropical', 'constellations']).optional(),
+          // Un fuseau IANA. Validé en le donnant à `Intl` : une chaîne inventée décalerait
+          // tout le calendrier lunaire d'un jour, sans erreur visible.
+          timezone: z
+            .string()
+            .min(1)
+            .max(64)
+            .refine(
+              (zone) => {
+                try {
+                  new Intl.DateTimeFormat('fr-FR', { timeZone: zone });
+                  return true;
+                } catch {
+                  return false;
+                }
+              },
+              { message: 'Fuseau horaire inconnu' },
+            )
+            .optional(),
         }),
       },
     },

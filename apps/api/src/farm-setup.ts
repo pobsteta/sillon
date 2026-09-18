@@ -109,6 +109,7 @@ export async function seedFarmReference(db: Tx, farmId: number, locale = 'fr'): 
             farmId,
             name: label(crop.name, crop.nameEn),
             color: family.color,
+            harvestedPart: crop.harvestedPart ?? null,
           })),
         },
       },

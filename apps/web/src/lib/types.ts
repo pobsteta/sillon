@@ -20,6 +20,8 @@ export interface Farm {
   };
   /** La ferme est un centre de formation : la navigation en dépend. */
   trainingCenter?: boolean;
+  /** Calendrier lunaire allumé. Éteint, l'interface n'en dit pas un mot. */
+  moonCalendar?: boolean;
   /** La ferme est une ferme d'apprenant, et si la formation court encore. */
   training?: { ended: boolean } | null;
 }
@@ -58,6 +60,20 @@ export interface StudentFarm {
   templateFarm: { id: number; name: string } | null;
   /** Adresse invitée, tant que la personne n'a pas de compte. */
   pendingEmail: string | null;
+}
+
+/** Qualification lunaire d'une journée, telle que `GET /moon/:year` la renvoie. */
+export interface MoonDay {
+  date: IsoDate;
+  declination: number;
+  trend: 'montante' | 'descendante';
+  illumination: number;
+  phase: 'nouvelle' | 'croissante' | 'pleine' | 'decroissante';
+  eclipticLongitude: number;
+  dayType: 'racine' | 'feuille' | 'fleur' | 'fruit';
+  dayStartType: 'racine' | 'feuille' | 'fleur' | 'fruit';
+  dayTypeChanges: { at: string; to: 'racine' | 'feuille' | 'fleur' | 'fruit' }[];
+  singularities: ('perigee' | 'apogee' | 'noeud')[];
 }
 
 export interface CurrentUser {

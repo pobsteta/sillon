@@ -95,22 +95,29 @@ enum OverdueUnit {
 }
 
 model Farm {
-  id                     Int         @id @default(autoincrement()) @map("farm_id")
+  id                     Int              @id @default(autoincrement()) @map("farm_id")
   name                   String
-  slug                   String      @unique
-  ownerId                Int?        @map("owner_id")
-  countryCode            String      @default("FR") @map("country_code")
-  locked                 Boolean     @default(false)
-  trialExpiryDate        DateTime    @map("trial_expiry_date") @db.Date
-  defaultProviderId      Int?        @map("default_provider_id")
-  taskOverdueWindowValue Int         @default(1) @map("task_overdue_window_value")
-  taskOverdueWindowUnit  OverdueUnit @default(year) @map("task_overdue_window_unit")
+  slug                   String           @unique
+  ownerId                Int?             @map("owner_id")
+  countryCode            String           @default("FR") @map("country_code")
+  locked                 Boolean          @default(false)
+  trialExpiryDate        DateTime         @map("trial_expiry_date") @db.Date
+  defaultProviderId      Int?             @map("default_provider_id")
+  taskOverdueWindowValue Int              @default(1) @map("task_overdue_window_value")
+  taskOverdueWindowUnit  OverdueUnit      @default(year) @map("task_overdue_window_unit")
   /// Échéance d'abonnement, quand le déploiement en tient une. Source de vérité du droit
   /// d'écrire sous la politique `abonnement` ; `Subscription` n'est qu'un miroir facultatif
   /// de prestataire, qui viendrait l'alimenter.
-  paidUntil              DateTime?   @map("paid_until") @db.Date
-  insertedAt             DateTime    @default(now()) @map("inserted_at")
-  updatedAt              DateTime    @updatedAt @map("updated_at")
+  paidUntil              DateTime?        @map("paid_until") @db.Date
+  /// Calendrier lunaire : éteint par défaut. Qui ne pratique pas ne doit pas voir un mot
+  /// de plus à l'écran (brief/jardinage-lunaire.md §1).
+  moonCalendar           Boolean          @default(false) @map("moon_calendar")
+  moonConvention         ZodiacConvention @default(constellations) @map("moon_convention")
+  /// Fuseau où la journée civile est découpée. Sans lui, le calendrier lunaire se décale
+  /// d'un jour hors de France métropolitaine, sans que rien n'ait l'air cassé.
+  timezone               String           @default("Europe/Paris")
+  insertedAt             DateTime         @default(now()) @map("inserted_at")
+  updatedAt              DateTime         @updatedAt @map("updated_at")
 
   owner                 User?                    @relation("Owner", fields: [ownerId], references: [id], onDelete: Cascade)
   memberships           FarmMembership[]
@@ -145,6 +152,14 @@ model Farm {
 
   @@index([ownerId])
   @@map("farms")
+}
+
+/// Conventions zodiacales du calendrier lunaire. Elles ne donnent pas les mêmes dates :
+/// `constellations` suit les bornes de l'UAI, comme le calendrier biodynamique et les
+/// calendriers en ligne les plus consultés ; `tropical` découpe douze secteurs égaux.
+enum ZodiacConvention {
+  tropical
+  constellations
 }
 
 /// Rôles repris de `Brinjel.Admin.Role`, du plus au moins capable.
@@ -318,14 +333,18 @@ model Family {
 }
 
 model Crop {
-  id               Int      @id @default(autoincrement())
-  farmId           Int      @map("farm_id")
-  familyId         Int      @map("family_id")
+  id               Int            @id @default(autoincrement())
+  farmId           Int            @map("farm_id")
+  familyId         Int            @map("family_id")
   name             String
   color            String
-  defaultVarietyId Int?     @map("default_variety_id")
-  insertedAt       DateTime @default(now()) @map("inserted_at")
-  updatedAt        DateTime @updatedAt @map("updated_at")
+  defaultVarietyId Int?           @map("default_variety_id")
+  /// Ce qu'on récolte de l'espèce — le pivot entre le plan de culture et le type de jour
+  /// lunaire. Nul tant que personne ne l'a renseigné : le calendrier se tait alors pour
+  /// cette espèce plutôt que d'inventer.
+  harvestedPart    HarvestedPart? @map("harvested_part")
+  insertedAt       DateTime       @default(now()) @map("inserted_at")
+  updatedAt        DateTime       @updatedAt @map("updated_at")
 
   farm           Farm       @relation(fields: [farmId], references: [id], onDelete: Cascade)
   family         Family     @relation(fields: [familyId], references: [id], onDelete: Cascade)
@@ -336,6 +355,14 @@ model Crop {
   @@unique([farmId, name, familyId])
   @@index([familyId])
   @@map("crops")
+}
+
+/// Partie récoltée, qui relie une culture au type de jour lunaire.
+enum HarvestedPart {
+  root
+  leaf
+  flower
+  fruit
 }
 
 /// `Provider.@provider_types` : 1 = semencier, 2 = fournisseur de plants.
@@ -459,28 +486,32 @@ enum PlantingDurationType {
 }
 
 model Planting {
-  id                      Int           @id @default(autoincrement())
-  farmId                  Int           @map("farm_id")
-  cropId                  Int           @map("crop_id")
-  varietyId               Int?          @map("variety_id")
-  unitId                  Int?          @map("unit_id")
-  containerId             Int?          @map("container_id")
-  plantingType            PlantingType  @map("planting_type")
-  inGreenhouse            Boolean?      @map("in_greenhouse")
+  id                      Int            @id @default(autoincrement())
+  farmId                  Int            @map("farm_id")
+  cropId                  Int            @map("crop_id")
+  varietyId               Int?           @map("variety_id")
+  unitId                  Int?           @map("unit_id")
+  containerId             Int?           @map("container_id")
+  plantingType            PlantingType   @map("planting_type")
+  /// Surcharge de `Crop.harvestedPart` pour cette série. L'attribut n'est pas toujours
+  /// vrai de la culture : une carotte **porte-graine** se mène en jour fruit, pas en jour
+  /// racine. Nul = on suit l'espèce.
+  harvestedPart           HarvestedPart? @map("harvested_part")
+  inGreenhouse            Boolean?       @map("in_greenhouse")
   length                  BigInt? // mm
   rows                    Int?
-  spacingPlants           BigInt?       @map("spacing_plants") // dixièmes de mm
-  yieldPerBedMeter        BigInt?       @map("yield_per_bed_meter") // millièmes d'unité, par mètre
-  pricePerUnit            BigInt?       @map("price_per_unit") // centimes
-  seedsPerGram            Int?          @map("seeds_per_gram") // graines par kilogramme
-  seedsPerHoleSeedling    Int?          @map("seeds_per_hole_seedling")
-  seedsPerHoleDirect      Int?          @map("seeds_per_hole_direct")
-  seedsExtraPercentage    Int?          @map("seeds_extra_percentage")
-  estimatedGreenhouseLoss Int?          @map("estimated_greenhouse_loss") // %
-  finished                Boolean       @default(false)
-  finishReason            FinishReason? @map("finish_reason")
-  insertedAt              DateTime      @default(now()) @map("inserted_at")
-  updatedAt               DateTime      @updatedAt @map("updated_at")
+  spacingPlants           BigInt?        @map("spacing_plants") // dixièmes de mm
+  yieldPerBedMeter        BigInt?        @map("yield_per_bed_meter") // millièmes d'unité, par mètre
+  pricePerUnit            BigInt?        @map("price_per_unit") // centimes
+  seedsPerGram            Int?           @map("seeds_per_gram") // graines par kilogramme
+  seedsPerHoleSeedling    Int?           @map("seeds_per_hole_seedling")
+  seedsPerHoleDirect      Int?           @map("seeds_per_hole_direct")
+  seedsExtraPercentage    Int?           @map("seeds_extra_percentage")
+  estimatedGreenhouseLoss Int?           @map("estimated_greenhouse_loss") // %
+  finished                Boolean        @default(false)
+  finishReason            FinishReason?  @map("finish_reason")
+  insertedAt              DateTime       @default(now()) @map("inserted_at")
+  updatedAt               DateTime       @updatedAt @map("updated_at")
 
   farm      Farm       @relation(fields: [farmId], references: [id], onDelete: Cascade)
   crop      Crop       @relation(fields: [cropId], references: [id], onDelete: Cascade)

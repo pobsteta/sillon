@@ -410,5 +410,40 @@
     "closeBlocked": "{{count}} formation(s) en cours : terminez-les d’abord.",
     "close": "Cesser d’être un centre de formation",
     "closeConfirm": "Confirmer"
+  },
+  "moon": {
+    "title": "Calendrier lunaire",
+    "hint": "Sillon affiche l’état du ciel : jour racine, feuille, fleur ou fruit, lune montante ou descendante. Il n’en tire aucune recommandation et ne déplace rien.",
+    "enable": "Afficher le calendrier lunaire",
+    "convention": "Convention",
+    "conventions": {
+      "constellations": "Constellations réelles (biodynamie)",
+      "tropical": "Signes zodiacaux (calendriers de presse)"
+    },
+    "timezone": "Fuseau horaire",
+    "timezoneHint": "Il découpe la journée : un fuseau erroné décale tout le calendrier d’un jour.",
+    "week": "Calendrier lunaire de la semaine",
+    "then": "puis {{type}} à {{at}}",
+    "dayType": {
+      "racine": "Racine",
+      "feuille": "Feuille",
+      "fleur": "Fleur",
+      "fruit": "Fruit"
+    },
+    "trend": {
+      "montante": "montante",
+      "descendante": "descendante"
+    },
+    "phase": {
+      "nouvelle": "nouvelle",
+      "croissante": "croissante",
+      "pleine": "pleine",
+      "decroissante": "décroissante"
+    },
+    "singularity": {
+      "perigee": "périgée",
+      "apogee": "apogée",
+      "noeud": "nœud"
+    }
   }
 }

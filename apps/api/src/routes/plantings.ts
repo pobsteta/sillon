@@ -53,6 +53,11 @@ const plantingFields = {
   unitId: z.number().int().positive().nullish(),
   containerId: z.number().int().positive().nullish(),
   plantingType,
+  /**
+   * Surcharge de la partie récoltée portée par l'espèce : une carotte **porte-graine** se
+   * mène en jour fruit, pas en jour racine. Nul = on suit l'espèce.
+   */
+  harvestedPart: z.enum(['root', 'leaf', 'flower', 'fruit']).nullish(),
   inGreenhouse: z.boolean().nullish(),
   length: z.number().int().min(0).max(10_000_000).nullish(),
   rows: z.number().int().min(0).max(1000).nullish(),

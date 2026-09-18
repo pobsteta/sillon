@@ -38,6 +38,20 @@ export default defineConfig({
         navigateFallbackDenylist: [/^\/api/, /^\/docs/],
         runtimeCaching: [
           {
+            // Le calendrier lunaire d'une année ne change plus : `CacheFirst`, et non le
+            // `NetworkFirst` des lectures métier. Il attend quatre secondes de réseau à
+            // chaque consultation sinon, alors qu'il n'a aucune raison de changer — et
+            // c'est précisément au champ, sans réseau, qu'on le consulte.
+            urlPattern: ({ url }) => /\/api\/farms\/\d+\/moon\/\d+$/.test(url.pathname),
+            handler: 'CacheFirst',
+            method: 'GET',
+            options: {
+              cacheName: 'sillon-lune',
+              expiration: { maxEntries: 8, maxAgeSeconds: 60 * 60 * 24 * 365 },
+              cacheableResponse: { statuses: [200] },
+            },
+          },
+          {
             // Les lectures métier restent consultables au champ, réseau coupé.
             urlPattern: ({ url }) => url.pathname.startsWith('/api/'),
             handler: 'NetworkFirst',

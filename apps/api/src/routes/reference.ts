@@ -156,6 +156,8 @@ const color = z
   .regex(/^#[0-9a-fA-F]{6}$/, 'Couleur attendue au format #rrggbb')
   .default('#4d7c0f');
 const name = z.string().trim().min(1).max(120);
+/** Ce qu'on récolte de l'espèce, pour le calendrier lunaire (`brief/jardinage-lunaire.md` §4). */
+const harvestedPart = z.enum(['root', 'leaf', 'flower', 'fruit']);
 
 export async function referenceRoutes(app: FastifyInstance): Promise<void> {
   registerResource(app, {
@@ -181,12 +183,14 @@ export async function referenceRoutes(app: FastifyInstance): Promise<void> {
       color,
       familyId: z.number().int().positive(),
       defaultVarietyId: z.number().int().positive().nullish(),
+      harvestedPart: harvestedPart.nullish(),
     }),
     update: z.object({
       name: name.optional(),
       color: color.optional(),
       familyId: z.number().int().positive().optional(),
       defaultVarietyId: z.number().int().positive().nullish(),
+      harvestedPart: harvestedPart.nullish(),
     }),
     include: { family: true },
     filters: z.object({ familyId: z.coerce.number().int().positive().optional() }),

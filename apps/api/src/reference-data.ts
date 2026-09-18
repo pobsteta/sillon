@@ -11,7 +11,18 @@ export interface FamilySeed {
   nameEn: string;
   color: string;
   interval: number;
-  crops: { name: string; nameEn: string }[];
+  crops: {
+    name: string;
+    nameEn: string;
+    /**
+     * Ce qu'on récolte de l'espèce, pour le calendrier lunaire. Trois valeurs se
+     * discutent et sont posées ici sciemment : le **céleri** est une feuille (le
+     * céleri-rave serait une racine), le **poireau** une feuille (certains calendriers en
+     * font une racine), le **fenouil** une feuille (c'est une base de feuilles, non un
+     * bulbe racinaire). Chaque ferme peut les corriger.
+     */
+    harvestedPart?: 'root' | 'leaf' | 'flower' | 'fruit';
+  }[];
 }
 
 export const DEFAULT_FAMILIES: FamilySeed[] = [
@@ -21,10 +32,10 @@ export const DEFAULT_FAMILIES: FamilySeed[] = [
     color: '#b91c1c',
     interval: 4,
     crops: [
-      { name: 'Tomate', nameEn: 'Tomato' },
-      { name: 'Aubergine', nameEn: 'Eggplant' },
-      { name: 'Poivron', nameEn: 'Pepper' },
-      { name: 'Pomme de terre', nameEn: 'Potato' },
+      { name: 'Tomate', nameEn: 'Tomato', harvestedPart: 'fruit' },
+      { name: 'Aubergine', nameEn: 'Eggplant', harvestedPart: 'fruit' },
+      { name: 'Poivron', nameEn: 'Pepper', harvestedPart: 'fruit' },
+      { name: 'Pomme de terre', nameEn: 'Potato', harvestedPart: 'root' },
     ],
   },
   {
@@ -33,10 +44,10 @@ export const DEFAULT_FAMILIES: FamilySeed[] = [
     color: '#ea580c',
     interval: 4,
     crops: [
-      { name: 'Courgette', nameEn: 'Zucchini' },
-      { name: 'Concombre', nameEn: 'Cucumber' },
-      { name: 'Courge', nameEn: 'Winter squash' },
-      { name: 'Melon', nameEn: 'Melon' },
+      { name: 'Courgette', nameEn: 'Zucchini', harvestedPart: 'fruit' },
+      { name: 'Concombre', nameEn: 'Cucumber', harvestedPart: 'fruit' },
+      { name: 'Courge', nameEn: 'Winter squash', harvestedPart: 'fruit' },
+      { name: 'Melon', nameEn: 'Melon', harvestedPart: 'fruit' },
     ],
   },
   {
@@ -45,10 +56,10 @@ export const DEFAULT_FAMILIES: FamilySeed[] = [
     color: '#0d9488',
     interval: 4,
     crops: [
-      { name: 'Chou', nameEn: 'Cabbage' },
-      { name: 'Navet', nameEn: 'Turnip' },
-      { name: 'Radis', nameEn: 'Radish' },
-      { name: 'Roquette', nameEn: 'Rocket' },
+      { name: 'Chou', nameEn: 'Cabbage', harvestedPart: 'leaf' },
+      { name: 'Navet', nameEn: 'Turnip', harvestedPart: 'root' },
+      { name: 'Radis', nameEn: 'Radish', harvestedPart: 'root' },
+      { name: 'Roquette', nameEn: 'Rocket', harvestedPart: 'leaf' },
     ],
   },
   {
@@ -57,10 +68,10 @@ export const DEFAULT_FAMILIES: FamilySeed[] = [
     color: '#f59e0b',
     interval: 3,
     crops: [
-      { name: 'Carotte', nameEn: 'Carrot' },
-      { name: 'Persil', nameEn: 'Parsley' },
-      { name: 'Céleri', nameEn: 'Celery' },
-      { name: 'Fenouil', nameEn: 'Fennel' },
+      { name: 'Carotte', nameEn: 'Carrot', harvestedPart: 'root' },
+      { name: 'Persil', nameEn: 'Parsley', harvestedPart: 'leaf' },
+      { name: 'Céleri', nameEn: 'Celery', harvestedPart: 'leaf' },
+      { name: 'Fenouil', nameEn: 'Fennel', harvestedPart: 'leaf' },
     ],
   },
   {
@@ -69,9 +80,9 @@ export const DEFAULT_FAMILIES: FamilySeed[] = [
     color: '#65a30d',
     interval: 2,
     crops: [
-      { name: 'Laitue', nameEn: 'Lettuce' },
-      { name: 'Chicorée', nameEn: 'Chicory' },
-      { name: 'Mâche', nameEn: 'Corn salad' },
+      { name: 'Laitue', nameEn: 'Lettuce', harvestedPart: 'leaf' },
+      { name: 'Chicorée', nameEn: 'Chicory', harvestedPart: 'leaf' },
+      { name: 'Mâche', nameEn: 'Corn salad', harvestedPart: 'leaf' },
     ],
   },
   {
@@ -80,10 +91,10 @@ export const DEFAULT_FAMILIES: FamilySeed[] = [
     color: '#7c3aed',
     interval: 4,
     crops: [
-      { name: 'Oignon', nameEn: 'Onion' },
-      { name: 'Poireau', nameEn: 'Leek' },
-      { name: 'Ail', nameEn: 'Garlic' },
-      { name: 'Échalote', nameEn: 'Shallot' },
+      { name: 'Oignon', nameEn: 'Onion', harvestedPart: 'root' },
+      { name: 'Poireau', nameEn: 'Leek', harvestedPart: 'leaf' },
+      { name: 'Ail', nameEn: 'Garlic', harvestedPart: 'root' },
+      { name: 'Échalote', nameEn: 'Shallot', harvestedPart: 'root' },
     ],
   },
   {
@@ -92,9 +103,9 @@ export const DEFAULT_FAMILIES: FamilySeed[] = [
     color: '#16a34a',
     interval: 3,
     crops: [
-      { name: 'Haricot', nameEn: 'Bean' },
-      { name: 'Pois', nameEn: 'Pea' },
-      { name: 'Fève', nameEn: 'Broad bean' },
+      { name: 'Haricot', nameEn: 'Bean', harvestedPart: 'fruit' },
+      { name: 'Pois', nameEn: 'Pea', harvestedPart: 'fruit' },
+      { name: 'Fève', nameEn: 'Broad bean', harvestedPart: 'fruit' },
     ],
   },
   {
@@ -103,9 +114,9 @@ export const DEFAULT_FAMILIES: FamilySeed[] = [
     color: '#0369a1',
     interval: 3,
     crops: [
-      { name: 'Épinard', nameEn: 'Spinach' },
-      { name: 'Betterave', nameEn: 'Beetroot' },
-      { name: 'Blette', nameEn: 'Chard' },
+      { name: 'Épinard', nameEn: 'Spinach', harvestedPart: 'leaf' },
+      { name: 'Betterave', nameEn: 'Beetroot', harvestedPart: 'root' },
+      { name: 'Blette', nameEn: 'Chard', harvestedPart: 'leaf' },
     ],
   },
 ];

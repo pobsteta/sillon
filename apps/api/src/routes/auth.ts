@@ -385,6 +385,7 @@ export async function authRoutes(app: FastifyInstance, options: { env: Env }): P
                 // par ouverture de l'application.
                 trainingCenter: { select: { farmId: true } },
                 studentFarm: { select: { endedAt: true } },
+                moonCalendar: true,
               },
             },
           },

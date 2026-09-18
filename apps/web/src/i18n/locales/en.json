@@ -410,5 +410,40 @@
     "closeBlocked": "{{count}} training(s) still running: end them first.",
     "close": "Stop being a training centre",
     "closeConfirm": "Confirm"
+  },
+  "moon": {
+    "title": "Lunar calendar",
+    "hint": "Sillon shows the state of the sky: root, leaf, flower or fruit day, waxing or waning in declination. It draws no recommendation from it and moves nothing.",
+    "enable": "Show the lunar calendar",
+    "convention": "Convention",
+    "conventions": {
+      "constellations": "Actual constellations (biodynamics)",
+      "tropical": "Zodiac signs (press calendars)"
+    },
+    "timezone": "Time zone",
+    "timezoneHint": "It cuts the civil day: a wrong zone shifts the whole calendar by a day.",
+    "week": "Lunar calendar for the week",
+    "then": "then {{type}} at {{at}}",
+    "dayType": {
+      "racine": "Root",
+      "feuille": "Leaf",
+      "fleur": "Flower",
+      "fruit": "Fruit"
+    },
+    "trend": {
+      "montante": "ascending",
+      "descendante": "descending"
+    },
+    "phase": {
+      "nouvelle": "new",
+      "croissante": "waxing",
+      "pleine": "full",
+      "decroissante": "waning"
+    },
+    "singularity": {
+      "perigee": "perigee",
+      "apogee": "apogee",
+      "noeud": "node"
+    }
   }
 }
