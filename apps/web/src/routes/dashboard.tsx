@@ -2,101 +2,99 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { Link } from '@tanstack/react-router';
-import { useTranslation } from 'react-i18next';
 import { useLocale } from '../lib/locale.js';
 import { today, weekRange } from '@sillon/core';
-import { useFarmId } from '../lib/session.js';
+import { useFarmId, useCurrentSession } from '../lib/session.js';
 import { usePlantings, useStats, useTasks } from '../lib/queries.js';
-import { EmptyState, Loading, PageHeader, StatTile } from '../components/ui.js';
+import { EmptyState, Loading, PageHeader } from '../components/ui.js';
 import { formatDate, formatLaborTime } from '../lib/format.js';
 import { TaskList } from './tasks.js';
 
 export function DashboardPage() {
-  const { t } = useTranslation();
   const locale = useLocale();
   const farmId = useFarmId();
+  const { farm } = useCurrentSession();
   const week = weekRange(today());
   const year = Number(today().slice(0, 4));
-
   const tasks = useTasks(farmId, { week: week.begin, includeLate: true });
   const stats = useStats(farmId, year);
   const upcoming = usePlantings(farmId, { sort: 'date', order: 'asc', year });
 
   if (tasks.isLoading || stats.isLoading) return <Loading />;
 
-  const late = (tasks.data ?? []).filter((task) => task.status === 'late');
-  // « Prochains semis » : la date de semis prévue, qu'il soit direct ou en pépinière.
+  const allTasks = tasks.data ?? [];
+  const late = allTasks.filter((task) => task.status === 'late');
+  const todayTasks = allTasks.filter((task) => task.status === 'today');
+  const doneThisWeek = allTasks.filter((task) => task.done).length;
   const nextSowings = (upcoming.data ?? [])
     .map((planting) => ({ planting, sowing: planting.dates.sowing?.planned ?? null }))
     .filter((entry) => entry.sowing !== null && entry.sowing >= today())
     .slice(0, 5);
 
-  return (
-    <>
-      <PageHeader title={t('dashboard.title')} />
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'Bonjour' : hour < 18 ? 'Bon après-midi' : 'Bonsoir';
+  const placed = stats.data?.plantings.placed ?? 0;
+  const totalPlantings = stats.data?.plantings.total ?? 0;
+  const done = stats.data?.tasks.done ?? 0;
+  const totalTasks = stats.data?.tasks.total ?? 0;
+  const placedPct = Math.min(100, (placed / Math.max(1, totalPlantings)) * 100);
+  const donePct = Math.min(100, (done / Math.max(1, totalTasks)) * 100);
 
-      <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatTile
-          label={t('dashboard.seriesInSeason')}
-          value={stats.data?.plantings.total ?? 0}
-          hint={`${stats.data?.plantings.placed ?? 0} ${t('dashboard.placed')}`}
-        />
-        <StatTile
-          label={t('stats.tasksDone')}
-          value={`${stats.data?.tasks.done ?? 0} / ${stats.data?.tasks.total ?? 0}`}
-          hint={formatLaborTime(stats.data?.tasks.labor.effective ?? 0)}
-        />
-        <StatTile label={t('dashboard.late')} value={late.length} />
-        <StatTile
-          label={t('stats.revenue')}
-          value={((stats.data?.yields.expectedRevenue ?? 0) / 100).toLocaleString(locale, {
-            style: 'currency',
-            currency: 'EUR',
-            maximumFractionDigits: 0,
-          })}
-        />
+  return (
+    <div className="dashboard">
+      <PageHeader title="Tableau de bord">
+        <Link to="/plan/nouvelle" className="btn-primary dashboard-add"><span aria-hidden>＋</span> Nouvelle série</Link>
+      </PageHeader>
+
+      <section className="dashboard-hero">
+        <div>
+          <div className="dashboard-eyebrow"><span className="dashboard-leaf">⌁</span> {farm?.name ?? 'Votre ferme'}</div>
+          <h1>{greeting}, <span>maraîcher.</span></h1>
+          <p>Voici ce qui vous attend au champ aujourd’hui.</p>
+        </div>
+        <div className="dashboard-date">
+          <strong>{new Date().toLocaleDateString(locale, { weekday: 'long', day: 'numeric', month: 'long' })}</strong>
+          <span>Saison {year}</span>
+        </div>
+      </section>
+
+      <section className="dashboard-kpis">
+        <article className="dashboard-kpi kpi-green"><div className="kpi-icon">✓</div><div><span>Tâches cette semaine</span><strong>{stats.data?.tasks.total ?? 0}</strong><small>{doneThisWeek} terminée{doneThisWeek > 1 ? 's' : ''}</small></div></article>
+        <article className="dashboard-kpi kpi-amber"><div className="kpi-icon">!</div><div><span>À faire aujourd’hui</span><strong>{todayTasks.length}</strong><small>{late.length ? late.length + ' en retard' : 'Aucun retard'}</small></div></article>
+        <article className="dashboard-kpi kpi-earth"><div className="kpi-icon">▦</div><div><span>Séries en culture</span><strong>{totalPlantings}</strong><small>{placed} sur l’assolement</small></div></article>
+        <article className="dashboard-kpi kpi-revenue"><div className="kpi-icon">€</div><div><span>Produit prévisionnel</span><strong>{((stats.data?.yields.expectedRevenue ?? 0) / 100).toLocaleString(locale, { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 })}</strong><small>{formatLaborTime(stats.data?.tasks.labor.effective ?? 0)} de travail saisi</small></div></article>
+      </section>
+
+      <div className="dashboard-grid">
+        <section className="dashboard-card dashboard-tasks">
+          <div className="dashboard-card-head"><div><h2>À faire cette semaine</h2><p>Vos travaux planifiés et leur avancement</p></div><Link to="/taches">Tout voir →</Link></div>
+          {allTasks.length > 0 ? <TaskList tasks={allTasks.slice(0, 7)} farmId={farmId} compact /> : <EmptyState message="Aucune tâche cette semaine" />}
+        </section>
+
+        <aside className="dashboard-card dashboard-sowing">
+          <div className="dashboard-card-head"><div><h2>Prochains semis</h2><p>Les prochaines implantations</p></div><Link to="/plan">Plan →</Link></div>
+          {nextSowings.length > 0 ? (
+            <ul className="sowing-list">
+              {nextSowings.map(({ planting, sowing }) => (
+                <li key={planting.id}>
+                  <span className="sowing-dot" style={{ backgroundColor: planting.crop.color }} />
+                  <div><Link to="/plan/$plantingId" params={{ plantingId: String(planting.id) }}>{planting.crop.name}{planting.variety ? ' · ' + planting.variety.name : ''}</Link><small>{planting.inGreenhouse ? 'Sous abri' : 'Plein champ'}</small></div>
+                  <time>{formatDate(sowing!, locale)}</time>
+                </li>
+              ))}
+            </ul>
+          ) : <EmptyState message="Aucune série à venir" action={<Link to="/plan" className="btn-primary">Ouvrir le plan</Link>} />}
+        </aside>
       </div>
 
-      <section className="mb-6">
-        <h2 className="mb-2 text-lg font-semibold">{t('dashboard.thisWeek')}</h2>
-        {tasks.data && tasks.data.length > 0 ? (
-          <TaskList tasks={tasks.data.slice(0, 8)} farmId={farmId} compact />
-        ) : (
-          <EmptyState message={t('dashboard.noTasks')} />
-        )}
+      <section className="dashboard-card dashboard-season">
+        <div className="dashboard-card-head"><div><h2>La saison {year} en un coup d’œil</h2><p>État de votre plan de culture</p></div><Link to="/statistiques">Statistiques →</Link></div>
+        <div className="season-progress">
+          <div><div className="progress-label"><span>Séries placées</span><strong>{placed} / {totalPlantings}</strong></div><div className="progress-track"><i style={{ width: placedPct + '%' }} /></div></div>
+          <div><div className="progress-label"><span>Tâches réalisées</span><strong>{done} / {totalTasks}</strong></div><div className="progress-track"><i style={{ width: donePct + '%' }} /></div></div>
+          <div className="season-summary"><span>Travail effectif</span><strong>{formatLaborTime(stats.data?.tasks.labor.effective ?? 0)}</strong></div>
+        </div>
       </section>
-
-      <section>
-        <h2 className="mb-2 text-lg font-semibold">{t('dashboard.upcomingSowings')}</h2>
-        {nextSowings.length > 0 ? (
-          <ul className="space-y-2">
-            {nextSowings.map(({ planting, sowing }) => (
-              <li key={planting.id} className="card flex items-center justify-between gap-3 py-3">
-                <Link
-                  to="/plan/$plantingId"
-                  params={{ plantingId: String(planting.id) }}
-                  className="font-medium hover:underline"
-                >
-                  {planting.crop.name}
-                  {planting.variety ? ` — ${planting.variety.name}` : ''}
-                </Link>
-                <span className="text-sm tabular-nums text-earth-700 dark:text-earth-200">
-                  {formatDate(sowing, locale)}
-                </span>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <EmptyState
-            message={t('planting.empty')}
-            action={
-              <Link to="/plan" className="btn-primary">
-                {t('dashboard.openPlan')}
-              </Link>
-            }
-          />
-        )}
-      </section>
-    </>
+    </div>
   );
 }
