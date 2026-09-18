@@ -23,7 +23,8 @@
     "menu": "Menu",
     "more": "More",
     "notes": "Notes",
-    "training": "Training"
+    "training": "Training",
+    "moon": "Moon"
   },
   "common": {
     "add": "Add",
@@ -100,7 +101,9 @@
       "resent": "Email sent"
     },
     "totpCode": "Verification code",
-    "totpHint": "Six digits, or one of your recovery codes."
+    "totpHint": "Six digits, or one of your recovery codes.",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -408,5 +411,60 @@
     "closeBlocked": "{{count}} training(s) still running: end them first.",
     "close": "Stop being a training centre",
     "closeConfirm": "Confirm"
+  },
+  "moon": {
+    "title": "Lunar calendar",
+    "hint": "Sillon shows the state of the sky: root, leaf, flower or fruit day, waxing or waning in declination. It draws no recommendation from it and moves nothing.",
+    "enable": "Show the lunar calendar",
+    "convention": "Convention",
+    "conventions": {
+      "constellations": "Actual constellations (biodynamics)",
+      "tropical": "Zodiac signs (press calendars)"
+    },
+    "timezone": "Time zone",
+    "timezoneHint": "It cuts the civil day: a wrong zone shifts the whole calendar by a day.",
+    "week": "Lunar calendar for the week",
+    "then": "then {{type}} at {{at}}",
+    "dayType": {
+      "racine": "Root",
+      "feuille": "Leaf",
+      "fleur": "Flower",
+      "fruit": "Fruit"
+    },
+    "trend": {
+      "montante": "ascending",
+      "descendante": "descending"
+    },
+    "phase": {
+      "nouvelle": "new",
+      "croissante": "waxing",
+      "pleine": "full",
+      "decroissante": "waning"
+    },
+    "singularity": {
+      "perigee": "perigee",
+      "apogee": "apogee",
+      "noeud": "node"
+    },
+    "align": "Align to the crop’s day",
+    "alignHint": "Each planting moves by at most three days, to a day of the type its crop calls for. Those with nowhere to go stay put.",
+    "aligned": "{{count}} planting(s) aligned out of {{total}} selected.",
+    "disabled": "The lunar calendar is off. Turn it on in the settings.",
+    "previousMonth": "Previous month",
+    "nextMonth": "Next month",
+    "monthGrid": "Lunar calendar for {{month}}",
+    "tasksOnDay": "{{count}} task(s)",
+    "disclaimer": "Sillon computes the Moon’s position from ephemerides and shows the state of the sky. It copies no published calendar and draws no recommendation from it.",
+    "weekday": {
+      "0": "Mon",
+      "1": "Tue",
+      "2": "Wed",
+      "3": "Thu",
+      "4": "Fri",
+      "5": "Sat",
+      "6": "Sun"
+    },
+    "matchesCrop": "matches the crop",
+    "nearby": "nearby {{type}} days:"
   }
 }

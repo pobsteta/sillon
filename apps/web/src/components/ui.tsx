@@ -8,6 +8,7 @@ import {
   useEffect,
   useId,
   useRef,
+  useState,
   type InputHTMLAttributes,
   type ReactNode,
   type SelectHTMLAttributes,
@@ -42,6 +43,62 @@ export function Field({
         aria-invalid={error ? true : undefined}
         {...props}
       />
+      {hint || error ? (
+        <p
+          id={`${id}-hint`}
+          className={`mt-1 text-xs ${error ? 'text-red-700 dark:text-red-300' : 'text-earth-700 dark:text-earth-200'}`}
+        >
+          {error ?? hint}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * Champ de mot de passe avec bascule d'affichage.
+ *
+ * Trois précautions qui ne se voient pas : le bouton est `type="button"` (dans un
+ * formulaire, un bouton sans type **soumet**, et cliquer sur l'œil tenterait de se
+ * connecter) ; il porte `aria-pressed`, donc un lecteur d'écran annonce l'état et pas
+ * seulement l'action ; et l'`autoComplete` reste celui du champ, pour ne pas priver les
+ * gestionnaires de mots de passe de ce qu'ils attendent.
+ */
+export function PasswordField({
+  label,
+  hint,
+  error,
+  ...props
+}: InputHTMLAttributes<HTMLInputElement> & { label: string; hint?: string; error?: string }) {
+  const { t } = useTranslation();
+  const id = useId();
+  const [visible, setVisible] = useState(false);
+
+  return (
+    <div>
+      <label className="label" htmlFor={id}>
+        {label}
+      </label>
+      <div className="relative">
+        <input
+          id={id}
+          className="field pr-12"
+          type={visible ? 'text' : 'password'}
+          aria-describedby={hint || error ? `${id}-hint` : undefined}
+          aria-invalid={error ? true : undefined}
+          {...props}
+        />
+        <button
+          type="button"
+          className="absolute inset-y-0 right-0 flex min-h-11 w-11 items-center justify-center text-earth-700 hover:text-earth-900 dark:text-earth-200 dark:hover:text-white"
+          aria-pressed={visible}
+          aria-label={visible ? t('auth.hidePassword') : t('auth.showPassword')}
+          title={visible ? t('auth.hidePassword') : t('auth.showPassword')}
+          onClick={() => setVisible((etat) => !etat)}
+        >
+          <span aria-hidden>{visible ? '🙈' : '👁'}</span>
+        </button>
+      </div>
       {hint || error ? (
         <p
           id={`${id}-hint`}

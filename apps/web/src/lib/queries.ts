@@ -19,6 +19,7 @@ import type {
   OrderLine,
   Planting,
   Session,
+  MoonDay,
   Stats,
   StudentFarm,
   Tag,
@@ -132,6 +133,17 @@ export const useAvailableLocations = (farmId: number, plantingId: number, enable
 export const useAssignmentPlan = (farmId: number, from: string, to: string) =>
   useQuery(farmList<any>(farmId, 'assignments', { from, to }));
 
+/** La ferme et ses réglages, au-delà de ce que la session porte. */
+export const useFarm = (farmId: number) =>
+  useQuery({
+    queryKey: keys.farm(farmId),
+    queryFn: () =>
+      api<{ moonConvention: 'tropical' | 'constellations'; timezone: string }>(
+        `/api/farms/${farmId}`,
+      ),
+    enabled: farmId > 0,
+  });
+
 export const useMembers = (farmId: number) => useQuery(farmList<any[]>(farmId, 'members'));
 
 /**
@@ -139,6 +151,20 @@ export const useMembers = (farmId: number) => useQuery(farmList<any[]>(farmId, '
  * plupart des fermes ne sont pas des centres, et l'API répond alors 404 — un échec qui
  * n'en est pas un, mais que TanStack Query réessaierait et afficherait.
  */
+/**
+ * L'année lunaire, demandée une fois et gardée longtemps. C'est la forme voulue par le
+ * brief : le champ n'a pas de réseau, et un calendrier qui exigerait un appel serait
+ * inutilisable là où il sert.
+ */
+export const useMoonYear = (farmId: number, year: number, enabled: boolean) =>
+  useQuery({
+    queryKey: keys.list(farmId, 'moon', year),
+    queryFn: () => api<MoonDay[]>(`${base(farmId)}/moon/${year}`),
+    enabled,
+    staleTime: Infinity,
+    gcTime: 24 * 3_600_000,
+  });
+
 export const useTrainingCenter = (farmId: number, enabled: boolean) =>
   useQuery({ ...farmList<TrainingCenter>(farmId, 'training-center'), enabled, retry: false });
 

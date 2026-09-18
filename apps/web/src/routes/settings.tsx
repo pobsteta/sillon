@@ -3,13 +3,16 @@
 //
 // Paramétrage : référentiel de la ferme, équipe, réglages, compte et export RGPD.
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useCurrentSession, useFarmId } from '../lib/session.js';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
+  keys,
   useContainers,
   useCrops,
   useFamilies,
+  useFarm,
   useFarmMutation,
   useMembers,
   useProviders,
@@ -19,7 +22,7 @@ import {
   useVarieties,
 } from '../lib/queries.js';
 import { api } from '../lib/api.js';
-import { Field, Loading, PageHeader, Select } from '../components/ui.js';
+import { ErrorNotice, Field, Loading, PageHeader, Select, Toggle } from '../components/ui.js';
 import { DeclareTrainingCenter } from './training.js';
 import { SecondFactor } from '../components/SecondFactor.js';
 
@@ -275,6 +278,8 @@ export function SettingsPage() {
         </section>
       ) : null}
 
+      {canManageFarm ? <MoonSettings /> : null}
+
       {canManageFarm ? <DeclareTrainingCenter /> : null}
 
       {/* §3.6 : « export complet des données de la ferme, auto-service, à tout moment ».
@@ -313,5 +318,71 @@ export function SettingsPage() {
 
       <SecondFactor />
     </>
+  );
+}
+
+/**
+ * Réglage du calendrier lunaire. Éteint par défaut, et la convention est un choix explicite
+ * parce que les deux **ne donnent pas les mêmes dates** : il faut choisir, le dire, et s'y
+ * tenir, sans quoi les dates de Sillon ne correspondent à aucun calendrier connu.
+ */
+function MoonSettings() {
+  const { t } = useTranslation();
+  const { farm } = useCurrentSession();
+  const queryClient = useQueryClient();
+  const farmId = farm?.id ?? 0;
+  const reglages = useFarm(farmId);
+
+  const enregistrer = useMutation({
+    mutationFn: (corps: Record<string, unknown>) =>
+      api(`/api/farms/${farmId}`, { method: 'PATCH', body: corps }),
+    // La navigation et le bandeau lisent `moonCalendar` dans la session : sans cette
+    // invalidation, allumer le calendrier ne se verrait qu'au rechargement.
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: keys.session });
+      void queryClient.invalidateQueries({ queryKey: ['farm', farmId] });
+    },
+  });
+
+  // L'état suit la session, mais bascule **avant** la réponse du serveur : un interrupteur
+  // qui attend l'aller-retour revient en arrière sous le doigt, et donne à croire qu'il n'a
+  // pas marché. En cas d'échec, il revient — et l'erreur s'affiche.
+  const [allume, setAllume] = useState(farm?.moonCalendar === true);
+  useEffect(() => setAllume(farm?.moonCalendar === true), [farm?.moonCalendar]);
+
+  return (
+    <section className="card mb-6">
+      <h2 className="mb-1 text-lg font-semibold">{t('moon.title')}</h2>
+      <p className="mb-3 text-sm text-earth-700 dark:text-earth-200">{t('moon.hint')}</p>
+
+      <Toggle
+        label={t('moon.enable')}
+        checked={allume}
+        onChange={(valeur) => {
+          setAllume(valeur);
+          enregistrer.mutate({ moonCalendar: valeur }, { onError: () => setAllume(!valeur) });
+        }}
+      />
+
+      {allume ? (
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <Select
+            label={t('moon.convention')}
+            value={reglages.data?.moonConvention ?? 'constellations'}
+            onChange={(event) => enregistrer.mutate({ moonConvention: event.target.value })}
+          >
+            <option value="constellations">{t('moon.conventions.constellations')}</option>
+            <option value="tropical">{t('moon.conventions.tropical')}</option>
+          </Select>
+          <Field
+            label={t('moon.timezone')}
+            value={reglages.data?.timezone ?? 'Europe/Paris'}
+            onChange={(event) => enregistrer.mutate({ timezone: event.target.value })}
+            hint={t('moon.timezoneHint')}
+          />
+        </div>
+      ) : null}
+      {enregistrer.error ? <ErrorNotice error={enregistrer.error} /> : null}
+    </section>
   );
 }

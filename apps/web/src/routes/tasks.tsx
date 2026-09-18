@@ -13,6 +13,7 @@ import { useFarmId } from '../lib/session.js';
 import { useFamilies, useTaskTypes, useTasks } from '../lib/queries.js';
 import { api, QueuedOfflineError } from '../lib/api.js';
 import { Drawer, EmptyState, Loading, PageHeader, Select, Toggle } from '../components/ui.js';
+import { MoonStrip } from '../components/MoonStrip.js';
 import { formatDate, formatLaborTime } from '../lib/format.js';
 import type { Task } from '../lib/types.js';
 
@@ -204,6 +205,10 @@ export function TasksPage() {
       <h2 className="mb-3 hidden text-lg font-semibold print:block">
         {t('tasks.sheet')} — {formatIsoWeek(range.begin)}
       </h2>
+
+      {/* Sans `no-print` : le brief demande le type de jour sur la feuille imprimée, qui
+          est ce qu'on emporte au champ. */}
+      <MoonStrip from={range.begin} />
 
       {tasks.isLoading ? (
         <Loading />

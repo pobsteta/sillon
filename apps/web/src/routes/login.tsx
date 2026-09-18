@@ -7,7 +7,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useLocale } from '../lib/locale.js';
 import { ApiError, api, clearApiCache } from '../lib/api.js';
-import { Field } from '../components/ui.js';
+import { Field, PasswordField } from '../components/ui.js';
 
 function SillonMark() {
   return (
@@ -192,9 +192,8 @@ export function LoginPage() {
               value={email}
               onChange={(event) => setEmail(event.target.value)}
             />
-            <Field
+            <PasswordField
               label={t('auth.password')}
-              type="password"
               autoComplete={mode === 'signIn' ? 'current-password' : 'new-password'}
               required
               minLength={mode === 'signUp' ? 10 : undefined}

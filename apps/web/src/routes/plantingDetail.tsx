@@ -26,6 +26,7 @@ import {
   type PlantingType,
 } from '@sillon/core';
 import { useCurrentSession, useFarmId } from '../lib/session.js';
+import { MoonDateHint } from '../components/MoonDateHint.js';
 import {
   useAvailableLocations,
   useContainers,
@@ -116,6 +117,9 @@ export function PlantingDetailPage({ plantingId }: { plantingId: number | null }
   const templates = useTaskTemplates(farmId);
   const [form, setForm] = useState<FormState>(EMPTY);
   const varieties = useVarieties(farmId, form.cropId ? { cropId: Number(form.cropId) } : {});
+  // L'espèce choisie porte ce qu'on récolte : c'est elle qui dit quel type de jour la
+  // culture appelle.
+  const especeChoisie = (crops.data ?? []).find((crop) => String(crop.id) === form.cropId);
   const [showPlacement, setShowPlacement] = useState(false);
   const available = useAvailableLocations(
     farmId,
@@ -377,13 +381,22 @@ export function PlantingDetailPage({ plantingId }: { plantingId: number | null }
           <fieldset className="border-t border-earth-200 pt-4 dark:border-earth-700">
             <legend className="text-sm font-semibold">{t('planting.dates')}</legend>
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field
-                label={t('planting.sowingDate')}
-                hint={t('planting.dateHint')}
-                value={form.sowingInput}
-                onChange={(event) => update('sowingInput', event.target.value)}
-                error={sowingDate ? undefined : t('common.required')}
-              />
+              <div>
+                <Field
+                  label={t('planting.sowingDate')}
+                  hint={t('planting.dateHint')}
+                  value={form.sowingInput}
+                  onChange={(event) => update('sowingInput', event.target.value)}
+                  error={sowingDate ? undefined : t('common.required')}
+                />
+                {/* Sous le champ, au moment où la date se décide — et non dans un écran
+                    à part, qu'on consulterait après coup. */}
+                <MoonDateHint
+                  date={sowingDate}
+                  harvestedPart={especeChoisie?.harvestedPart}
+                  onPick={(choix) => update('sowingInput', choix)}
+                />
+              </div>
               <Field
                 label={`${t('planting.durationTypes.days_to_transplant')} (${t('common.days')})`}
                 type="number"

@@ -9,9 +9,12 @@ import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import {
+  daysBetween,
   expectedRevenue,
   expectedYield,
   fieldDate,
+  moonYear,
+  nearestMatchingDay,
   occupationRange,
   seedRequirement,
   shiftHarvestPeriods,
@@ -21,7 +24,7 @@ import {
 } from '@sillon/core';
 import { inFarm } from '../scope.js';
 import { recalerPlusieursSeries } from '../task-scheduling.js';
-import { notFound } from '../errors.js';
+import { badRequest, notFound } from '../errors.js';
 import { assertReferences } from '../references.js';
 import type { Tx } from '../db.js';
 import {
@@ -53,6 +56,11 @@ const plantingFields = {
   unitId: z.number().int().positive().nullish(),
   containerId: z.number().int().positive().nullish(),
   plantingType,
+  /**
+   * Surcharge de la partie récoltée portée par l'espèce : une carotte **porte-graine** se
+   * mène en jour fruit, pas en jour racine. Nul = on suit l'espèce.
+   */
+  harvestedPart: z.enum(['root', 'leaf', 'flower', 'fruit']).nullish(),
   inGreenhouse: z.boolean().nullish(),
   length: z.number().int().min(0).max(10_000_000).nullish(),
   rows: z.number().int().min(0).max(1000).nullish(),
@@ -496,6 +504,18 @@ export async function plantingRoutes(app: FastifyInstance): Promise<void> {
           ids: z.array(z.number().int().positive()).min(1).max(500),
           /** Décalage appliqué à toutes les dates prévues des séries visées. */
           shiftDays: z.number().int().min(-3650).max(3650).optional(),
+          /**
+           * Caler chaque série sur un jour du type que sa culture appelle — jour racine
+           * pour une carotte, jour fruit pour une tomate.
+           *
+           * `maxShift` est plafonné à trois jours, **et ce n'est pas un détail
+           * d'implémentation** : au-delà, c'est l'agronomie qui commande, et une série de
+           * printemps ne se décale pas d'une semaine pour attendre un jour fruit. Une
+           * série qu'aucun jour ne satisfait dans la fenêtre n'est pas touchée.
+           */
+          alignToMoonDay: z
+            .object({ maxShift: z.number().int().min(1).max(3).default(3) })
+            .optional(),
           data: z
             .object({
               varietyId: z.number().int().positive().nullish(),
@@ -520,7 +540,12 @@ export async function plantingRoutes(app: FastifyInstance): Promise<void> {
     },
     async (request) =>
       inFarm(request, async (db, { farmId }) => {
-        const { ids, shiftDays, data, addTagIds, removeTagIds } = request.body;
+        const { ids, shiftDays, alignToMoonDay, data, addTagIds, removeTagIds } = request.body;
+        if (shiftDays && alignToMoonDay) {
+          // Les deux ensemble donneraient un résultat que personne ne saurait prédire :
+          // le calage part de la date de semis, qui vient d'être déplacée.
+          throw badRequest('Décalage en jours et calage lunaire ne se combinent pas');
+        }
         await assertReferences(db, {
           variety: data?.varietyId,
           unit: data?.unitId,
@@ -529,7 +554,7 @@ export async function plantingRoutes(app: FastifyInstance): Promise<void> {
         });
         const owned = await db.planting.findMany({
           where: { id: { in: ids }, farmId },
-          include: { dates: true, harvestPeriods: true },
+          include: { dates: true, harvestPeriods: true, crop: true },
         });
         if (owned.length === 0) throw notFound('Aucune série correspondante');
 
@@ -537,30 +562,67 @@ export async function plantingRoutes(app: FastifyInstance): Promise<void> {
           await db.planting.updateMany({ where: { id: { in: owned.map((p) => p.id) } }, data });
         }
 
+        /** Décale une série d'un nombre de jours qui lui est propre. */
+        const decalerSerie = async (planting: (typeof owned)[number], jours: number) => {
+          if (jours === 0) return;
+          const shifted = shiftPlantingDates(datesFromRows(planting.dates), jours);
+          for (const [type, value] of Object.entries(shifted)) {
+            await db.plantingDate.update({
+              where: { plantingId_type: { plantingId: planting.id, type: type as any } },
+              data: { planned: toDbDate(value!.planned) },
+            });
+          }
+          // Les fenêtres de récolte suivent : elles sont accrochées aux mêmes dates.
+          for (const period of planting.harvestPeriods) {
+            const [shiftedPeriod] = shiftHarvestPeriods(harvestPeriodsFromRows([period]), jours);
+            if (!shiftedPeriod) continue;
+            await db.harvestPeriod.update({
+              where: { id: period.id },
+              data: { begin: toDbDate(shiftedPeriod.begin), end: toDbDate(shiftedPeriod.end) },
+            });
+          }
+        };
+
         if (shiftDays) {
+          for (const planting of owned) await decalerSerie(planting, shiftDays);
+        }
+
+        // Calage lunaire : chaque série reçoit **son** décalage, calculé depuis sa date de
+        // semis et ce que sa culture récolte. Un décalage unique pour tout le lot n'aurait
+        // aucun sens — deux séries semées à deux jours d'écart n'attendent pas le même jour.
+        const aligned: { plantingId: number; from: string; to: string }[] = [];
+        if (alignToMoonDay) {
+          const ferme = await db.farm.findUniqueOrThrow({
+            where: { id: farmId },
+            select: { moonConvention: true, timezone: true },
+          });
+          const options = { convention: ferme.moonConvention, timeZone: ferme.timezone };
+          const calendriers = new Map<number, ReturnType<typeof moonYear>>();
+          const calendrier = (annee: number) => {
+            if (!calendriers.has(annee)) calendriers.set(annee, moonYear(annee, options));
+            return calendriers.get(annee)!;
+          };
+
           for (const planting of owned) {
-            const shifted = shiftPlantingDates(datesFromRows(planting.dates), shiftDays);
-            for (const [type, value] of Object.entries(shifted)) {
-              await db.plantingDate.update({
-                where: { plantingId_type: { plantingId: planting.id, type: type as any } },
-                data: { planned: toDbDate(value!.planned) },
-              });
-            }
-            // Les fenêtres de récolte suivent : elles sont accrochées aux mêmes dates.
-            for (const period of planting.harvestPeriods) {
-              const [shiftedPeriod] = shiftHarvestPeriods(
-                harvestPeriodsFromRows([period]),
-                shiftDays,
-              );
-              if (!shiftedPeriod) continue;
-              await db.harvestPeriod.update({
-                where: { id: period.id },
-                data: {
-                  begin: toDbDate(shiftedPeriod.begin),
-                  end: toDbDate(shiftedPeriod.end),
-                },
-              });
-            }
+            // Comme Brinjel, tout part du semis : caler une autre date laisserait le semis
+            // là où il est, et l'itinéraire technique replacerait le reste derrière lui.
+            const semis = datesFromRows(planting.dates).sowing?.planned;
+            const partie = planting.harvestedPart ?? planting.crop.harvestedPart;
+            if (!semis || !partie) continue;
+
+            const annee = Number(semis.slice(0, 4));
+            // Une fenêtre de trois jours peut franchir le 1er janvier : on donne les deux
+            // années plutôt que de rater un calage fin décembre.
+            const jours = [
+              ...calendrier(annee - 1),
+              ...calendrier(annee),
+              ...calendrier(annee + 1),
+            ];
+            const cible = nearestMatchingDay(jours, semis, partie, alignToMoonDay.maxShift);
+            if (!cible || cible === semis) continue;
+
+            await decalerSerie(planting, daysBetween(semis, cible));
+            aligned.push({ plantingId: planting.id, from: semis, to: cible });
           }
         }
 
@@ -569,7 +631,7 @@ export async function plantingRoutes(app: FastifyInstance): Promise<void> {
         // chose et le travail du jour en disait une autre. Les tâches déjà faites ne
         // bougent pas — c'est `recalerPlusieursSeries` qui s'en charge.
         let rescheduled = 0;
-        if (shiftDays) {
+        if (shiftDays || aligned.length > 0) {
           const decalees = await db.planting.findMany({
             where: { id: { in: owned.map((planting) => planting.id) } },
             include: { dates: true, harvestPeriods: true },
@@ -591,7 +653,10 @@ export async function plantingRoutes(app: FastifyInstance): Promise<void> {
           });
         }
 
-        return { updated: owned.length, rescheduled };
+        // `aligned` n'apparaît que si on a demandé un calage : ajouter un champ à la
+        // réponse de tout le monde pour une option que presque personne n'emploie change
+        // un contrat sans raison.
+        return { updated: owned.length, rescheduled, ...(alignToMoonDay ? { aligned } : {}) };
       }),
   );
 

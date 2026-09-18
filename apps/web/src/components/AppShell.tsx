@@ -18,6 +18,8 @@ interface NavEntry {
   labelKey: string;
   /** N'apparaît que si la ferme est un centre de formation. */
   centerOnly?: boolean;
+  /** N'apparaît que si la ferme a allumé le calendrier lunaire. */
+  moonOnly?: boolean;
   icon: string;
   primary: boolean;
   /** Permission requise pour voir l'entrée ; absente = visible par tout membre. */
@@ -50,6 +52,8 @@ const NAVIGATION: NavEntry[] = [
   // Réservée aux centres : l'immense majorité des fermes n'en sont pas, et une entrée
   // permanente vers un écran vide serait du bruit dans une barre déjà dense.
   { to: '/formation', labelKey: 'nav.training', icon: '⌂', primary: false, centerOnly: true },
+  // Éteint par défaut : qui ne pratique pas ne doit pas voir un mot de plus à l'écran.
+  { to: '/calendrier-lunaire', labelKey: 'nav.moon', icon: '☾', primary: false, moonOnly: true },
   { to: '/parametres', labelKey: 'nav.settings', icon: '⚙', primary: false },
 ];
 
@@ -84,7 +88,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   const navigation = NAVIGATION.filter(
     (entry) =>
       (!entry.permission || can(...entry.permission)) &&
-      (!entry.centerOnly || farm?.trainingCenter === true),
+      (!entry.centerOnly || farm?.trainingCenter === true) &&
+      (!entry.moonOnly || farm?.moonCalendar === true),
   );
 
   // Renvoi du courriel de confirmation : une seule fois par visite, l'API limitant
