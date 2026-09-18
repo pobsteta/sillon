@@ -20,6 +20,7 @@ import {
 } from '../lib/queries.js';
 import { api } from '../lib/api.js';
 import { Field, Loading, PageHeader, Select } from '../components/ui.js';
+import { DeclareTrainingCenter } from './training.js';
 import { SecondFactor } from '../components/SecondFactor.js';
 
 type ResourceKey =
@@ -273,6 +274,8 @@ export function SettingsPage() {
           ) : null}
         </section>
       ) : null}
+
+      {canManageFarm ? <DeclareTrainingCenter /> : null}
 
       {/* §3.6 : « export complet des données de la ferme, auto-service, à tout moment ».
           Un lien nu plutôt qu'un appel fetch : le navigateur enchaîne le téléchargement

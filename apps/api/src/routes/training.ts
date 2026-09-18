@@ -254,7 +254,10 @@ export async function trainingRoutes(app: FastifyInstance): Promise<void> {
         tags,
         summary: 'Fermes d’apprenants',
         params: FarmParams,
-        querystring: z.object({ ended: z.coerce.boolean().optional() }),
+        // `z.stringbool()` et non `z.coerce.boolean()` : dans une chaîne de requête, tout
+        // arrive en texte, et `Boolean('false')` vaut `true`. Demander les formations en
+        // cours renvoyait donc les formations terminées — une liste vide, sans erreur.
+        querystring: z.object({ ended: z.stringbool().optional() }),
       },
     },
     async (request) => {

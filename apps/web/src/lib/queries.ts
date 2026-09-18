@@ -20,9 +20,11 @@ import type {
   Planting,
   Session,
   Stats,
+  StudentFarm,
   Tag,
   Task,
   TaskTemplate,
+  TrainingCenter,
   Variety,
 } from './types.js';
 
@@ -131,6 +133,25 @@ export const useAssignmentPlan = (farmId: number, from: string, to: string) =>
   useQuery(farmList<any>(farmId, 'assignments', { from, to }));
 
 export const useMembers = (farmId: number) => useQuery(farmList<any[]>(farmId, 'members'));
+
+/**
+ * Le centre de formation de la ferme. `enabled` plutôt qu'un appel systématique : la
+ * plupart des fermes ne sont pas des centres, et l'API répond alors 404 — un échec qui
+ * n'en est pas un, mais que TanStack Query réessaierait et afficherait.
+ */
+export const useTrainingCenter = (farmId: number, enabled: boolean) =>
+  useQuery({ ...farmList<TrainingCenter>(farmId, 'training-center'), enabled, retry: false });
+
+export const useStudentFarms = (farmId: number, enabled: boolean, ended?: boolean) =>
+  useQuery({
+    ...farmList<StudentFarm[]>(
+      farmId,
+      'training-center/students',
+      ended === undefined ? {} : { ended },
+    ),
+    enabled,
+    retry: false,
+  });
 
 /**
  * Mutation générique : toute écriture invalide le cache de la ferme, ce qui garde

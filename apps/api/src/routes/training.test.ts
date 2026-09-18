@@ -264,6 +264,30 @@ describe('terminer une formation', () => {
     expect(ecriture.statusCode).toBe(201);
   });
 
+  it('sépare les formations en cours des formations terminées', async () => {
+    // Le filtre voyage dans la chaîne de requête, donc en texte. Avec une coercition
+    // naïve, `ended=false` valait `true` : demander les formations en cours renvoyait les
+    // terminées, c'est-à-dire une liste vide et aucune erreur.
+    const lister = (parametres: string) =>
+      app
+        .inject({
+          method: 'GET',
+          url: `/api/farms/${centre.farmId}/training-center/students${parametres}`,
+          headers: { cookie: centre.cookie },
+        })
+        .then((r) => r.json());
+
+    const enCours = await lister('?ended=false');
+    const terminees = await lister('?ended=true');
+    const toutes = await lister('');
+
+    expect(enCours.length, 'des formations courent').toBeGreaterThan(0);
+    expect(terminees.length, 'et une est terminée').toBeGreaterThan(0);
+    expect(toutes.length).toBe(enCours.length + terminees.length);
+    for (const formation of enCours) expect(formation.endedAt).toBeNull();
+    for (const formation of terminees) expect(formation.endedAt).not.toBeNull();
+  });
+
   it('refuse de supprimer un centre dont des formations courent', async () => {
     const refus = await app.inject({
       method: 'DELETE',

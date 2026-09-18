@@ -16,6 +16,8 @@ import { useQueryClient } from '@tanstack/react-query';
 interface NavEntry {
   to: string;
   labelKey: string;
+  /** N'apparaît que si la ferme est un centre de formation. */
+  centerOnly?: boolean;
   icon: string;
   primary: boolean;
   /** Permission requise pour voir l'entrée ; absente = visible par tout membre. */
@@ -45,6 +47,9 @@ const NAVIGATION: NavEntry[] = [
     primary: false,
     permission: ['charts', 'read'],
   },
+  // Réservée aux centres : l'immense majorité des fermes n'en sont pas, et une entrée
+  // permanente vers un écran vide serait du bruit dans une barre déjà dense.
+  { to: '/formation', labelKey: 'nav.training', icon: '⌂', primary: false, centerOnly: true },
   { to: '/parametres', labelKey: 'nav.settings', icon: '⚙', primary: false },
 ];
 
@@ -76,7 +81,11 @@ export function AppShell({ children }: { children: ReactNode }) {
   });
 
   const isActive = (to: string) => (to === '/' ? path === '/' : path.startsWith(to));
-  const navigation = NAVIGATION.filter((entry) => !entry.permission || can(...entry.permission));
+  const navigation = NAVIGATION.filter(
+    (entry) =>
+      (!entry.permission || can(...entry.permission)) &&
+      (!entry.centerOnly || farm?.trainingCenter === true),
+  );
 
   // Renvoi du courriel de confirmation : une seule fois par visite, l'API limitant
   // de toute façon le débit.

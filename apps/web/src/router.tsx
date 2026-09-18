@@ -140,6 +140,11 @@ const statsRoute = createRoute({
   path: '/statistiques',
   component: lazyRouteComponent(() => import('./routes/stats.js'), 'StatsPage'),
 });
+const trainingRoute = createRoute({
+  getParentRoute: () => protectedRoute,
+  path: '/formation',
+  component: lazyRouteComponent(() => import('./routes/training.js'), 'TrainingPage'),
+});
 const settingsRoute = createRoute({
   getParentRoute: () => protectedRoute,
   path: '/parametres',
@@ -171,6 +176,7 @@ const routeTree = rootRoute.addChildren([
     harvestsRoute,
     notesRoute,
     statsRoute,
+    trainingRoute,
     settingsRoute,
   ]),
   notFoundRoute,
