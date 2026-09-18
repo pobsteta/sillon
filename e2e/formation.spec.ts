@@ -38,7 +38,7 @@ test('déclarer un centre, créer un apprenant, terminer la formation', async ({
     await page.goto('/connexion');
     await page.getByRole('button', { name: 'Pas encore de compte ?' }).click();
     await page.getByLabel('Adresse électronique').fill(formateur);
-    await page.getByLabel('Mot de passe').fill(password);
+    await page.getByLabel('Mot de passe', { exact: true }).fill(password);
     await page.getByLabel('Nom de la ferme').fill('CFPPA de bout en bout');
     await page.getByRole('button', { name: 'Créer un compte', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Tableau de bord' })).toBeVisible();

@@ -22,7 +22,7 @@ test('inscription, série, tâches', async ({ page }, testInfo) => {
     await page.goto('/connexion');
     await page.getByRole('button', { name: 'Pas encore de compte ?' }).click();
     await page.getByLabel('Adresse électronique').fill(email);
-    await page.getByLabel('Mot de passe').fill(password);
+    await page.getByLabel('Mot de passe', { exact: true }).fill(password);
     await page.getByLabel('Nom de la ferme').fill('Ferme de bout en bout');
     await page.getByRole('button', { name: 'Créer un compte', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Tableau de bord' })).toBeVisible();
@@ -76,7 +76,7 @@ test('la fiche de série calcule les semences sans réseau', async ({ page }, te
   await page.goto('/connexion');
   await page.getByRole('button', { name: 'Pas encore de compte ?' }).click();
   await page.getByLabel('Adresse électronique').fill(email);
-  await page.getByLabel('Mot de passe').fill(password);
+  await page.getByLabel('Mot de passe', { exact: true }).fill(password);
   await page.getByRole('button', { name: 'Créer un compte', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Tableau de bord' })).toBeVisible();
 
@@ -92,6 +92,27 @@ test('la fiche de série calcule les semences sans réseau', async ({ page }, te
   // 20 m / 4 cm × 5 rangs = 2500 poquets, 3 graines chacun = 7500 graines. La marge de
   // sécurité n'entre pas ici : dans Brinjel elle ne s'applique qu'à la liste de commande.
   await expect(page.getByText('7 500').or(page.getByText('7500'))).toBeVisible();
+});
+
+test('le mot de passe s’affiche à la demande, sans soumettre le formulaire', async ({ page }) => {
+  await page.goto('/connexion');
+  // `exact` partout ailleurs aussi : le bouton d'affichage s'appelle « Afficher le mot de
+  // passe », donc une correspondance partielle attrape le champ **et** le bouton. Le
+  // libellé du bouton est le bon — c'est au sélecteur d'être précis.
+  const champ = page.getByLabel('Mot de passe', { exact: true });
+  await champ.fill(password);
+  await expect(champ).toHaveAttribute('type', 'password');
+
+  await page.getByRole('button', { name: 'Afficher le mot de passe' }).click();
+  await expect(champ).toHaveAttribute('type', 'text');
+  await expect(champ).toHaveValue(password);
+
+  // Le piège du bouton dans un formulaire : sans `type="button"`, cliquer sur l'œil
+  // soumettrait la connexion. On vérifie qu'on est resté sur place.
+  await expect(page).toHaveURL(/connexion/);
+
+  await page.getByRole('button', { name: 'Masquer le mot de passe' }).click();
+  await expect(champ).toHaveAttribute('type', 'password');
 });
 
 test('le mot de passe oublié ne dit pas qui a un compte', async ({ page }) => {
@@ -114,7 +135,7 @@ test('écrit une note avec photo et la retrouve au journal', async ({ page }, te
   await page.goto('/connexion');
   await page.getByRole('button', { name: 'Pas encore de compte ?' }).click();
   await page.getByLabel('Adresse électronique').fill(email);
-  await page.getByLabel('Mot de passe').fill(password);
+  await page.getByLabel('Mot de passe', { exact: true }).fill(password);
   await page.getByRole('button', { name: 'Créer un compte', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Tableau de bord' })).toBeVisible();
 
@@ -167,7 +188,7 @@ test('compresse une grande photo avant de l’envoyer', async ({ page }, testInf
   await page.goto('/connexion');
   await page.getByRole('button', { name: 'Pas encore de compte ?' }).click();
   await page.getByLabel('Adresse électronique').fill(email);
-  await page.getByLabel('Mot de passe').fill(password);
+  await page.getByLabel('Mot de passe', { exact: true }).fill(password);
   await page.getByRole('button', { name: 'Créer un compte', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Tableau de bord' })).toBeVisible();
 
@@ -200,7 +221,7 @@ test('place une série sur une planche, au doigt comme à la souris', async ({ p
     await page.goto('/connexion');
     await page.getByRole('button', { name: 'Pas encore de compte ?' }).click();
     await page.getByLabel('Adresse électronique').fill(email);
-    await page.getByLabel('Mot de passe').fill(password);
+    await page.getByLabel('Mot de passe', { exact: true }).fill(password);
     await page.getByLabel('Nom de la ferme').fill('Ferme de l’assolement');
     await page.getByRole('button', { name: 'Créer un compte', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Tableau de bord' })).toBeVisible();
@@ -257,7 +278,7 @@ test('exporte toutes les données de la ferme en une archive', async ({ page }, 
   await page.goto('/connexion');
   await page.getByRole('button', { name: 'Pas encore de compte ?' }).click();
   await page.getByLabel('Adresse électronique').fill(email);
-  await page.getByLabel('Mot de passe').fill(password);
+  await page.getByLabel('Mot de passe', { exact: true }).fill(password);
   await page.getByLabel('Nom de la ferme').fill('Ferme de l’export');
   await page.getByRole('button', { name: 'Créer un compte', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Tableau de bord' })).toBeVisible();

@@ -100,7 +100,9 @@
       "resent": "Courriel renvoyé"
     },
     "totpCode": "Code de vérification",
-    "totpHint": "Six chiffres, ou l’un de vos codes de secours."
+    "totpHint": "Six chiffres, ou l’un de vos codes de secours.",
+    "showPassword": "Afficher le mot de passe",
+    "hidePassword": "Masquer le mot de passe"
   },
   "dashboard": {
     "title": "Tableau de bord",

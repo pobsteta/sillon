@@ -100,7 +100,9 @@
       "resent": "Email sent"
     },
     "totpCode": "Verification code",
-    "totpHint": "Six digits, or one of your recovery codes."
+    "totpHint": "Six digits, or one of your recovery codes.",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password"
   },
   "dashboard": {
     "title": "Dashboard",
