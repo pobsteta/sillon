@@ -315,7 +315,21 @@ quelqu'un.
 ### Tester sur un smartphone
 
 Le téléphone et l'ordinateur doivent être sur le même réseau local. Relevez l'adresse
-locale de l'ordinateur (`192.168.x.y`) : Vite l'affiche au démarrage sous « Network ».
+locale de l'ordinateur (`192.168.x.y`) : Vite l'affiche au démarrage sous « Network », et
+`ip -4 addr show scope global` la donne aussi.
+
+**Depuis la pile `docker compose`** — celle qui porte vos données. Posez l'adresse dans
+`.env`, sans quoi les liens envoyés par courriel pointeraient vers l'appareil qui les
+ouvre, c'est-à-dire nulle part :
+
+```bash
+echo 'APP_URL=http://192.168.x.y:8080' >> .env
+docker compose up -d api
+```
+
+Sur le téléphone : `http://192.168.x.y:8080`. Nginx relaie `/api` sur le même port, donc
+tout est de même origine et aucun réglage CORS n'est à toucher. Si la page n'arrive pas,
+regardez le pare-feu de l'ordinateur (`sudo ufw status`, puis `sudo ufw allow 8080/tcp`).
 
 **Coup d'œil rapide, avec rechargement à chaud** — l'API sur son port habituel, l'interface
 ouverte au réseau :
@@ -340,11 +354,18 @@ Sur le téléphone : `http://192.168.x.y:4173`.
 
 Attention : les navigateurs réservent le service worker et l'installation aux **contextes
 sécurisés**. Sur une adresse `http://` du réseau local, l'application fonctionne, mais
-l'installation sur l'écran d'accueil et le mode hors ligne restent inactifs. Pour les
-essayer, exposez le port en HTTPS — par exemple `cloudflared tunnel --url http://localhost:4173`
-ou `ngrok http 4173` — et ouvrez l'adresse `https://…` obtenue : « Ajouter à l'écran
-d'accueil » apparaît alors, et couper les données mobiles permet de vérifier que la feuille
-de la semaine reste lisible et que les récoltes saisies partent en file d'attente.
+l'installation sur l'écran d'accueil et le mode hors ligne restent inactifs — c'est-à-dire
+précisément ce qui fait sa valeur au champ. Deux façons de les essayer :
+
+- **par le câble** (Android) : `chrome://inspect` sur l'ordinateur, redirection de port
+  `8080 → localhost:8080`. Le téléphone voit alors `http://localhost:8080`, **qui est un
+  contexte sécurisé** ;
+- **par un tunnel HTTPS** : `cloudflared tunnel --url http://localhost:8080` (ou 4173 en
+  mode prévisualisation), puis l'adresse `https://…` obtenue.
+
+« Ajouter à l'écran d'accueil » apparaît alors, et couper les données mobiles permet de
+vérifier que la feuille de la semaine reste lisible et que les récoltes saisies partent en
+file d'attente.
 
 Le port de l'API derrière le proxy se change avec `API_PORT` (3000 par défaut).
 
