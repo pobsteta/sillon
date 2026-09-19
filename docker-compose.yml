@@ -48,10 +48,19 @@ services:
       # L'adresse où l'on atteint l'interface, et donc la base des liens envoyés par
       # courriel. Sans elle, l'API retombait sur le port 5173 de Vite : le lien de
       # confirmation reçu à l'inscription était injoignable, puisque `docker compose`
-      # sert l'interface sur 8080. Les deux suivent `WEB_PORT`, sans quoi en changer
-      # casserait les liens et le partage d'origine.
-      APP_URL: http://localhost:${WEB_PORT:-8080}
-      CORS_ORIGINS: http://localhost:${WEB_PORT:-8080}
+      # sert l'interface sur 8080.
+      #
+      # `localhost` ne convient que depuis la machine qui héberge. Pour essayer depuis un
+      # téléphone du réseau local, ou pour déployer, posez `APP_URL` dans `.env` :
+      # sans quoi les liens de confirmation pointeraient vers l'appareil qui les ouvre,
+      # c'est-à-dire nulle part. `CORS_ORIGINS` suit `APP_URL` par défaut — les deux
+      # désignent la même interface, et les désaccorder n'a de sens que si l'interface est
+      # servie depuis plusieurs adresses.
+      #
+      # À défaut des deux, on retombe sur `WEB_PORT`, sans quoi en changer casserait les
+      # liens et le partage d'origine.
+      APP_URL: ${APP_URL:-http://localhost:${WEB_PORT:-8080}}
+      CORS_ORIGINS: ${CORS_ORIGINS:-${APP_URL:-http://localhost:${WEB_PORT:-8080}}}
       COOKIE_SECURE: 'false'
       NODE_ENV: production
       PORT: '3000'
