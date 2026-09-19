@@ -504,6 +504,8 @@
     "alreadyDrawn": "already drawn",
     "eraseOutline": "Erase the outline",
     "measured": "“{{nom}}”: {{surface}} m², longest side {{longueur}} m. The bed length you entered was not changed.",
-    "planLayer": "Street map"
+    "planLayer": "Street map",
+    "useMeasure": "Set the bed to {{longueur}} m",
+    "measureApplied": "Bed length updated. Seed and order calculations now use it."
   }
 }

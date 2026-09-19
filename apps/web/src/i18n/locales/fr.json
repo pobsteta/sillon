@@ -504,6 +504,8 @@
     "alreadyDrawn": "déjà dessiné",
     "eraseOutline": "Effacer le contour",
     "measured": "« {{nom}} » : {{surface}} m², plus grand côté {{longueur}} m. La longueur de planche saisie n’a pas été modifiée.",
-    "planLayer": "Plan"
+    "planLayer": "Plan",
+    "useMeasure": "Régler la planche sur {{longueur}} m",
+    "measureApplied": "Longueur de planche mise à jour. Les calculs de semences et de commande en tiennent compte."
   }
 }

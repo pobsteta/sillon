@@ -67,9 +67,15 @@ const EnvSchema = z.object({
    * Pour une exploitation individuelle, c'est une donnée personnelle — et c'est le seul
    * endroit où Sillon parle à l'extérieur. Il faut pouvoir dire non.
    */
-  GEOCODING: z.enum(['ban', 'none']).default('ban'),
-  /** Adresse du service, pour pointer une instance à soi plutôt que la publique. */
+  GEOCODING: z.enum(['ban', 'nominatim', 'ban+nominatim', 'none']).default('ban'),
+  /** Adresse de la BAN, pour pointer une instance à soi plutôt que la publique. */
   GEOCODING_URL: z.string().default('https://api-adresse.data.gouv.fr/search/'),
+  /**
+   * Adresse de Nominatim. L'instance publique impose une politique d'usage stricte — une
+   * requête par seconde, identification obligatoire, aucun géocodage en masse — et peut
+   * refuser un service qui en abuse. Un déploiement sérieux pointe la sienne.
+   */
+  NOMINATIM_URL: z.string().default('https://nominatim.openstreetmap.org/search'),
 
   /**
    * Fond de carte supplémentaire, à la charge du déploiement. Sillon ne livre

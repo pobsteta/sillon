@@ -14,7 +14,15 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMutation } from '@tanstack/react-query';
-import { arrondirLatLng, isGeoJsonPolygon, type GeoJsonPolygon, type LatLng } from '@sillon/core';
+import {
+  arrondirLatLng,
+  fromGeoJsonPolygon,
+  isGeoJsonPolygon,
+  longestSideMm,
+  polygonArea,
+  type GeoJsonPolygon,
+  type LatLng,
+} from '@sillon/core';
 import { api, useFarm, useFarmMutation, useLocations } from '../lib/queries.js';
 import { useCurrentSession } from '../lib/session.js';
 import { Carte } from '../components/Carte.js';
@@ -47,6 +55,7 @@ export function MapPage() {
     areaM2: number;
     longestSideMm: number;
   } | null>(null);
+  const [applique, setApplique] = useState(false);
   const emplacements = useLocations(farmId);
 
   const chercher = useMutation({
@@ -90,6 +99,13 @@ export function MapPage() {
     },
   );
 
+  const appliquerMesure = useFarmMutation(
+    farmId,
+    ({ id, bedLength }: { id: number; bedLength: number }) =>
+      api(`/api/farms/${farmId}/locations/${id}`, { method: 'PATCH', body: { bedLength } }),
+    { onSuccess: () => setApplique(true) },
+  );
+
   if (!farm || reglages.isLoading) return <Loading />;
 
   const position =
@@ -106,6 +122,11 @@ export function MapPage() {
   return (
     <>
       <PageHeader title={t('map.title')}>
+        {/* Le plan s'emporte ou s'affiche dans la remise : c'est un usage à part entière,
+            et l'impression masque tout ce qui ne sert qu'à l'écran. */}
+        <button type="button" className="btn-ghost no-print" onClick={() => window.print()}>
+          {t('common.print')}
+        </button>
         {position ? (
           <span className="chip bg-earth-100 tabular-nums dark:bg-earth-700">
             {position.lat.toFixed(5)}, {position.lng.toFixed(5)}
@@ -114,7 +135,7 @@ export function MapPage() {
       </PageHeader>
 
       {canManageFarm ? (
-        <section className="card mb-4">
+        <section className="card no-print mb-4">
           <h2 className="mb-1 text-lg font-semibold">{t('map.search')}</h2>
           {/* Dire où part la requête, avant qu'elle ne parte. */}
           <p className="mb-3 text-sm text-earth-700 dark:text-earth-200">{t('map.searchHint')}</p>
@@ -176,7 +197,7 @@ export function MapPage() {
         {...(session?.map ? { tuiles: session.map } : {})}
       />
       {canManageFarm ? (
-        <section className="card mt-4">
+        <section className="card no-print mt-4">
           <h2 className="mb-1 text-lg font-semibold">{t('map.draw')}</h2>
           <p className="mb-3 text-sm text-earth-700 dark:text-earth-200">{t('map.drawHint')}</p>
           <div className="flex flex-wrap items-end gap-3">
@@ -184,8 +205,26 @@ export function MapPage() {
               label={t('map.target')}
               value={cible}
               onChange={(event) => {
-                setCible(event.target.value);
-                setMesure(null);
+                const choisi = event.target.value;
+                setCible(choisi);
+                setApplique(false);
+                // Un emplacement déjà dessiné montre sa mesure tout de suite : la calculer
+                // ici évite d'obliger à retracer un contour pour la relire, et le noyau
+                // est la même bibliothèque que celle du serveur — les deux ne peuvent pas
+                // diverger.
+                const lieu = (emplacements.data ?? []).find(
+                  (candidat) => String(candidat.id) === choisi,
+                );
+                if (lieu && isGeoJsonPolygon(lieu.geometry)) {
+                  const sommets = fromGeoJsonPolygon(lieu.geometry);
+                  setMesure({
+                    nom: lieu.name,
+                    areaM2: polygonArea(sommets),
+                    longestSideMm: longestSideMm(sommets),
+                  });
+                } else {
+                  setMesure(null);
+                }
               }}
             >
               <option value="">{t('map.targetNone')}</option>
@@ -212,12 +251,34 @@ export function MapPage() {
           {/* La mesure se **propose**. `bedLength` sert aux calculs de semences et de
               commande : un tracé au doigt ne doit pas en devenir la base tout seul. */}
           {mesure ? (
-            <p role="status" className="mt-3 text-sm">
-              {t('map.measured', {
-                nom: mesure.nom,
-                surface: mesure.areaM2,
-                longueur: (mesure.longestSideMm / 1000).toFixed(1),
-              })}
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              <p role="status" className="text-sm">
+                {t('map.measured', {
+                  nom: mesure.nom,
+                  surface: mesure.areaM2,
+                  longueur: (mesure.longestSideMm / 1000).toFixed(1),
+                })}
+              </p>
+              {/* La mesure ne remplace la longueur saisie que si on le demande. Cette
+                  valeur sert aux calculs de semences, de rendement et de commande : un
+                  tracé au doigt ne doit pas en devenir la base tout seul. */}
+              <button
+                type="button"
+                className="btn-ghost"
+                onClick={() =>
+                  appliquerMesure.mutate({
+                    id: Number(cible),
+                    bedLength: mesure.longestSideMm,
+                  })
+                }
+              >
+                {t('map.useMeasure', { longueur: (mesure.longestSideMm / 1000).toFixed(1) })}
+              </button>
+            </div>
+          ) : null}
+          {applique ? (
+            <p role="status" className="mt-2 text-sm text-sillon-800 dark:text-sillon-200">
+              {t('map.measureApplied')}
             </p>
           ) : null}
           {dessiner.error ? <ErrorNotice error={dessiner.error} /> : null}
@@ -234,7 +295,7 @@ export function MapPage() {
       ) : null}
 
       {canManageFarm ? (
-        <section className="card mt-4">
+        <section className="card no-print mt-4">
           <h2 className="mb-1 text-lg font-semibold">{t('map.manual')}</h2>
           <p className="mb-3 text-sm text-earth-700 dark:text-earth-200">{t('map.manualHint')}</p>
           <div className="grid gap-3 sm:grid-cols-3">
