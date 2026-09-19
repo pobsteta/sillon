@@ -79,6 +79,8 @@ const EnvSchema = z.object({
    */
   MAP_TILE_URL: z.string().optional(),
   MAP_TILE_ATTRIBUTION: z.string().optional(),
+  /** Nom du fond dans le sélecteur. « Vue aérienne » à défaut, ce qu'il est le plus souvent. */
+  MAP_TILE_NAME: z.string().optional(),
 
   /**
    * Dossier du build de l'interface, pour la servir **depuis l'API**. Absent, l'API ne rend

@@ -168,6 +168,7 @@ export function MapPage() {
         etiquette={t('map.mapLabel')}
         contours={contours}
         avecDessin={canManageFarm}
+        nomDuPlan={t('map.planLayer')}
         {...(canManageFarm && cible
           ? { onDessin: (points: LatLng[]) => dessiner.mutate({ id: Number(cible), points }) }
           : {})}

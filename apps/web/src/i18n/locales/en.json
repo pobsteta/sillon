@@ -503,6 +503,7 @@
     "targetNone": "— none; clicking sets the farm’s position —",
     "alreadyDrawn": "already drawn",
     "eraseOutline": "Erase the outline",
-    "measured": "“{{nom}}”: {{surface}} m², longest side {{longueur}} m. The bed length you entered was not changed."
+    "measured": "“{{nom}}”: {{surface}} m², longest side {{longueur}} m. The bed length you entered was not changed.",
+    "planLayer": "Street map"
   }
 }

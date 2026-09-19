@@ -57,6 +57,12 @@ export default defineConfig({
         // manifeste par un écran qui n'affiche rien, donc par un échec dont la cause n'a
         // aucun rapport avec ce que l'essai vérifie.
         RATE_LIMIT_MAX: '100000',
+        // Un second fond, pour que le sélecteur existe. L'adresse est volontairement
+        // injoignable : l'essai vérifie le sélecteur, pas les tuiles, et joindre un
+        // service tiers depuis une suite d'essais est ce qu'on évite partout ailleurs.
+        MAP_TILE_URL: 'https://fond.exemple.test/{z}/{x}/{y}.png',
+        MAP_TILE_ATTRIBUTION: 'Fond d’essai',
+        MAP_TILE_NAME: 'Vue aérienne',
       },
     },
     {

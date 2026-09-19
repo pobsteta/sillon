@@ -132,7 +132,9 @@ pas.
 ## 5. Les fonds de carte : OSM livré, le reste configuré
 
 **Sillon ne livre qu'OpenStreetMap**, avec son attribution affichée — elle est exigée par
-la licence, pas facultative.
+la licence, pas facultative. Un fond configuré **s'y ajoute** au lieu de le remplacer, et la
+carte propose alors un sélecteur : le plan des rues reste le plus lisible pour se repérer,
+même quand on dispose d'une vue aérienne.
 
 ```env
 # Fond supplémentaire, à la charge du déploiement.

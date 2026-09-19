@@ -41,6 +41,30 @@ test('poser la position de la ferme', async ({ page }, info) => {
     await expect(carte.locator('.leaflet-control-attribution')).toContainText('OpenStreetMap');
   });
 
+  await test.step('on choisit son fond de carte', async () => {
+    // OpenStreetMap est toujours là : c'est le seul fond que Sillon livre, et le seul dont
+    // il garantisse la licence. Un fond configuré s'y **ajoute**.
+    const carte = page.getByRole('application', { name: 'Carte du jardin' });
+    const selecteur = carte.locator('.leaflet-control-layers');
+    await expect(selecteur).toBeAttached();
+
+    await selecteur.hover();
+    await expect(selecteur).toContainText('Plan');
+    await expect(selecteur).toContainText('Vue aérienne');
+
+    // Le choix se retient d'une visite à l'autre.
+    await selecteur.getByText('Vue aérienne').click();
+    await page.reload();
+    const apres = page
+      .getByRole('application', { name: 'Carte du jardin' })
+      .locator('.leaflet-control-layers');
+    await apres.hover();
+    await expect(
+      apres.locator('input[type="radio"]:checked + span'),
+      'le fond choisi revient tout seul',
+    ).toContainText('Vue aérienne');
+  });
+
   await test.step('l’écran dit où part la recherche, avant qu’elle ne parte', async () => {
     // Chercher une adresse fait sortir une donnée de Sillon. Le dire est la moitié du
     // travail ; une reformulation qui l'effacerait passerait inaperçue sans cet essai.

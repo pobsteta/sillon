@@ -503,6 +503,7 @@
     "targetNone": "— aucun, le clic pose la position de la ferme —",
     "alreadyDrawn": "déjà dessiné",
     "eraseOutline": "Effacer le contour",
-    "measured": "« {{nom}} » : {{surface}} m², plus grand côté {{longueur}} m. La longueur de planche saisie n’a pas été modifiée."
+    "measured": "« {{nom}} » : {{surface}} m², plus grand côté {{longueur}} m. La longueur de planche saisie n’a pas été modifiée.",
+    "planLayer": "Plan"
   }
 }

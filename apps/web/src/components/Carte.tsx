@@ -18,6 +18,9 @@ import 'leaflet/dist/leaflet.css';
 import { fromGeoJsonPolygon, type GeoJsonPolygon, type LatLng } from '@sillon/core';
 
 /** Fond par défaut. L'attribution est exigée par la licence, elle n'est pas décorative. */
+/** Clé du fond retenu, par navigateur. */
+const CHOIX_DU_FOND = 'sillon.fondDeCarte';
+
 const OSM = {
   url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
   attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
@@ -28,7 +31,7 @@ export interface CarteProps {
   point?: LatLng | null;
   zoom?: number;
   /** Fond supplémentaire, à la charge du déploiement (`MAP_TILE_URL`). */
-  tuiles?: { url: string; attribution: string } | null;
+  tuiles?: { url: string; attribution: string; name: string } | null;
   /** Appelé au clic : c'est ainsi qu'on pose une position à la main. */
   onClick?: ((point: LatLng) => void) | undefined;
   /** Contours à afficher, par emplacement. */
@@ -40,6 +43,8 @@ export interface CarteProps {
    * indéfini — sans erreur au démarrage, et sans outil à l'écran.
    */
   avecDessin?: boolean;
+  /** Nom du fond OpenStreetMap dans le sélecteur, traduit par l'appelant. */
+  nomDuPlan?: string;
   /**
    * Appelé quand un contour est tracé. Absent, les outils restent rangés : on ne dessine
    * que lorsqu'un emplacement est choisi, sans quoi le tracé n'appartiendrait à rien.
@@ -57,6 +62,7 @@ export function Carte({
   contours,
   avecDessin = false,
   onDessin,
+  nomDuPlan = 'Plan',
   hauteur = '24rem',
   etiquette,
 }: CarteProps) {
@@ -93,8 +99,40 @@ export function Carte({
         zoom: 5,
         attributionControl: true,
       });
-      const fond = tuiles ?? OSM;
-      L.tileLayer(fond.url, { attribution: fond.attribution, maxZoom: 19 }).addTo(instance);
+      // OSM est toujours là : c'est le seul fond que Sillon livre, et le seul dont il
+      // garantisse la licence. Un fond configuré **s'ajoute** au lieu de le remplacer —
+      // sinon on perdrait le plan des rues, qui reste le plus lisible pour se repérer.
+      const plan = L.tileLayer(OSM.url, { attribution: OSM.attribution, maxZoom: 19 });
+      const supplementaire = tuiles
+        ? L.tileLayer(tuiles.url, { attribution: tuiles.attribution, maxZoom: 19 })
+        : null;
+
+      // Le choix se retient d'une visite à l'autre : on ne veut pas rebasculer sur
+      // l'aérien à chaque ouverture. `try` parce qu'un navigateur peut refuser le stockage
+      // (navigation privée), et qu'une carte ne doit pas disparaître pour autant.
+      let prefere = '';
+      try {
+        prefere = localStorage.getItem(CHOIX_DU_FOND) ?? '';
+      } catch {
+        /* stockage indisponible */
+      }
+      const aerienDabord = supplementaire !== null && prefere === tuiles?.name;
+      (aerienDabord ? supplementaire! : plan).addTo(instance);
+
+      if (supplementaire && tuiles) {
+        L.control
+          .layers({ [nomDuPlan]: plan, [tuiles.name]: supplementaire }, undefined, {
+            position: 'topleft',
+          })
+          .addTo(instance);
+        instance.on('baselayerchange', (evenement) => {
+          try {
+            localStorage.setItem(CHOIX_DU_FOND, evenement.name);
+          } catch {
+            /* stockage indisponible */
+          }
+        });
+      }
       instance.on('click', (evenement) => {
         // `wrap()` ramène la longitude dans [-180, 180]. Leaflet répète le monde
         // horizontalement : après quelques tours, un clic rend 190° ou -400°, que l'API

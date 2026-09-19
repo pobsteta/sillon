@@ -301,9 +301,15 @@ Deux choses méritent d'être sues avant de s'en servir :
   l'adresse saisie au service configuré (la Base Adresse Nationale par défaut), ne part
   jamais pendant la frappe, et s'éteint par `GEOCODING=none` — on saisit alors ses
   coordonnées à la main et rien ne sort ;
-- **Sillon ne livre qu'OpenStreetMap.** Les imageries aériennes gratuites d'Esri ou de
-  Google interdisent la redistribution. `MAP_TILE_URL` permet d'ajouter ce à quoi votre
-  déploiement a droit — les orthophotos de l'IGN, par exemple, pour une ferme française.
+- **Sillon ne livre qu'OpenStreetMap.** `MAP_TILE_URL` ajoute un second fond, que la carte
+  propose alors dans un sélecteur — le choix se retient d'une visite à l'autre. Les
+  orthophotos de l'IGN, par exemple, pour une ferme française.
+
+  Ce qu'on ne peut pas y mettre : les tuiles de Google, de Bing ou d'Esri. Leurs conditions
+  interdisent de les consommer hors de leurs propres bibliothèques, et interdisent la
+  redistribution — les inscrire ici ferait porter à chaque personne qui installe Sillon une
+  violation qu'elle n'a pas choisie. Si vous avez un contrat avec l'un d'eux, c'est à vous
+  de le poser, et à vous seul.
 
 ### Un jardin d'exemple
 

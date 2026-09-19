@@ -87,7 +87,7 @@ export interface Session {
   user: CurrentUser;
   farms: Farm[];
   /** Fond de carte supplémentaire du déploiement. Nul : Sillon n'en livre qu'un, OSM. */
-  map?: { url: string; attribution: string } | null;
+  map?: { url: string; attribution: string; name: string } | null;
 }
 
 export interface Family {
