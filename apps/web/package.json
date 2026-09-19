@@ -1,6 +1,6 @@
 {
   "name": "@sillon/web",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Interface web de Sillon (React 19, PWA responsive)",
   "license": "AGPL-3.0-or-later",
   "type": "module",
