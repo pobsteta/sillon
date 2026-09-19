@@ -317,6 +317,15 @@ Deux choses méritent d'être sues avant de s'en servir :
   violation qu'elle n'a pas choisie. Si vous avez un contrat avec l'un d'eux, c'est à vous
   de le poser, et à vous seul.
 
+### Redémarrer un service seul
+
+`docker compose up -d api` suffit après une modification de `.env` : l'interface suit, parce
+que nginx consulte le résolveur de Docker à chaque requête (`apps/web/nginx.conf`).
+
+Sans cela, nginx résolvait l'adresse de l'API **une seule fois, à son démarrage** : un
+conteneur recréé prenait une autre adresse, et l'interface rendait des 502 jusqu'à ce qu'on
+la redémarre — la page s'affichait, seule la connexion échouait, et rien ne disait pourquoi.
+
 ### Ce que `.env` peut régler
 
 Tout ce que le fichier contient arrive dans les conteneurs `api` et `worker` — `SMTP_URL`,
