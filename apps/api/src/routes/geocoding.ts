@@ -75,6 +75,46 @@ export function lireBan(charge: unknown): Adresse[] {
   return adresses;
 }
 
+interface ReponseNominatim {
+  lat?: string;
+  lon?: string;
+  display_name?: string;
+  importance?: number;
+  address?: { postcode?: string; city?: string; town?: string; village?: string };
+}
+
+/**
+ * Traduit la réponse de Nominatim.
+ *
+ * Deux différences avec la BAN, et toutes deux sont des pièges. Nominatim rend les
+ * coordonnées en **chaînes de caractères** : les additionner au lieu de les convertir
+ * donnerait « 47.598-0.440 ». Et il nomme la ville de trois façons selon la taille de la
+ * commune — `city`, `town` ou `village` —, si bien que ne lire que `city` laisserait vide
+ * l'essentiel des adresses rurales, qui sont précisément celles qui nous intéressent.
+ */
+export function lireNominatim(charge: unknown): Adresse[] {
+  const reponse = charge as ReponseNominatim[];
+  if (!Array.isArray(reponse)) return [];
+  const adresses: Adresse[] = [];
+
+  for (const trait of reponse) {
+    const latitude = Number(trait.lat);
+    const longitude = Number(trait.lon);
+    const label = trait.display_name;
+    if (!label || !isLatitude(latitude) || !isLongitude(longitude)) continue;
+
+    adresses.push({
+      label,
+      latitude: arrondirCoordonnee(latitude),
+      longitude: arrondirCoordonnee(longitude),
+      score: trait.importance ?? 0,
+      postcode: trait.address?.postcode ?? null,
+      city: trait.address?.city ?? trait.address?.town ?? trait.address?.village ?? null,
+    });
+  }
+  return adresses;
+}
+
 export async function geocodingRoutes(app: FastifyInstance, options: { env: Env }): Promise<void> {
   const typed = app.withTypeProvider<ZodTypeProvider>();
 
@@ -99,31 +139,58 @@ export async function geocodingRoutes(app: FastifyInstance, options: { env: Env 
         throw badRequest('La recherche d’adresse est désactivée sur ce déploiement');
       }
 
-      const cible = new URL(options.env.GEOCODING_URL);
-      cible.searchParams.set('q', request.query.q);
-      cible.searchParams.set('limit', String(request.query.limit));
+      /** Interroge un service, ou rend `null` s'il n'a pas répondu. */
+      const interroger = async (cible: URL): Promise<unknown | null> => {
+        try {
+          const reponse = await fetch(cible, {
+            // Un délai borné : un service tiers lent ne doit pas immobiliser une requête
+            // de Sillon, et l'interface préfère un échec net à une attente sans fin.
+            signal: AbortSignal.timeout(5_000),
+            // La politique d'usage de Nominatim exige que l'application s'identifie, et
+            // refuse le service à qui ne le fait pas.
+            headers: { 'user-agent': 'Sillon (logiciel libre de planification maraîchère)' },
+          });
+          if (!reponse.ok) return null;
+          return await reponse.json();
+        } catch {
+          return null;
+        }
+      };
 
-      // Un délai borné : un service tiers lent ne doit pas immobiliser une requête de
-      // Sillon, et l'interface préfère un échec net à une attente sans fin.
-      const minuteur = AbortSignal.timeout(5_000);
-      let charge: unknown;
-      try {
-        const reponse = await fetch(cible, {
-          signal: minuteur,
-          // La politique d'usage de Nominatim exige que l'application s'identifie ; la BAN
-          // ne l'impose pas, mais le faire partout coûte une ligne et évite d'y penser le
-          // jour où l'on branche l'autre.
-          headers: { 'user-agent': 'Sillon (logiciel libre de planification maraîchère)' },
-        });
-        if (!reponse.ok) throw new Error(`statut ${reponse.status}`);
-        charge = await reponse.json();
-      } catch {
-        // On ne relaie ni le message ni l'adresse du tiers : ils ne disent rien d'utile à
-        // qui cherche une adresse, et le second est un détail de déploiement.
-        throw badRequest('Le service de recherche d’adresse n’a pas répondu');
+      const politique = options.env.GEOCODING;
+      let panne = false;
+
+      if (politique === 'ban' || politique === 'ban+nominatim') {
+        const cible = new URL(options.env.GEOCODING_URL);
+        cible.searchParams.set('q', request.query.q);
+        cible.searchParams.set('limit', String(request.query.limit));
+        const charge = await interroger(cible);
+        if (charge === null) panne = true;
+        else {
+          const trouvees = lireBan(charge);
+          if (trouvees.length > 0) return { provider: 'ban', results: trouvees };
+        }
       }
 
-      return { provider: options.env.GEOCODING, results: lireBan(charge) };
+      // Nominatim n'est sollicité qu'en **recours**, quand la BAN n'a rien trouvé : sa
+      // politique d'usage plafonne à une requête par seconde, et ce repli borne
+      // naturellement le volume au lieu de doubler chaque recherche.
+      if (politique === 'nominatim' || politique === 'ban+nominatim') {
+        const cible = new URL(options.env.NOMINATIM_URL);
+        cible.searchParams.set('q', request.query.q);
+        cible.searchParams.set('limit', String(request.query.limit));
+        cible.searchParams.set('format', 'jsonv2');
+        cible.searchParams.set('addressdetails', '1');
+        const charge = await interroger(cible);
+        if (charge === null) panne = true;
+        else return { provider: 'nominatim', results: lireNominatim(charge) };
+      }
+
+      // Aucun service n'a répondu : c'est une panne, et il faut le dire. Rendre une liste
+      // vide laisserait croire que l'adresse n'existe pas.
+      if (panne) throw badRequest('Le service de recherche d’adresse n’a pas répondu');
+
+      return { provider: politique, results: [] };
     },
   );
 }

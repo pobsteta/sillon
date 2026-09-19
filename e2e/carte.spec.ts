@@ -113,6 +113,61 @@ test('poser la position de la ferme', async ({ page }, info) => {
     await expect(outilTrace).toHaveCount(0);
   });
 
+  await test.step('la mesure se propose, et ne s’applique que si on le demande', async () => {
+    // `bedLength` sert aux calculs de semences, de rendement et de commande. Le bouton
+    // existe, il est nommé, et rien ne se règle sans lui : c'est la règle du brief, et
+    // elle ne tient qu'à cette séparation.
+    const session = await page.request.get('/api/auth/me').then((r) => r.json());
+    const ferme = session.farms[0].id;
+    const lieux = await page.request.get(`/api/farms/${ferme}/locations`).then((r) => r.json());
+    const planche = lieux.find((lieu: { name: string }) => lieu.name === 'Planche du haut');
+
+    // Un rectangle d'environ 30 m sur 80 cm, posé par l'API : ce qui se vérifie ici est
+    // l'écran, pas le maniement de l'outil de tracé.
+    const pose = await page.request.put(`/api/farms/${ferme}/locations/${planche.id}/geometry`, {
+      data: {
+        points: [
+          { lat: 47.5985, lng: -0.4408 },
+          { lat: 47.5985, lng: -0.44079 },
+          { lat: 47.59877, lng: -0.44079 },
+          { lat: 47.59877, lng: -0.4408 },
+        ],
+      },
+    });
+    expect(pose.status(), await pose.text()).toBe(200);
+
+    await page.goto('/carte');
+    // Le contour tracé revient sur la carte.
+    const carte = page.getByRole('application', { name: 'Carte du jardin' });
+    await expect(carte.locator('path.leaflet-interactive').first()).toBeAttached();
+
+    // Choisir la planche suffit à lire sa mesure : nul besoin de retracer.
+    await page.getByLabel('Emplacement à dessiner').selectOption(String(planche.id));
+    await expect(page.getByRole('status').filter({ hasText: /m²/ })).toBeVisible();
+
+    // La longueur saisie n'a pas bougé, et le bouton dit exactement ce qu'il ferait.
+    expect(planche.bedLength).toBe(30000);
+    const reglerLaPlanche = page.getByRole('button', { name: /Régler la planche sur/ });
+    await expect(reglerLaPlanche).toBeVisible();
+
+    await reglerLaPlanche.click();
+    await expect(page.getByText(/Longueur de planche mise à jour/)).toBeVisible();
+
+    const apres = await page.request
+      .get(`/api/farms/${ferme}/locations`)
+      .then((r) => r.json())
+      .then((lieux: { name: string; bedLength: number }[]) =>
+        lieux.find((lieu) => lieu.name === 'Planche du haut'),
+      );
+    expect(apres!.bedLength, 'et seulement après qu’on l’a demandé').not.toBe(30000);
+  });
+
+  await test.step('le plan s’imprime', async () => {
+    // Un bouton qui appelle `window.print()` : on vérifie qu'il est là et qu'il ne
+    // disparaît pas au profit d'autre chose. Le rendu papier lui-même se juge à l'œil.
+    await expect(page.getByRole('button', { name: 'Imprimer' })).toBeVisible();
+  });
+
   await test.step('et se retirent aussi simplement', async () => {
     await page.getByRole('button', { name: 'Retirer la position' }).click();
     await expect(page.getByText('47.59855, -0.44078')).toHaveCount(0);

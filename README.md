@@ -290,17 +290,23 @@ Sillon est bâti, et elle coûte moins d'efforts qu'un palier gratuit n'en épar
 
 ### Situer la ferme sur une carte
 
-L'écran **Carte** pose la position de la ferme : en cherchant une adresse, en cliquant sur
-le fond, ou en saisissant des coordonnées. C'est le lot 1 de `brief/carte-du-jardin.md` ;
-le tracé des planches viendra ensuite, et l'assolement ne bouge pas — la carte sert au
-plan, la liste au travail.
+L'écran **Carte** pose la position de la ferme — en cherchant une adresse, en cliquant sur
+le fond, ou en saisissant des coordonnées — puis sert à **dessiner le parcellaire** :
+choisissez un emplacement, tracez son contour, et Sillon en donne la surface et le plus
+grand côté. L'assolement ne bouge pas : la carte sert au plan, la liste au travail.
+
+La mesure **se propose**. Un bouton règle la longueur de planche dessus si vous le
+demandez — cette valeur sert aux calculs de semences, de rendement et de commande, et un
+tracé approximatif ne doit pas en devenir la base tout seul. Le plan s'imprime, pour
+l'emporter ou l'afficher dans la remise.
 
 Deux choses méritent d'être sues avant de s'en servir :
 
 - **la recherche d'adresse est le seul endroit où Sillon parle à l'extérieur.** Elle envoie
-  l'adresse saisie au service configuré (la Base Adresse Nationale par défaut), ne part
-  jamais pendant la frappe, et s'éteint par `GEOCODING=none` — on saisit alors ses
-  coordonnées à la main et rien ne sort ;
+  l'adresse saisie au service configuré, ne part jamais pendant la frappe, et s'éteint par
+  `GEOCODING=none` — on saisit alors ses coordonnées à la main et rien ne sort. Hors de
+  France, `GEOCODING=ban+nominatim` ajoute un recours à Nominatim, sollicité seulement
+  quand la Base Adresse Nationale n'a rien trouvé ;
 - **Sillon ne livre qu'OpenStreetMap.** `MAP_TILE_URL` ajoute un second fond, que la carte
   propose alors dans un sélecteur — le choix se retient d'une visite à l'autre. Les
   orthophotos de l'IGN, par exemple, pour une ferme française.

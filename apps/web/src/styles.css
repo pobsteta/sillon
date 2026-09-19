@@ -787,4 +787,25 @@
   a[href]::after {
     content: '';
   }
+
+  /* Le plan du jardin, à emporter ou à afficher dans la remise.
+   *
+   * Deux réglages qui ne se devinent pas. Les navigateurs n'impriment pas les fonds par
+   * défaut : sans `print-color-adjust`, une carte sort en page blanche avec ses seuls
+   * contours — techniquement imprimée, et sans intérêt. Et la carte doit occuper la
+   * feuille : à sa hauteur d'écran, elle donnerait un timbre-poste au milieu d'un A4. */
+  .leaflet-container {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+    height: 16cm !important;
+    break-inside: avoid;
+  }
+
+  /* Les commandes de la carte ne servent qu'à l'écran ; l'attribution, elle, reste —
+   * elle est due par la licence des fonds, sur papier comme ailleurs. */
+  .leaflet-control-zoom,
+  .leaflet-control-layers,
+  .leaflet-pm-toolbar {
+    display: none !important;
+  }
 }

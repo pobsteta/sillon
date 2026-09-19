@@ -14,25 +14,41 @@
 // Aucun essai ne joint la Base Adresse Nationale : un service tiers dans une suite
 // d'essais, c'est un échec du jour où il est en maintenance, sur du code qui n'a pas bougé.
 
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, describe, expect, it, vi } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 import { buildApp } from '../app.js';
-import { lireBan } from './geocoding.js';
+import { lireBan, lireNominatim } from './geocoding.js';
 import { registerAccount, resetDatabase, type TestAccount } from '../test-support.js';
 import { withoutFarmScope } from '../tenant.js';
 
-const apps: FastifyInstance[] = [];
+/**
+ * Une application par jeu de réglages, **partagée** entre les essais qui l'emploient.
+ *
+ * Chaque `buildApp` monte une instance Fastify complète et son client Prisma : en ouvrir
+ * une par essai a fini par saturer la machine, et les échecs qui en sortaient n'avaient
+ * rien à voir avec ce que les essais vérifiaient. La base, elle, est bien vidée à chaque
+ * fois — c'est l'isolation qui compte, pas le nombre d'instances.
+ */
+const apps = new Map<string, FastifyInstance>();
 
-afterEach(async () => {
-  await Promise.all(apps.splice(0).map((app) => app.close()));
+afterAll(async () => {
+  await Promise.all([...apps.values()].map((app) => app.close()));
+  apps.clear();
+});
+
+afterEach(() => {
   vi.unstubAllGlobals();
 });
 
 async function monter(env: Record<string, string> = {}) {
+  const cle = JSON.stringify(env);
+  let app = apps.get(cle);
+  if (!app) {
+    app = await buildApp({ NODE_ENV: 'test', ...env });
+    await app.ready();
+    apps.set(cle, app);
+  }
   await resetDatabase();
-  const app = await buildApp({ NODE_ENV: 'test', ...env });
-  await app.ready();
-  apps.push(app);
   const compte = await registerAccount(app, { email: 'carte@example.org' });
   return { app, compte };
 }
@@ -86,6 +102,110 @@ describe('la lecture d’une réponse', () => {
   it('ne suppose rien d’une réponse vide', () => {
     expect(lireBan({})).toEqual([]);
     expect(lireBan({ features: [] })).toEqual([]);
+  });
+});
+
+/** Réponse de Nominatim, telle qu'elle est faite : coordonnées en **chaînes**. */
+const REPONSE_NOMINATIM = [
+  {
+    lat: '47.59855',
+    lon: '-0.44078',
+    display_name: 'Chemin de la Rougerie, Rives-du-Loir-en-Anjou, Maine-et-Loire, France',
+    importance: 0.42,
+    address: { postcode: '49140', village: 'Soucelles' },
+  },
+];
+
+describe('la lecture de Nominatim', () => {
+  it('convertit les coordonnées, qui arrivent en texte', () => {
+    // Le piège : `lat` et `lon` sont des chaînes. Les additionner au lieu de les convertir
+    // donnerait « 47.598-0.440 », et rien ne lèverait d'erreur.
+    const [adresse] = lireNominatim(REPONSE_NOMINATIM);
+
+    expect(adresse!.latitude).toBe(47.59855);
+    expect(adresse!.longitude).toBe(-0.44078);
+    expect(typeof adresse!.latitude).toBe('number');
+  });
+
+  it('retrouve la commune, quelle que soit sa taille', () => {
+    // Nominatim nomme la ville `city`, `town` ou `village` selon la commune. Ne lire que
+    // `city` laisserait vide l'essentiel des adresses rurales — précisément les nôtres.
+    expect(lireNominatim(REPONSE_NOMINATIM)[0]!.city).toBe('Soucelles');
+    expect(lireNominatim([{ ...REPONSE_NOMINATIM[0], address: { town: 'Segré' } }])[0]!.city).toBe(
+      'Segré',
+    );
+    expect(lireNominatim([{ ...REPONSE_NOMINATIM[0], address: { city: 'Angers' } }])[0]!.city).toBe(
+      'Angers',
+    );
+  });
+
+  it('ne suppose rien d’une réponse inattendue', () => {
+    expect(lireNominatim(null)).toEqual([]);
+    expect(lireNominatim({ error: 'Unable to geocode' })).toEqual([]);
+    expect(lireNominatim([{ lat: 'pas un nombre', lon: '2', display_name: 'X' }])).toEqual([]);
+  });
+});
+
+describe('le recours à Nominatim', () => {
+  it('ne part pas quand la Base Adresse Nationale a trouvé', async () => {
+    // Sa politique d'usage plafonne à une requête par seconde : doubler chaque recherche
+    // ferait refuser le service, et pour rien.
+    const { app, compte } = await monter({ GEOCODING: 'ban+nominatim' });
+    const joints: string[] = [];
+    vi.stubGlobal('fetch', async (url: URL) => {
+      joints.push(String(url));
+      return new Response(JSON.stringify(REPONSE_BAN));
+    });
+
+    const reponse = await chercher(app, compte);
+
+    expect(reponse.json().provider).toBe('ban');
+    expect(joints, 'un seul service joint').toHaveLength(1);
+    expect(joints[0]).toContain('api-adresse');
+  });
+
+  it('prend le relais quand elle n’a rien trouvé', async () => {
+    const { app, compte } = await monter({ GEOCODING: 'ban+nominatim' });
+    vi.stubGlobal('fetch', async (url: URL) =>
+      String(url).includes('api-adresse')
+        ? new Response(JSON.stringify({ features: [] }))
+        : new Response(JSON.stringify(REPONSE_NOMINATIM)),
+    );
+
+    const reponse = await chercher(app, compte, 'Hof Sonnenblume, Brandenburg');
+
+    expect(reponse.json().provider).toBe('nominatim');
+    expect(reponse.json().results[0]).toMatchObject({ latitude: 47.59855 });
+  });
+
+  it('s’emploie seul quand on l’a choisi seul', async () => {
+    const { app, compte } = await monter({ GEOCODING: 'nominatim' });
+    const joints: string[] = [];
+    vi.stubGlobal('fetch', async (url: URL) => {
+      joints.push(String(url));
+      return new Response(JSON.stringify(REPONSE_NOMINATIM));
+    });
+
+    await chercher(app, compte);
+
+    expect(joints).toHaveLength(1);
+    expect(joints[0]).toContain('nominatim');
+    // `format=jsonv2` : sans lui, Nominatim rend du XML, et la lecture donnerait une liste
+    // vide sans que rien ne le signale.
+    expect(joints[0]).toContain('format=jsonv2');
+  });
+
+  it('dit la panne plutôt que de rendre une liste vide', async () => {
+    // Une liste vide laisserait croire que l'adresse n'existe pas. Ce n'est pas la même
+    // chose que « le service n'a pas répondu », et la personne n'agirait pas pareil.
+    const { app, compte } = await monter({ GEOCODING: 'ban+nominatim' });
+    vi.stubGlobal('fetch', async () => {
+      throw new Error('ECONNREFUSED');
+    });
+
+    const echec = await chercher(app, compte);
+
+    expect(echec.statusCode).toBe(400);
   });
 });
 

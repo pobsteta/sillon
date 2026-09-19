@@ -219,7 +219,7 @@ déjà face au calendrier lunaire.
 | ---------------- | ----------------------------------------------------------------------------------------------------------------------- | ---------- |
 | **1 — Situer**   | `latitude`/`longitude` sur la ferme, recherche d'adresse (BAN), carte en lecture seule, réglages, attribution OSM       | ~3 jours   |
 | **2 — Dessiner** | `geometry` sur `Location`, tracé et modification (Geoman), rattachement à l'arbre existant, conversions et leurs essais | ~1 semaine |
-| **3 — Relier**   | surface calculée, longueur proposée, impression du plan, Nominatim en recours, fond configurable                        | ~1 semaine |
+| **3 — Relier**   | surface calculée, longueur proposée, impression du plan, Nominatim en recours, fond configurable                        | **livré**  |
 
 Le **lot 1 est autonome et utile seul** : il situe la ferme, ce dont le calendrier lunaire a
 besoin pour sortir de France métropolitaine (l'hémisphère sud inverse montante et
@@ -235,18 +235,29 @@ l'hébergeur**, **BAN puis Nominatim**. Restent :
 
 1. **La licence exacte des données de la BAN**, à confirmer avant d'écrire la mention
    d'attribution : la réponse de l'API ne la porte plus dans le champ `licence`, et
-   l'attribution due doit être exacte, pas approximative.
-2. **Un fond français livré configuré ?** Les orthophotos de l'IGN sont libres. Les donner
-   en exemple commenté dans `.env.example` est sûr ; les activer par défaut reviendrait à
-   décider que Sillon est français, ce qu'il n'est pas.
-3. ~~**La position de la ferme est-elle visible de toute l'équipe ?**~~ — tranché le
-   19 septembre 2026 : **oui**, de quiconque peut se connecter à la ferme. Elle ne se
-   **modifie** en revanche que par qui la règle, `PATCH /farms/:id` exigeant le rôle
-   propriétaire. Deux essais fixent la décision, sans quoi un resserrement des droits
-   passerait plus tard pour une correction.
-4. ~~**Que fait-on d'un emplacement dessiné puis supprimé** dans l'arbre ?~~ — le contour
-   est une colonne de l'emplacement : il part avec lui, comme son nom et sa longueur. Rien
-   à décider, seulement à dire.
+   l'attribution due doit être exacte, pas approximative. **Toujours ouverte** — aucune
+   mention n'est affichée pour l'instant, ce qui est le moindre mal tant qu'on ne sait pas
+   laquelle est juste.
+
+**Ce que le lot 3 a appris.** Nominatim rend les coordonnées en **chaînes de caractères**,
+et nomme la commune `city`, `town` ou `village` selon sa taille — ne lire que `city`
+laisserait vides précisément les adresses rurales. Et surtout : **une panne n'est pas une
+absence de résultat**. Quand aucun service ne répond, la route le dit, au lieu de rendre une
+liste vide qui ferait croire que l'adresse n'existe pas. Les deux situations n'appellent pas
+la même réaction de la personne qui cherche.
+
+Côté impression, deux réglages qui ne se devinent pas : les navigateurs n'impriment pas les
+fonds par défaut — sans `print-color-adjust`, la carte sort en page blanche avec ses seuls
+contours, techniquement imprimée et sans intérêt —, et la carte doit être forcée à une
+hauteur de feuille, faute de quoi elle donne un timbre-poste au milieu d'un A4. 2. **Un fond français livré configuré ?** Les orthophotos de l'IGN sont libres. Les donner
+en exemple commenté dans `.env.example` est sûr ; les activer par défaut reviendrait à
+décider que Sillon est français, ce qu'il n'est pas. 3. ~~**La position de la ferme est-elle visible de toute l'équipe ?**~~ — tranché le
+19 septembre 2026 : **oui**, de quiconque peut se connecter à la ferme. Elle ne se
+**modifie** en revanche que par qui la règle, `PATCH /farms/:id` exigeant le rôle
+propriétaire. Deux essais fixent la décision, sans quoi un resserrement des droits
+passerait plus tard pour une correction. 4. ~~**Que fait-on d'un emplacement dessiné puis supprimé** dans l'arbre ?~~ — le contour
+est une colonne de l'emplacement : il part avec lui, comme son nom et sa longueur. Rien
+à décider, seulement à dire.
 
 **Ce que le lot 2 a appris.** Geoman s'accroche à la carte au moment où elle est créée
 (`addInitHook`) : le charger après coup laisse `map.pm` indéfini, **sans erreur au
