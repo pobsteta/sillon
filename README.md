@@ -317,6 +317,15 @@ Deux choses méritent d'être sues avant de s'en servir :
   violation qu'elle n'a pas choisie. Si vous avez un contrat avec l'un d'eux, c'est à vous
   de le poser, et à vous seul.
 
+### Ce que `.env` peut régler
+
+Tout ce que le fichier contient arrive dans les conteneurs `api` et `worker` — `SMTP_URL`,
+`ACCESS_POLICY`, `GEOCODING`, les fonds de carte, la limite de requêtes. Les valeurs
+inscrites dans `docker-compose.yml` gardent la priorité pour ce qui désigne le réseau
+interne (`DATABASE_URL`, `REDIS_URL`), que la machine hôte ne sait pas joindre.
+
+`apps/api/src/env.ts` fait foi sur ce qui existe et sur les valeurs par défaut.
+
 ### Un jardin d'exemple
 
 Un écran de plan de culture vide ne dit rien de ce que fait l'outil : les statistiques,

@@ -38,6 +38,16 @@ services:
       retries: 10
 
   api:
+    # Tout ce que `.env` contient arrive dans le conteneur.
+    #
+    # Énumérer les variables une par une a produit le même défaut trois fois : un réglage
+    # posé dans `.env` — `SMTP_URL`, `ACCESS_POLICY`, `MAP_TILE_NAME` — n'arrivait pas
+    # jusqu'ici et restait sans effet, **en silence**. Les `environment:` ci-dessous
+    # gardent la priorité : ils désignent des services du réseau interne, que la machine
+    # hôte ne sait pas joindre.
+    env_file:
+      - path: .env
+        required: false
     build:
       context: .
       dockerfile: apps/api/Dockerfile
@@ -83,6 +93,16 @@ services:
         condition: service_healthy
 
   worker:
+    # Tout ce que `.env` contient arrive dans le conteneur.
+    #
+    # Énumérer les variables une par une a produit le même défaut trois fois : un réglage
+    # posé dans `.env` — `SMTP_URL`, `ACCESS_POLICY`, `MAP_TILE_NAME` — n'arrivait pas
+    # jusqu'ici et restait sans effet, **en silence**. Les `environment:` ci-dessous
+    # gardent la priorité : ils désignent des services du réseau interne, que la machine
+    # hôte ne sait pas joindre.
+    env_file:
+      - path: .env
+        required: false
     # Même image que l'API, autre commande : il vide la file au lieu de servir des requêtes.
     # Sans lui, les courriels s'empilent dans Redis sans jamais partir.
     build:
