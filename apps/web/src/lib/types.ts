@@ -156,6 +156,8 @@ export interface LocationNode {
   bedWidth: number | null;
   greenhouse: boolean;
   position: number;
+  /** Contour dessiné sur la carte, GeoJSON Polygon. Nul tant que personne ne l'a tracé. */
+  geometry?: unknown;
   _count?: { children: number; assignments: number };
 }
 

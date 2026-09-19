@@ -8,13 +8,17 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
+import { Prisma } from '@prisma/client';
 import {
   bedHistory,
   checkRotation,
   distributeOverBeds,
   fieldDate,
   findAvailableBeds,
+  longestSideMm,
   occupationRange,
+  polygonArea,
+  toGeoJsonPolygon,
   type Bed,
   type Occupation,
   type PlantingType as PlantingTypeValue,
@@ -189,6 +193,58 @@ export async function locationRoutes(app: FastifyInstance): Promise<void> {
         // Le trigger `locations_path_before` recalcule le chemin ltree, et
         // `locations_path_after` celui de toute la descendance.
         return db.location.update({ where: { id }, data: request.body });
+      }),
+  );
+
+  typed.put(
+    '/api/farms/:farmId/locations/:id/geometry',
+    {
+      onRequest: app.requireFarm('manager'),
+      schema: {
+        tags,
+        summary: 'Dessiner le contour d’un emplacement',
+        params: IdParams,
+        body: z.object({
+          /**
+           * Sommets dans l'ordre lisible — latitude d'abord. La forme GeoJSON
+           * `[longitude, latitude]` ne se fabrique qu'au dernier moment, par
+           * `toGeoJsonPolygon` : c'est le seul endroit où l'inversion pourrait se
+           * produire, et elle déplacerait le jardin de plusieurs milliers de kilomètres
+           * sans lever la moindre erreur.
+           *
+           * `null` efface le contour — on doit pouvoir défaire un tracé raté.
+           */
+          points: z
+            .array(
+              z.object({ lat: z.number().min(-90).max(90), lng: z.number().min(-180).max(180) }),
+            )
+            .min(3)
+            .max(500)
+            .nullable(),
+        }),
+      },
+    },
+    async (request) =>
+      inFarm(request, async (db, { farmId }) => {
+        const { id } = request.params;
+        const existing = await db.location.findFirst({ where: { id, farmId } });
+        if (!existing) throw notFound('Emplacement introuvable');
+
+        const { points } = request.body;
+        const emplacement = await db.location.update({
+          where: { id },
+          data: { geometry: points ? (toGeoJsonPolygon(points) as never) : Prisma.DbNull },
+        });
+
+        // La mesure accompagne la réponse, elle ne remplace rien. `bedLength` sert aux
+        // calculs de semences et de commande : un tracé au doigt ne doit pas en devenir la
+        // base sans que personne ne l'ait voulu (brief/carte-du-jardin.md §7).
+        return {
+          ...emplacement,
+          measured: points
+            ? { areaM2: polygonArea(points), longestSideMm: longestSideMm(points) }
+            : null,
+        };
       }),
   );
 

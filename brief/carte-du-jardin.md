@@ -242,8 +242,17 @@ l'hébergeur**, **BAN puis Nominatim**. Restent :
    **modifie** en revanche que par qui la règle, `PATCH /farms/:id` exigeant le rôle
    propriétaire. Deux essais fixent la décision, sans quoi un resserrement des droits
    passerait plus tard pour une correction.
-4. **Que fait-on d'un emplacement dessiné puis supprimé** dans l'arbre ? Le polygone part
-   avec — mais il faut le dire, sans quoi on croira à une perte.
+4. ~~**Que fait-on d'un emplacement dessiné puis supprimé** dans l'arbre ?~~ — le contour
+   est une colonne de l'emplacement : il part avec lui, comme son nom et sa longueur. Rien
+   à décider, seulement à dire.
+
+**Ce que le lot 2 a appris.** Geoman s'accroche à la carte au moment où elle est créée
+(`addInitHook`) : le charger après coup laisse `map.pm` indéfini, **sans erreur au
+démarrage et sans outil à l'écran**. La bibliothèque est donc chargée avant `L.map()`, et
+seulement pour qui peut dessiner — un saisonnier qui consulte la carte ne télécharge pas
+les 75 ko du tracé. Le défaut ne s'est vu qu'en ouvrant l'écran dans un vrai navigateur ;
+la compilation, le typage et le rendu de la page étaient tous d'accord pour dire que tout
+allait bien.
 
 ---
 

@@ -618,6 +618,12 @@ model Location {
   bedLength  Int                   @map("bed_length") // mm
   bedWidth   Int?                  @map("bed_width") // mm
   greenhouse Boolean
+  /// Contour de l'emplacement, GeoJSON Polygon en WGS 84. Nul tant que personne ne l'a
+  /// dessiné — et le rester est un état normal : Sillon fonctionne entièrement sans.
+  ///
+  /// GeoJSON compte en `[longitude, latitude]`, Leaflet en `[latitude, longitude]` :
+  /// la conversion vit dans `@sillon/core/geo`, et nulle part ailleurs.
+  geometry   Json?
   position   Int
   /// Chemin matérialisé (ltree), maintenu par trigger SQL : lpad(position,5,'0') à chaque niveau.
   /// Prisma ne connaît pas ltree : déclaré Unsupported, index GiST à créer en migration manuelle.
