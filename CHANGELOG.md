@@ -1,5 +1,30 @@
 # Changelog
 
+## [0.7.0](https://github.com/pobsteta/sillon/compare/v0.6.0...v0.7.0) (2026-09-19)
+
+
+### Fonctionnalités
+
+* **carte:** faire pivoter le parcellaire, carte plus haute et plus zoomable ([#40](https://github.com/pobsteta/sillon/issues/40)) ([00f8de2](https://github.com/pobsteta/sillon/commit/00f8de28035e09fabc0764a9d67b435ab0b19993))
+* **carte:** Nominatim en recours, mesure applicable, plan imprimable ([#37](https://github.com/pobsteta/sillon/issues/37)) ([4f166b7](https://github.com/pobsteta/sillon/commit/4f166b7f8854d950a3f177c1c3796b4c94e43167))
+* **docker:** APP_URL et CORS_ORIGINS se posent dans .env ([#33](https://github.com/pobsteta/sillon/issues/33)) ([7401114](https://github.com/pobsteta/sillon/commit/7401114bfa83ecc1a01ae80bebbacf7c4f9f650c))
+* **fournisseurs:** trois semenciers de plus, et un jardin d'exemple ([#32](https://github.com/pobsteta/sillon/issues/32)) ([5679a90](https://github.com/pobsteta/sillon/commit/5679a9053542f075cf2daf47072d12c9ef5f6287))
+* **web:** add polished login visual design ([e5bc204](https://github.com/pobsteta/sillon/commit/e5bc20423766a3324a2f0b8b3d20b7da6e595afe))
+* **web:** redesign login page ([64b74a1](https://github.com/pobsteta/sillon/commit/64b74a101435b04b1e0ddb689eb1292627721003))
+* **web:** redesign Sillon dashboard ([44080f8](https://github.com/pobsteta/sillon/commit/44080f8b0cd9f6b40939739f1382e8afc259651a))
+* **web:** style Sillon dashboard ([dd16c25](https://github.com/pobsteta/sillon/commit/dd16c2592f48e68b329e0730a667d7779b269056))
+
+
+### Corrections
+
+* **docker:** tout ce que .env contient arrive au conteneur ([#38](https://github.com/pobsteta/sillon/issues/38)) ([8c79c5f](https://github.com/pobsteta/sillon/commit/8c79c5f57755bfb004f342284d647e7c9ed4c566))
+* **web:** nginx suit l'API quand son conteneur change d'adresse ([#39](https://github.com/pobsteta/sillon/issues/39)) ([7a4ad2c](https://github.com/pobsteta/sillon/commit/7a4ad2c8998e8af6a36d63e333b69a8a589a4a71))
+
+
+### Documentation
+
+* **brief:** dessiner son jardin sur une carte ([#34](https://github.com/pobsteta/sillon/issues/34)) ([bde6222](https://github.com/pobsteta/sillon/commit/bde6222d9998dcf1c200e32752aef26e1464cbc2))
+
 ## [0.6.0](https://github.com/pobsteta/sillon/compare/v0.5.1...v0.6.0) (2026-09-18)
 
 
