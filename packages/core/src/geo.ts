@@ -188,3 +188,41 @@ export function longestSideMm(points: LatLng[]): number {
   }
   return Math.round(plusLong * 1000);
 }
+
+/**
+ * Fait pivoter des sommets autour d'un centre, en degrés **dans le sens horaire**.
+ *
+ * C'est le sens qu'attend la main : tourner la poignée vers la droite fait tourner la
+ * planche vers la droite. Le sens trigonométrique, plus naturel en mathématiques, aurait
+ * fait partir le parcellaire du mauvais côté sans que la formule ait l'air fausse.
+ *
+ * La rotation se fait sur la projection plane locale : à l'échelle d'un jardin, la Terre
+ * est plate. Tourner directement des degrés de latitude et de longitude déformerait le
+ * dessin, les méridiens étant resserrés d'un tiers à nos latitudes — un carré deviendrait
+ * un losange, et rien n'aurait l'air cassé.
+ */
+export function rotateAround(points: LatLng[], degres: number, centre: LatLng): LatLng[] {
+  const versRadians = Math.PI / 180;
+  const angle = degres * versRadians;
+  const cos = Math.cos(angle);
+  const sin = Math.sin(angle);
+  const cosLat = Math.cos(centre.lat * versRadians);
+
+  return points.map((point) => {
+    const x = RAYON * (point.lng - centre.lng) * versRadians * cosLat;
+    const y = RAYON * (point.lat - centre.lat) * versRadians;
+    const xt = x * cos + y * sin;
+    const yt = -x * sin + y * cos;
+    return {
+      lat: centre.lat + yt / RAYON / versRadians,
+      lng: centre.lng + xt / (RAYON * cosLat) / versRadians,
+    };
+  });
+}
+
+/** Barycentre de plusieurs contours, pour les faire pivoter d'un seul bloc. */
+export function centroidOfAll(contours: LatLng[][]): LatLng {
+  const tous = contours.flat();
+  if (tous.length === 0) throw new RangeError('Aucun contour');
+  return polygonCentroid(tous);
+}

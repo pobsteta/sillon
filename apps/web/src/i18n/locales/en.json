@@ -506,6 +506,13 @@
     "measured": "“{{nom}}”: {{surface}} m², longest side {{longueur}} m. The bed length you entered was not changed.",
     "planLayer": "Street map",
     "useMeasure": "Set the bed to {{longueur}} m",
-    "measureApplied": "Bed length updated. Seed and order calculations now use it."
+    "measureApplied": "Bed length updated. Seed and order calculations now use it.",
+    "rotate": "Rotate",
+    "rotateHint": "A positive angle turns clockwise. The whole layout rotates around its common centre: beds keep their relative positions and paths.",
+    "angle": "Angle (degrees)",
+    "angleHint": "From −360 to 360.",
+    "rotateOne": "This location",
+    "rotateAll": "All outlines ({{count}})",
+    "rotated": "{{count}} outline(s) rotated by {{angle}}°."
   }
 }

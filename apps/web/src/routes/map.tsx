@@ -16,10 +16,12 @@ import { useTranslation } from 'react-i18next';
 import { useMutation } from '@tanstack/react-query';
 import {
   arrondirLatLng,
+  centroidOfAll,
   fromGeoJsonPolygon,
   isGeoJsonPolygon,
   longestSideMm,
   polygonArea,
+  rotateAround,
   type GeoJsonPolygon,
   type LatLng,
 } from '@sillon/core';
@@ -56,6 +58,8 @@ export function MapPage() {
     longestSideMm: number;
   } | null>(null);
   const [applique, setApplique] = useState(false);
+  const [angle, setAngle] = useState('15');
+  const [pivote, setPivote] = useState<number | null>(null);
   const emplacements = useLocations(farmId);
 
   const chercher = useMutation({
@@ -104,6 +108,37 @@ export function MapPage() {
     ({ id, bedLength }: { id: number; bedLength: number }) =>
       api(`/api/farms/${farmId}/locations/${id}`, { method: 'PATCH', body: { bedLength } }),
     { onSuccess: () => setApplique(true) },
+  );
+
+  /**
+   * Fait pivoter des emplacements autour de leur centre **commun**.
+   *
+   * Autour d'un centre commun, et non chacun sur soi : un bloc de planches mal orienté se
+   * redresse d'un bloc, en gardant ses passe-pieds. Chacune sur place les ferait tourner
+   * en croix et le parcellaire n'aurait plus de sens.
+   */
+  const pivoter = useFarmMutation(
+    farmId,
+    async ({ ids, degres }: { ids: number[]; degres: number }) => {
+      const contours = ids
+        .map((id) => (emplacements.data ?? []).find((lieu) => lieu.id === id))
+        .filter((lieu): lieu is NonNullable<typeof lieu> => isGeoJsonPolygon(lieu?.geometry))
+        .map((lieu) => ({
+          id: lieu.id,
+          sommets: fromGeoJsonPolygon(lieu.geometry as GeoJsonPolygon),
+        }));
+      if (contours.length === 0) return 0;
+
+      const centre = centroidOfAll(contours.map((contour) => contour.sommets));
+      for (const contour of contours) {
+        await api(`/api/farms/${farmId}/locations/${contour.id}/geometry`, {
+          method: 'PUT',
+          body: { points: rotateAround(contour.sommets, degres, centre) },
+        });
+      }
+      return contours.length;
+    },
+    { onSuccess: (nombre) => setPivote(nombre as number) },
   );
 
   if (!farm || reglages.isLoading) return <Loading />;
@@ -281,6 +316,49 @@ export function MapPage() {
               {t('map.measureApplied')}
             </p>
           ) : null}
+
+          <div className="mt-4 border-t border-earth-200 pt-4 dark:border-earth-700">
+            <h3 className="mb-1 font-medium">{t('map.rotate')}</h3>
+            <p className="mb-3 text-sm text-earth-700 dark:text-earth-200">{t('map.rotateHint')}</p>
+            <div className="flex flex-wrap items-end gap-3">
+              <Field
+                label={t('map.angle')}
+                type="number"
+                min={-360}
+                max={360}
+                value={angle}
+                onChange={(event) => setAngle(event.target.value)}
+                hint={t('map.angleHint')}
+              />
+              <button
+                type="button"
+                className="btn-ghost"
+                disabled={!cible || pivoter.isPending}
+                onClick={() => pivoter.mutate({ ids: [Number(cible)], degres: Number(angle) })}
+              >
+                {t('map.rotateOne')}
+              </button>
+              <button
+                type="button"
+                className="btn-ghost"
+                disabled={pivoter.isPending || contours.length === 0}
+                onClick={() =>
+                  pivoter.mutate({
+                    ids: contours.map((contour) => contour.id),
+                    degres: Number(angle),
+                  })
+                }
+              >
+                {t('map.rotateAll', { count: contours.length })}
+              </button>
+            </div>
+            {pivote !== null ? (
+              <p role="status" className="mt-2 text-sm">
+                {t('map.rotated', { count: pivote, angle })}
+              </p>
+            ) : null}
+            {pivoter.error ? <ErrorNotice error={pivoter.error} /> : null}
+          </div>
           {dessiner.error ? <ErrorNotice error={dessiner.error} /> : null}
         </section>
       ) : null}
