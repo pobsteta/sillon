@@ -65,6 +65,14 @@ services:
       NODE_ENV: production
       PORT: '3000'
       UPLOAD_DIR: /data/uploads
+      # Un réglage qui n'arrive pas jusqu'au conteneur n'existe pas : ces trois-là se
+      # posent dans `.env`, et seraient sinon ignorés sans que rien ne le dise.
+      # `GEOCODING=none` coupe la seule requête que Sillon adresse à un tiers.
+      GEOCODING: ${GEOCODING:-ban}
+      GEOCODING_URL: ${GEOCODING_URL:-https://api-adresse.data.gouv.fr/search/}
+      MAP_TILE_URL: ${MAP_TILE_URL:-}
+      MAP_TILE_ATTRIBUTION: ${MAP_TILE_ATTRIBUTION:-}
+      RATE_LIMIT_MAX: ${RATE_LIMIT_MAX:-600}
     ports: ['${API_PORT:-3000}:3000']
     volumes:
       - uploads:/data/uploads

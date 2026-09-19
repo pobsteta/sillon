@@ -116,6 +116,14 @@ model Farm {
   /// Fuseau où la journée civile est découpée. Sans lui, le calendrier lunaire se décale
   /// d'un jour hors de France métropolitaine, sans que rien n'ait l'air cassé.
   timezone               String           @default("Europe/Paris")
+  /// Position de la ferme, en degrés décimaux WGS 84. Nulle tant que personne ne l'a
+  /// posée : Sillon ne la devine pas, et la retire même des photos de notes.
+  ///
+  /// Flottants, alors que le dépôt stocke tout en entiers : une coordonnée n'est pas une
+  /// mesure de l'outil mais un format d'échange normalisé, dont la représentation ne nous
+  /// appartient pas. Voir `brief/carte-du-jardin.md` §3.
+  latitude               Float?
+  longitude              Float?
   insertedAt             DateTime         @default(now()) @map("inserted_at")
   updatedAt              DateTime         @updatedAt @map("updated_at")
 

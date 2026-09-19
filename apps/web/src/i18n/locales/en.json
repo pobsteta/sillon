@@ -24,7 +24,8 @@
     "more": "More",
     "notes": "Notes",
     "training": "Training",
-    "moon": "Moon"
+    "moon": "Moon",
+    "map": "Map"
   },
   "common": {
     "add": "Add",
@@ -476,5 +477,24 @@
     },
     "matchesCrop": "matches the crop",
     "nearby": "nearby {{type}} days:"
+  },
+  "map": {
+    "title": "Garden map",
+    "restricted": "The farm’s position is visible to its managers only.",
+    "search": "Find the address",
+    "searchHint": "The search sends the address you type to the geocoding service configured on this deployment. It only goes when you start it, never while you type.",
+    "address": "Address",
+    "addressPlaceholder": "12 chemin des Prés, 49000 Angers",
+    "searchAction": "Search",
+    "searching": "Searching…",
+    "noResult": "No address found.",
+    "use": "Place here",
+    "mapLabel": "Garden map",
+    "clickHint": "Clicking the map sets the farm’s position.",
+    "manual": "Coordinates",
+    "manualHint": "Decimal degrees (WGS 84), as a GPS or a map gives them. Five decimals is enough: about one metre.",
+    "latitude": "Latitude",
+    "longitude": "Longitude",
+    "clear": "Remove the position"
   }
 }

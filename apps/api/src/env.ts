@@ -58,6 +58,29 @@ const EnvSchema = z.object({
   RATE_LIMIT_MAX: z.coerce.number().int().positive().max(1_000_000).default(600),
 
   /**
+   * Service de recherche d'adresse, pour situer une ferme sur la carte.
+   *
+   * `ban` — la Base Adresse Nationale française, libre et sans clé. `none` éteint la
+   * recherche : on saisit alors ses coordonnées à la main, et **rien ne sort de Sillon**.
+   *
+   * Ce réglage existe parce que chercher une adresse envoie celle de la ferme à un tiers.
+   * Pour une exploitation individuelle, c'est une donnée personnelle — et c'est le seul
+   * endroit où Sillon parle à l'extérieur. Il faut pouvoir dire non.
+   */
+  GEOCODING: z.enum(['ban', 'none']).default('ban'),
+  /** Adresse du service, pour pointer une instance à soi plutôt que la publique. */
+  GEOCODING_URL: z.string().default('https://api-adresse.data.gouv.fr/search/'),
+
+  /**
+   * Fond de carte supplémentaire, à la charge du déploiement. Sillon ne livre
+   * qu'OpenStreetMap : les imageries aériennes gratuites d'Esri ou de Google interdisent
+   * la redistribution, et les inscrire ici ferait porter à chaque auto-hébergeur une
+   * violation qu'il n'a pas choisie. L'attribution est **obligatoire**, pas décorative.
+   */
+  MAP_TILE_URL: z.string().optional(),
+  MAP_TILE_ATTRIBUTION: z.string().optional(),
+
+  /**
    * Dossier du build de l'interface, pour la servir **depuis l'API**. Absent, l'API ne rend
    * que du JSON et l'interface est servie à part (Nginx, comme dans `docker-compose.yml`).
    *

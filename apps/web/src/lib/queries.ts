@@ -139,9 +139,12 @@ export const useFarm = (farmId: number) =>
   useQuery({
     queryKey: keys.farm(farmId),
     queryFn: () =>
-      api<{ moonConvention: 'tropical' | 'constellations'; timezone: string }>(
-        `/api/farms/${farmId}`,
-      ),
+      api<{
+        moonConvention: 'tropical' | 'constellations';
+        timezone: string;
+        latitude: number | null;
+        longitude: number | null;
+      }>(`/api/farms/${farmId}`),
     enabled: farmId > 0,
   });
 
