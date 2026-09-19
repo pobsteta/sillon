@@ -394,6 +394,18 @@ export async function authRoutes(app: FastifyInstance, options: { env: Env }): P
       );
       const jour = today();
       return {
+        /**
+         * Fond de carte supplémentaire, à la charge du déploiement. Il voyage avec la
+         * session parce que c'est un réglage d'installation, identique pour toutes les
+         * fermes — pas une donnée de ferme.
+         */
+        map:
+          options.env.MAP_TILE_URL && options.env.MAP_TILE_ATTRIBUTION
+            ? {
+                url: options.env.MAP_TILE_URL,
+                attribution: options.env.MAP_TILE_ATTRIBUTION,
+              }
+            : null,
         user: {
           id: user.id,
           email: user.email,

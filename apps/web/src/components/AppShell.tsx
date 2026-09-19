@@ -51,6 +51,7 @@ const NAVIGATION: NavEntry[] = [
   },
   // Réservée aux centres : l'immense majorité des fermes n'en sont pas, et une entrée
   // permanente vers un écran vide serait du bruit dans une barre déjà dense.
+  { to: '/carte', labelKey: 'nav.map', icon: '⌖', primary: false },
   { to: '/formation', labelKey: 'nav.training', icon: '⌂', primary: false, centerOnly: true },
   // Éteint par défaut : qui ne pratique pas ne doit pas voir un mot de plus à l'écran.
   { to: '/calendrier-lunaire', labelKey: 'nav.moon', icon: '☾', primary: false, moonOnly: true },

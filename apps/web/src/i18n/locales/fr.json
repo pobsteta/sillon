@@ -24,7 +24,8 @@
     "more": "Plus",
     "notes": "Notes",
     "training": "Formation",
-    "moon": "Lune"
+    "moon": "Lune",
+    "map": "Carte"
   },
   "common": {
     "add": "Ajouter",
@@ -476,5 +477,25 @@
     },
     "matchesCrop": "correspond à la culture",
     "nearby": "jours {{type}} proches :"
+  },
+  "map": {
+    "title": "Carte du jardin",
+    "search": "Trouver l’adresse",
+    "searchHint": "La recherche envoie l’adresse saisie au service de géocodage configuré sur ce déploiement. Elle ne part qu’au moment où vous la lancez, et jamais pendant que vous tapez.",
+    "address": "Adresse",
+    "addressPlaceholder": "12 chemin des Prés, 49000 Angers",
+    "searchAction": "Chercher",
+    "searching": "Recherche…",
+    "noResult": "Aucune adresse trouvée.",
+    "use": "Poser ici",
+    "mapLabel": "Carte du jardin",
+    "clickHint": "Un clic sur la carte pose la position de la ferme.",
+    "manual": "Coordonnées",
+    "manualHint": "En degrés décimaux (WGS 84), comme les donne un GPS ou une carte. Cinq décimales suffisent : c’est environ un mètre.",
+    "latitude": "Latitude",
+    "longitude": "Longitude",
+    "clear": "Retirer la position",
+    "notSetYet": "La position de la ferme n’est pas encore posée.",
+    "notSetByOwner": "La position de la ferme n’a pas encore été posée par son propriétaire."
   }
 }

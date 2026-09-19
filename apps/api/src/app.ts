@@ -43,6 +43,7 @@ import { exportRoutes } from './routes/export.js';
 import { trainingRoutes } from './routes/training.js';
 import { moonRoutes } from './routes/moon.js';
 import { providerRoutes } from './routes/providers.js';
+import { geocodingRoutes } from './routes/geocoding.js';
 
 /**
  * Version publiée, lue dans le package.json que release-please tient à jour : `/health`
@@ -200,6 +201,7 @@ export async function buildApp(
   await app.register(trainingRoutes);
   await app.register(moonRoutes);
   await app.register(providerRoutes);
+  await app.register(async (instance) => geocodingRoutes(instance, { env }));
 
   return app;
 }

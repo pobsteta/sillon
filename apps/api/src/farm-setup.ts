@@ -172,12 +172,15 @@ export async function ajouterSemenciersProposes(
     // « Kokopelli (commande groupée) » reste Kokopelli. Sans cette seconde clause, le
     // geste ferait réapparaître l'ancien nom à côté du sien, c'est-à-dire défairait son
     // choix en croyant l'aider.
+    // `{ url: undefined }` n'est pas « adresse inconnue » pour Prisma : c'est une clause
+    // **vide**, qui accepte n'importe quelle ligne. Glissée dans un `OR`, elle ferait
+    // considérer comme déjà présente la première maison venue — et une maison sans site ne
+    // serait jamais ajoutée, sans erreur ni message. D'où la clause construite à la main.
+    const reconnaissance: { name?: string; url?: string }[] = [{ name: semencier.name }];
+    if (semencier.url) reconnaissance.push({ url: semencier.url });
+
     const existe = await db.provider.findFirst({
-      where: {
-        farmId,
-        type: semencier.type,
-        OR: [{ name: semencier.name }, { url: semencier.url }],
-      },
+      where: { farmId, type: semencier.type, OR: reconnaissance },
     });
     if (existe) continue;
     const cree = await db.provider.create({

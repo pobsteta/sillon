@@ -288,6 +288,23 @@ Sillon est bâti, et elle coûte moins d'efforts qu'un palier gratuit n'en épar
 
 ---
 
+### Situer la ferme sur une carte
+
+L'écran **Carte** pose la position de la ferme : en cherchant une adresse, en cliquant sur
+le fond, ou en saisissant des coordonnées. C'est le lot 1 de `brief/carte-du-jardin.md` ;
+le tracé des planches viendra ensuite, et l'assolement ne bouge pas — la carte sert au
+plan, la liste au travail.
+
+Deux choses méritent d'être sues avant de s'en servir :
+
+- **la recherche d'adresse est le seul endroit où Sillon parle à l'extérieur.** Elle envoie
+  l'adresse saisie au service configuré (la Base Adresse Nationale par défaut), ne part
+  jamais pendant la frappe, et s'éteint par `GEOCODING=none` — on saisit alors ses
+  coordonnées à la main et rien ne sort ;
+- **Sillon ne livre qu'OpenStreetMap.** Les imageries aériennes gratuites d'Esri ou de
+  Google interdisent la redistribution. `MAP_TILE_URL` permet d'ajouter ce à quoi votre
+  déploiement a droit — les orthophotos de l'IGN, par exemple, pour une ferme française.
+
 ### Un jardin d'exemple
 
 Un écran de plan de culture vide ne dit rien de ce que fait l'outil : les statistiques,

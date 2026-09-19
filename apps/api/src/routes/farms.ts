@@ -84,6 +84,10 @@ export async function farmRoutes(app: FastifyInstance): Promise<void> {
           taskOverdueWindowValue: z.number().int().positive().max(100).optional(),
           taskOverdueWindowUnit: z.enum(['day', 'week', 'month', 'year']).optional(),
           moonCalendar: z.boolean().optional(),
+          // Position de la ferme, en degrés décimaux. Nullable : on doit pouvoir la
+          // retirer aussi simplement qu'on l'a posée.
+          latitude: z.number().min(-90).max(90).nullish(),
+          longitude: z.number().min(-180).max(180).nullish(),
           moonConvention: z.enum(['tropical', 'constellations']).optional(),
           // Un fuseau IANA. Validé en le donnant à `Intl` : une chaîne inventée décalerait
           // tout le calendrier lunaire d'un jour, sans erreur visible.

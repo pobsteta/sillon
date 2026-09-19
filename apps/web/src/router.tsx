@@ -145,6 +145,11 @@ const trainingRoute = createRoute({
   path: '/formation',
   component: lazyRouteComponent(() => import('./routes/training.js'), 'TrainingPage'),
 });
+const mapRoute = createRoute({
+  getParentRoute: () => protectedRoute,
+  path: '/carte',
+  component: lazyRouteComponent(() => import('./routes/map.js'), 'MapPage'),
+});
 const moonRoute = createRoute({
   getParentRoute: () => protectedRoute,
   path: '/calendrier-lunaire',
@@ -182,6 +187,7 @@ const routeTree = rootRoute.addChildren([
     notesRoute,
     statsRoute,
     trainingRoute,
+    mapRoute,
     moonRoute,
     settingsRoute,
   ]),

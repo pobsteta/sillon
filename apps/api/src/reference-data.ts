@@ -250,7 +250,9 @@ export const DEFAULT_PROVIDER = { name: 'Fournisseur par défaut', nameEn: 'Defa
 export const SUGGESTED_PROVIDERS: {
   name: string;
   type: 'seed' | 'transplant';
-  url: string;
+  /** Site de commande. Absent quand le domaine ne répond plus : mieux vaut pas de lien
+   *  qu'un lien mort, qu'on suivrait une fois pour rien avant de s'en méfier. */
+  url?: string;
   notes: string;
   notesEn: string;
 }[] = [
@@ -280,7 +282,8 @@ export const SUGGESTED_PROVIDERS: {
   {
     name: 'Graines del Païs',
     type: 'seed',
-    url: 'https://grainesdelpais.com/',
+    // Sans site : `grainesdelpais.com` ne répondait plus le 19 septembre 2026. La maison
+    // reste au référentiel — c'est son nom qui sert à répartir une commande, pas son site.
     notes:
       'Coopérative d’artisans semenciers (Aude). Variétés population, reproductibles et libres de droits.',
     notesEn:
