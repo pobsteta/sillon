@@ -41,6 +41,30 @@ test('poser la position de la ferme', async ({ page }, info) => {
     await expect(carte.locator('.leaflet-control-attribution')).toContainText('OpenStreetMap');
   });
 
+  await test.step('on choisit son fond de carte', async () => {
+    // OpenStreetMap est toujours là : c'est le seul fond que Sillon livre, et le seul dont
+    // il garantisse la licence. Un fond configuré s'y **ajoute**.
+    const carte = page.getByRole('application', { name: 'Carte du jardin' });
+    const selecteur = carte.locator('.leaflet-control-layers');
+    await expect(selecteur).toBeAttached();
+
+    await selecteur.hover();
+    await expect(selecteur).toContainText('Plan');
+    await expect(selecteur).toContainText('Vue aérienne');
+
+    // Le choix se retient d'une visite à l'autre.
+    await selecteur.getByText('Vue aérienne').click();
+    await page.reload();
+    const apres = page
+      .getByRole('application', { name: 'Carte du jardin' })
+      .locator('.leaflet-control-layers');
+    await apres.hover();
+    await expect(
+      apres.locator('input[type="radio"]:checked + span'),
+      'le fond choisi revient tout seul',
+    ).toContainText('Vue aérienne');
+  });
+
   await test.step('l’écran dit où part la recherche, avant qu’elle ne parte', async () => {
     // Chercher une adresse fait sortir une donnée de Sillon. Le dire est la moitié du
     // travail ; une reformulation qui l'effacerait passerait inaperçue sans cet essai.
@@ -58,6 +82,35 @@ test('poser la position de la ferme', async ({ page }, info) => {
     // Et elle survit au rechargement : c'est la base qui la porte, pas l'écran.
     await page.reload();
     await expect(page.getByText('47.59855, -0.44078')).toBeVisible();
+  });
+
+  await test.step('les outils de tracé n’arrivent qu’au moment de dessiner', async () => {
+    // La bibliothèque de dessin pèse près de deux fois la carte : elle n'est chargée que
+    // si l'on dessine. Le piège est que l'emplacement se choisit **après** l'ouverture de
+    // l'écran — un chargement fait une fois pour toutes au montage n'arriverait jamais, et
+    // l'outil polygone ne paraîtrait pas. Rien ne l'aurait signalé.
+    const carte = page.getByRole('application', { name: 'Carte du jardin' });
+
+    // Une planche, posée par l'API : cet essai porte sur la carte, pas sur la création
+    // d'un parcellaire. `page.request` réutilise le cookie de session du navigateur.
+    const session = await page.request.get('/api/auth/me').then((r) => r.json());
+    const reponse = await page.request.post(`/api/farms/${session.farms[0].id}/locations`, {
+      data: { name: 'Planche du haut', parentId: null, bedLength: 30000, greenhouse: false },
+    });
+    expect(reponse.status(), await reponse.text()).toBe(201);
+
+    await page.goto('/carte');
+    // Geoman pose deux barres, dessin et édition : on vise celle du tracé.
+    const outilTrace = carte.locator('.leaflet-pm-toolbar.leaflet-pm-draw');
+    await expect(outilTrace, 'rangés tant qu’aucun emplacement n’est choisi').toHaveCount(0);
+
+    await page.getByLabel('Emplacement à dessiner').selectOption({ label: 'Planche du haut' });
+
+    await expect(outilTrace, 'et sortis dès qu’il y en a un').toBeAttached({ timeout: 15_000 });
+
+    // Puis rangés de nouveau : on ne dessine que pour quelqu'un.
+    await page.getByLabel('Emplacement à dessiner').selectOption('');
+    await expect(outilTrace).toHaveCount(0);
   });
 
   await test.step('et se retirent aussi simplement', async () => {

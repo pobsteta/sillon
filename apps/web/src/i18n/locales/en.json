@@ -496,6 +496,14 @@
     "longitude": "Longitude",
     "clear": "Remove the position",
     "notSetYet": "The farm’s position has not been set yet.",
-    "notSetByOwner": "The farm’s owner has not set the position yet."
+    "notSetByOwner": "The farm’s owner has not set the position yet.",
+    "draw": "Draw the beds",
+    "drawHint": "Pick a location, then trace its outline with the polygon tool at the top right of the map. A new outline replaces the previous one.",
+    "target": "Location to draw",
+    "targetNone": "— none; clicking sets the farm’s position —",
+    "alreadyDrawn": "already drawn",
+    "eraseOutline": "Erase the outline",
+    "measured": "“{{nom}}”: {{surface}} m², longest side {{longueur}} m. The bed length you entered was not changed.",
+    "planLayer": "Street map"
   }
 }

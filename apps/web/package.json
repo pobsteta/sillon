@@ -12,6 +12,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@geoman-io/leaflet-geoman-free": "^2.20.1",
     "@sillon/core": "*",
     "@tanstack/react-query": "^5.62.7",
     "@tanstack/react-router": "^1.95.0",

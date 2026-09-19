@@ -496,6 +496,14 @@
     "longitude": "Longitude",
     "clear": "Retirer la position",
     "notSetYet": "La position de la ferme n’est pas encore posée.",
-    "notSetByOwner": "La position de la ferme n’a pas encore été posée par son propriétaire."
+    "notSetByOwner": "La position de la ferme n’a pas encore été posée par son propriétaire.",
+    "draw": "Dessiner le parcellaire",
+    "drawHint": "Choisissez un emplacement, puis tracez son contour avec l’outil polygone, en haut à droite de la carte. Le tracé remplace le précédent.",
+    "target": "Emplacement à dessiner",
+    "targetNone": "— aucun, le clic pose la position de la ferme —",
+    "alreadyDrawn": "déjà dessiné",
+    "eraseOutline": "Effacer le contour",
+    "measured": "« {{nom}} » : {{surface}} m², plus grand côté {{longueur}} m. La longueur de planche saisie n’a pas été modifiée.",
+    "planLayer": "Plan"
   }
 }

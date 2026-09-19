@@ -404,6 +404,7 @@ export async function authRoutes(app: FastifyInstance, options: { env: Env }): P
             ? {
                 url: options.env.MAP_TILE_URL,
                 attribution: options.env.MAP_TILE_ATTRIBUTION,
+                name: options.env.MAP_TILE_NAME || 'Vue aérienne',
               }
             : null,
         user: {

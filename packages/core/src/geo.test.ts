@@ -11,12 +11,19 @@ import { describe, expect, it } from 'vitest';
 import {
   arrondirCoordonnee,
   arrondirLatLng,
+  fromGeoJsonPolygon,
   fromGeoJsonPosition,
+  isGeoJsonPolygon,
   isLatitude,
   isLatLng,
   isLongitude,
+  longestSideMm,
+  polygonArea,
+  polygonCentroid,
+  toGeoJsonPolygon,
   toGeoJsonPosition,
   type GeoJsonPosition,
+  type LatLng,
 } from './geo.js';
 
 // Relevé par la Base Adresse Nationale le 19 septembre 2026 pour une adresse du
@@ -83,5 +90,122 @@ describe('l’arrondi', () => {
   it('n’invente pas de précision sur un nombre court', () => {
     expect(arrondirCoordonnee(47.6)).toBe(47.6);
     expect(arrondirLatLng({ lat: 47.6, lng: -0.44 })).toEqual({ lat: 47.6, lng: -0.44 });
+  });
+});
+
+/** Construit un rectangle de `largeur` × `longueur` mètres, centré sur `centre`. */
+function rectangle(centre: LatLng, largeurM: number, longueurM: number): LatLng[] {
+  const R = 6_371_008.8;
+  const enDegres = 180 / Math.PI;
+  const dLat = (longueurM / 2 / R) * enDegres;
+  const dLng = (largeurM / 2 / (R * Math.cos((centre.lat * Math.PI) / 180))) * enDegres;
+  return [
+    { lat: centre.lat - dLat, lng: centre.lng - dLng },
+    { lat: centre.lat - dLat, lng: centre.lng + dLng },
+    { lat: centre.lat + dLat, lng: centre.lng + dLng },
+    { lat: centre.lat + dLat, lng: centre.lng - dLng },
+  ];
+}
+
+describe('un contour', () => {
+  it('se ferme en partant vers GeoJSON', () => {
+    // La spécification l'exige, et l'oublier produit un polygone que d'autres outils
+    // refusent sans toujours dire pourquoi.
+    const polygone = toGeoJsonPolygon(rectangle(SOUCELLES, 10, 30));
+    const anneau = polygone.coordinates[0]!;
+
+    expect(anneau).toHaveLength(5);
+    expect(anneau[0]).toEqual(anneau[4]);
+    expect(polygone.type).toBe('Polygon');
+  });
+
+  it('se rouvre au retour, sans le point répété', () => {
+    const sommets = rectangle(SOUCELLES, 10, 30);
+    expect(fromGeoJsonPolygon(toGeoJsonPolygon(sommets))).toHaveLength(4);
+  });
+
+  it('refuse ce qui n’est pas une surface', () => {
+    expect(() => toGeoJsonPolygon([SOUCELLES])).toThrow(RangeError);
+    expect(() => toGeoJsonPolygon([SOUCELLES, { lat: 47.6, lng: -0.44 }])).toThrow(RangeError);
+    expect(() => fromGeoJsonPolygon({ type: 'Polygon', coordinates: [[]] })).toThrow(RangeError);
+  });
+
+  it('se reconnaît sans lever, pour ce qui vient du dehors', () => {
+    expect(isGeoJsonPolygon(toGeoJsonPolygon(rectangle(SOUCELLES, 10, 30)))).toBe(true);
+    expect(isGeoJsonPolygon(null)).toBe(false);
+    expect(isGeoJsonPolygon({ type: 'Point', coordinates: [0, 0] })).toBe(false);
+    // Un anneau trop court, et un point hors de la Terre : deux façons d'arriver ici.
+    expect(
+      isGeoJsonPolygon({
+        type: 'Polygon',
+        coordinates: [
+          [
+            [0, 0],
+            [1, 1],
+            [0, 0],
+          ],
+        ],
+      }),
+    ).toBe(false);
+    expect(
+      isGeoJsonPolygon({
+        type: 'Polygon',
+        coordinates: [
+          [
+            [0, 0],
+            [1, 1],
+            [2, 200],
+            [0, 0],
+          ],
+        ],
+      }),
+    ).toBe(false);
+  });
+});
+
+describe('ce qu’on tire d’un contour', () => {
+  it('mesure une planche de 80 cm sur 30 m au mètre carré près', () => {
+    // Une planche du référentiel de départ : 30 m de long, 80 cm de large, soit 24 m².
+    const surface = polygonArea(rectangle(SOUCELLES, 0.8, 30));
+
+    expect(surface).toBeGreaterThanOrEqual(23);
+    expect(surface).toBeLessThanOrEqual(25);
+  });
+
+  it('mesure un carré de cent mètres, à un pour mille près', () => {
+    // 10 000 m² : la vérification qui dit si la projection locale tient. Une erreur de
+    // facteur — degrés pris pour des radians, cosinus oublié — se verrait ici d'un coup.
+    const surface = polygonArea(rectangle(SOUCELLES, 100, 100));
+
+    expect(surface).toBeGreaterThan(9_990);
+    expect(surface).toBeLessThan(10_010);
+  });
+
+  it('donne la même surface dans un sens que dans l’autre', () => {
+    // Un contour tracé à l'envers est le même enclos. Sans valeur absolue, la surface
+    // serait négative — et un affichage la montrerait telle quelle.
+    const sommets = rectangle(SOUCELLES, 10, 30);
+    expect(polygonArea([...sommets].reverse())).toBe(polygonArea(sommets));
+  });
+
+  it('ne mesure rien d’un contour qui n’en est pas un', () => {
+    expect(polygonArea([])).toBe(0);
+    expect(polygonArea([SOUCELLES, { lat: 47.6, lng: -0.44 }])).toBe(0);
+  });
+
+  it('retrouve le grand côté d’une planche, en millimètres', () => {
+    // `bedLength` est en millimètres : 30 m font 30 000. C'est cette valeur qu'on
+    // **proposera**, jamais qu'on imposera.
+    const longueur = longestSideMm(rectangle(SOUCELLES, 0.8, 30));
+
+    expect(longueur).toBeGreaterThan(29_900);
+    expect(longueur).toBeLessThan(30_100);
+  });
+
+  it('place le centre au milieu', () => {
+    const centre = polygonCentroid(rectangle(SOUCELLES, 10, 30));
+
+    expect(centre.lat).toBeCloseTo(SOUCELLES.lat, 6);
+    expect(centre.lng).toBeCloseTo(SOUCELLES.lng, 6);
   });
 });

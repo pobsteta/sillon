@@ -14,11 +14,11 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMutation } from '@tanstack/react-query';
-import { arrondirLatLng, type LatLng } from '@sillon/core';
-import { api, useFarm, useFarmMutation } from '../lib/queries.js';
+import { arrondirLatLng, isGeoJsonPolygon, type GeoJsonPolygon, type LatLng } from '@sillon/core';
+import { api, useFarm, useFarmMutation, useLocations } from '../lib/queries.js';
 import { useCurrentSession } from '../lib/session.js';
 import { Carte } from '../components/Carte.js';
-import { ErrorNotice, Field, Loading, PageHeader } from '../components/ui.js';
+import { ErrorNotice, Field, Loading, PageHeader, Select } from '../components/ui.js';
 
 interface Adresse {
   label: string;
@@ -39,6 +39,15 @@ export function MapPage() {
   const [recherche, setRecherche] = useState('');
   const [resultats, setResultats] = useState<Adresse[] | null>(null);
   const [saisie, setSaisie] = useState<{ lat: string; lng: string }>({ lat: '', lng: '' });
+  // L'emplacement que le prochain tracé viendra dessiner. Sans ce choix explicite, un
+  // polygone posé sur la carte n'appartiendrait à rien.
+  const [cible, setCible] = useState('');
+  const [mesure, setMesure] = useState<{
+    nom: string;
+    areaM2: number;
+    longestSideMm: number;
+  } | null>(null);
+  const emplacements = useLocations(farmId);
 
   const chercher = useMutation({
     mutationFn: (q: string) =>
@@ -55,6 +64,30 @@ export function MapPage() {
         ? { latitude: point.lat, longitude: point.lng }
         : { latitude: null, longitude: null },
     }),
+  );
+
+  const contours = (emplacements.data ?? [])
+    .filter((lieu) => isGeoJsonPolygon(lieu.geometry))
+    .map((lieu) => ({
+      id: lieu.id,
+      nom: lieu.name,
+      polygone: lieu.geometry as GeoJsonPolygon,
+      actif: String(lieu.id) === cible,
+    }));
+
+  const dessiner = useFarmMutation(
+    farmId,
+    ({ id, points }: { id: number; points: LatLng[] | null }) =>
+      api<{ measured: { areaM2: number; longestSideMm: number } | null }>(
+        `/api/farms/${farmId}/locations/${id}/geometry`,
+        { method: 'PUT', body: { points } },
+      ),
+    {
+      onSuccess: (reponse, entree) => {
+        const lieu = (emplacements.data ?? []).find((candidat) => candidat.id === entree.id);
+        setMesure(reponse.measured ? { nom: lieu?.name ?? '', ...reponse.measured } : null);
+      },
+    },
   );
 
   if (!farm || reglages.isLoading) return <Loading />;
@@ -133,10 +166,65 @@ export function MapPage() {
       <Carte
         point={position}
         etiquette={t('map.mapLabel')}
-        {...(canManageFarm ? { onClick: poser } : {})}
+        contours={contours}
+        avecDessin={canManageFarm}
+        nomDuPlan={t('map.planLayer')}
+        {...(canManageFarm && cible
+          ? { onDessin: (points: LatLng[]) => dessiner.mutate({ id: Number(cible), points }) }
+          : {})}
+        {...(canManageFarm && !cible ? { onClick: poser } : {})}
         {...(session?.map ? { tuiles: session.map } : {})}
       />
       {canManageFarm ? (
+        <section className="card mt-4">
+          <h2 className="mb-1 text-lg font-semibold">{t('map.draw')}</h2>
+          <p className="mb-3 text-sm text-earth-700 dark:text-earth-200">{t('map.drawHint')}</p>
+          <div className="flex flex-wrap items-end gap-3">
+            <Select
+              label={t('map.target')}
+              value={cible}
+              onChange={(event) => {
+                setCible(event.target.value);
+                setMesure(null);
+              }}
+            >
+              <option value="">{t('map.targetNone')}</option>
+              {(emplacements.data ?? []).map((lieu) => (
+                <option key={lieu.id} value={lieu.id}>
+                  {lieu.name}
+                  {isGeoJsonPolygon(lieu.geometry) ? ` — ${t('map.alreadyDrawn')}` : ''}
+                </option>
+              ))}
+            </Select>
+            {cible &&
+            isGeoJsonPolygon(
+              (emplacements.data ?? []).find((lieu) => String(lieu.id) === cible)?.geometry,
+            ) ? (
+              <button
+                type="button"
+                className="btn-ghost"
+                onClick={() => dessiner.mutate({ id: Number(cible), points: null })}
+              >
+                {t('map.eraseOutline')}
+              </button>
+            ) : null}
+          </div>
+          {/* La mesure se **propose**. `bedLength` sert aux calculs de semences et de
+              commande : un tracé au doigt ne doit pas en devenir la base tout seul. */}
+          {mesure ? (
+            <p role="status" className="mt-3 text-sm">
+              {t('map.measured', {
+                nom: mesure.nom,
+                surface: mesure.areaM2,
+                longueur: (mesure.longestSideMm / 1000).toFixed(1),
+              })}
+            </p>
+          ) : null}
+          {dessiner.error ? <ErrorNotice error={dessiner.error} /> : null}
+        </section>
+      ) : null}
+
+      {canManageFarm && !cible ? (
         <p className="mt-2 text-xs text-earth-700 dark:text-earth-200">{t('map.clickHint')}</p>
       ) : null}
       {!position ? (
