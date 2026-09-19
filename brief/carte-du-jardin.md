@@ -237,9 +237,11 @@ l'hébergeur**, **BAN puis Nominatim**. Restent :
 2. **Un fond français livré configuré ?** Les orthophotos de l'IGN sont libres. Les donner
    en exemple commenté dans `.env.example` est sûr ; les activer par défaut reviendrait à
    décider que Sillon est français, ce qu'il n'est pas.
-3. **La position de la ferme est-elle visible de toute l'équipe ?** La matrice de rôles
-   existe ; une ferme d'apprenant hérite des membres de son centre. Un saisonnier doit-il
-   voir les coordonnées de l'exploitation ?
+3. ~~**La position de la ferme est-elle visible de toute l'équipe ?**~~ — tranché le
+   19 septembre 2026 : **oui**, de quiconque peut se connecter à la ferme. Elle ne se
+   **modifie** en revanche que par qui la règle, `PATCH /farms/:id` exigeant le rôle
+   propriétaire. Deux essais fixent la décision, sans quoi un resserrement des droits
+   passerait plus tard pour une correction.
 4. **Que fait-on d'un emplacement dessiné puis supprimé** dans l'arbre ? Le polygone part
    avec — mais il faut le dire, sans quoi on croira à une perte.
 

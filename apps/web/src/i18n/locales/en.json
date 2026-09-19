@@ -480,7 +480,6 @@
   },
   "map": {
     "title": "Garden map",
-    "restricted": "The farm’s position is visible to its managers only.",
     "search": "Find the address",
     "searchHint": "The search sends the address you type to the geocoding service configured on this deployment. It only goes when you start it, never while you type.",
     "address": "Address",
@@ -495,6 +494,8 @@
     "manualHint": "Decimal degrees (WGS 84), as a GPS or a map gives them. Five decimals is enough: about one metre.",
     "latitude": "Latitude",
     "longitude": "Longitude",
-    "clear": "Remove the position"
+    "clear": "Remove the position",
+    "notSetYet": "The farm’s position has not been set yet.",
+    "notSetByOwner": "The farm’s owner has not set the position yet."
   }
 }

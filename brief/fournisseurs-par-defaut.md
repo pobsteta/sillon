@@ -186,3 +186,7 @@ ferme lui donne. Un essai porte ce cas.
 - [Kokopelli s'en va semer en Ariège — Objectif Gard](https://www.objectifgard.com/actualites/ales-kokopelli-sen-va-semer-en-ariege-84817.php)
 - [Kokopelli (association) — Ekopedia](<https://www.ekopedia.fr/wiki/Kokopelli_(association)>)
 - [Le Potager de Santé — site officiel](https://www.lepotagerdesante.com/)
+
+_Mise à jour du 19 septembre 2026_ : le domaine de Graines del Païs ne répondait plus. La
+maison reste au référentiel **sans lien** — c'est son nom qui répartit une commande, pas son
+site, et un lien mort se suit une fois pour rien avant qu'on s'en méfie.

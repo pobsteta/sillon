@@ -34,12 +34,17 @@ export async function providerRoutes(app: FastifyInstance): Promise<void> {
         // Même reconnaissance que l'ajout — nom **ou** adresse — sans quoi l'écran
         // annoncerait « absent » une maison que la ferme a simplement renommée, et le
         // bouton ne ferait rien de ce qu'il promet.
+        // Les adresses connues seulement : une maison sans site n'en apporte pas, et un
+        // `in` contenant `undefined` ne veut rien dire.
+        const adresses = SUGGESTED_PROVIDERS.map((s) => s.url).filter(
+          (url): url is string => typeof url === 'string',
+        );
         const presents = await db.provider.findMany({
           where: {
             farmId,
             OR: [
               { name: { in: SUGGESTED_PROVIDERS.map((s) => s.name) } },
-              { url: { in: SUGGESTED_PROVIDERS.map((s) => s.url) } },
+              ...(adresses.length > 0 ? [{ url: { in: adresses } }] : []),
             ],
           },
           select: { name: true, type: true, url: true },
@@ -47,7 +52,7 @@ export async function providerRoutes(app: FastifyInstance): Promise<void> {
         return SUGGESTED_PROVIDERS.map(({ name, type, url }) => ({
           name,
           type,
-          url,
+          url: url ?? null,
           present: presents.some((p) => p.type === type && (p.name === name || p.url === url)),
         }));
       });

@@ -48,7 +48,11 @@ describe('une ferme neuve', () => {
     for (const semencier of SUGGESTED_PROVIDERS) {
       const trouve = liste.find((f: { name: string }) => f.name === semencier.name);
       expect(trouve, `${semencier.name} doit être au référentiel`).toBeDefined();
-      expect(trouve.url, 'le site rend la feuille de commande cliquable').toBe(semencier.url);
+      // `?? null` : une maison sans site n'en a pas, et la base écrit `null` là où la
+      // liste ne dit rien. Les deux formes disent la même chose.
+      expect(trouve.url, 'le site rend la feuille de commande cliquable').toBe(
+        semencier.url ?? null,
+      );
       expect(trouve.type).toBe(semencier.type);
     }
   });
@@ -147,6 +151,55 @@ describe('le geste offert aux fermes existantes', () => {
       apres.filter((f: { name: string }) => f.name.startsWith('Kokopelli')),
       'un seul Kokopelli, celui de la ferme',
     ).toHaveLength(1);
+  });
+});
+
+describe('une maison sans site', () => {
+  // `grainesdelpais.com` ne répondait plus le 19 septembre 2026 : mieux vaut pas de lien
+  // qu'un lien mort. La maison reste au référentiel — c'est son nom qui répartit une
+  // commande, pas son site.
+  const sansSite = SUGGESTED_PROVIDERS.filter((semencier) => !semencier.url);
+
+  it('existe dans la liste proposée', () => {
+    expect(sansSite.length, 'ce cas existe et doit être traité').toBeGreaterThan(0);
+  });
+
+  it('est tout de même ajoutée', async () => {
+    // Le piège : en Prisma, `{ url: undefined }` dans un `OR` n'est pas « adresse
+    // inconnue » mais une clause **vide**, qui accepte n'importe quelle ligne. Elle ferait
+    // considérer la maison comme déjà présente, et celle-ci ne serait jamais créée — sans
+    // erreur, sans message, et sans que la liste proposée ne s'en aperçoive.
+    await withoutFarmScope((db) =>
+      db.provider.deleteMany({
+        where: { farmId: compte.farmId, name: { in: SUGGESTED_PROVIDERS.map((s) => s.name) } },
+      }),
+    );
+
+    const reponse = await app.inject({
+      method: 'POST',
+      url: url('/providers/suggested'),
+      headers: entetes(),
+    });
+
+    expect(reponse.json().added).toHaveLength(SUGGESTED_PROVIDERS.length);
+    const liste = await fournisseurs();
+    for (const semencier of sansSite) {
+      const trouve = liste.find((f: { name: string }) => f.name === semencier.name);
+      expect(trouve, `${semencier.name} doit être au référentiel`).toBeDefined();
+      expect(trouve.url, 'et sans lien mort').toBeNull();
+    }
+  });
+
+  it('est reconnue comme présente, par son nom', async () => {
+    const proposes = await app
+      .inject({ method: 'GET', url: url('/providers/suggested'), headers: entetes() })
+      .then((r) => r.json());
+
+    for (const semencier of sansSite) {
+      const ligne = proposes.find((s: { name: string }) => s.name === semencier.name);
+      expect(ligne.url, 'aucun lien annoncé').toBeNull();
+      expect(ligne.present, 'et pourtant reconnue').toBe(true);
+    }
   });
 });
 

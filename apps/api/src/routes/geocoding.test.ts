@@ -19,6 +19,7 @@ import type { FastifyInstance } from 'fastify';
 import { buildApp } from '../app.js';
 import { lireBan } from './geocoding.js';
 import { registerAccount, resetDatabase, type TestAccount } from '../test-support.js';
+import { withoutFarmScope } from '../tenant.js';
 
 const apps: FastifyInstance[] = [];
 
@@ -180,6 +181,56 @@ describe('la position de la ferme', () => {
       })
       .then((r) => r.json());
     expect(apres.latitude).toBeNull();
+  });
+
+  it('se lit de toute l’équipe, et pas seulement de l’encadrement', async () => {
+    // Décision du 19 septembre 2026 : les coordonnées de l'exploitation sont visibles de
+    // qui peut se connecter. L'essai la fixe — sans lui, un resserrement des droits
+    // passerait pour une correction.
+    const { app, compte } = await monter();
+    await app.inject({
+      method: 'PATCH',
+      url: `/api/farms/${compte.farmId}`,
+      headers: { cookie: compte.cookie },
+      payload: { latitude: 47.59855, longitude: -0.44078 },
+    });
+
+    const saisonnier = await registerAccount(app, { email: 'saisonnier@example.org' });
+    await withoutFarmScope((db) =>
+      db.farmMembership.create({
+        data: { farmId: compte.farmId, userId: saisonnier.userId, role: 'seasonal' },
+      }),
+    );
+
+    const lecture = await app.inject({
+      method: 'GET',
+      url: `/api/farms/${compte.farmId}`,
+      headers: { cookie: saisonnier.cookie },
+    });
+
+    expect(lecture.statusCode).toBe(200);
+    expect(lecture.json()).toMatchObject({ latitude: 47.59855, longitude: -0.44078 });
+  });
+
+  it('ne se modifie que par qui règle la ferme', async () => {
+    // Voir n'est pas poser. `PATCH /farms/:id` exige le rôle propriétaire, et l'écran ne
+    // propose les boutons qu'à qui peut s'en servir.
+    const { app, compte } = await monter();
+    const employe = await registerAccount(app, { email: 'employe@example.org' });
+    await withoutFarmScope((db) =>
+      db.farmMembership.create({
+        data: { farmId: compte.farmId, userId: employe.userId, role: 'employee' },
+      }),
+    );
+
+    const refus = await app.inject({
+      method: 'PATCH',
+      url: `/api/farms/${compte.farmId}`,
+      headers: { cookie: employe.cookie },
+      payload: { latitude: 47.6, longitude: -0.44 },
+    });
+
+    expect(refus.statusCode).toBe(403);
   });
 
   it('refuse une latitude qui n’existe pas', async () => {

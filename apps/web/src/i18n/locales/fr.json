@@ -480,7 +480,6 @@
   },
   "map": {
     "title": "Carte du jardin",
-    "restricted": "La position de la ferme n’est visible que de son encadrement.",
     "search": "Trouver l’adresse",
     "searchHint": "La recherche envoie l’adresse saisie au service de géocodage configuré sur ce déploiement. Elle ne part qu’au moment où vous la lancez, et jamais pendant que vous tapez.",
     "address": "Adresse",
@@ -495,6 +494,8 @@
     "manualHint": "En degrés décimaux (WGS 84), comme les donne un GPS ou une carte. Cinq décimales suffisent : c’est environ un mètre.",
     "latitude": "Latitude",
     "longitude": "Longitude",
-    "clear": "Retirer la position"
+    "clear": "Retirer la position",
+    "notSetYet": "La position de la ferme n’est pas encore posée.",
+    "notSetByOwner": "La position de la ferme n’a pas encore été posée par son propriétaire."
   }
 }
