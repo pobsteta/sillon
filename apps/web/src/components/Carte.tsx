@@ -18,6 +18,9 @@ import 'leaflet/dist/leaflet.css';
 import { fromGeoJsonPolygon, type GeoJsonPolygon, type LatLng } from '@sillon/core';
 
 /** Fond par défaut. L'attribution est exigée par la licence, elle n'est pas décorative. */
+/** Dernier niveau d'approche, au-delà des tuiles réellement disponibles. */
+const ZOOM_MAXIMUM = 23;
+
 /** Clé du fond retenu, par navigateur. */
 const CHOIX_DU_FOND = 'sillon.fondDeCarte';
 
@@ -50,6 +53,11 @@ export interface CarteProps {
    * que lorsqu'un emplacement est choisi, sans quoi le tracé n'appartiendrait à rien.
    */
   onDessin?: ((points: LatLng[]) => void) | undefined;
+  /**
+   * Hauteur de la carte. Doublée par rapport au premier jet, mais bornée par la hauteur
+   * de l'écran : sur un téléphone, 48 rem dépasseraient la fenêtre et l'on perdrait les
+   * commandes en bas de page sans comprendre pourquoi.
+   */
   hauteur?: string;
   etiquette: string;
 }
@@ -63,7 +71,7 @@ export function Carte({
   avecDessin = false,
   onDessin,
   nomDuPlan = 'Plan',
-  hauteur = '24rem',
+  hauteur = 'min(48rem, 75vh)',
   etiquette,
 }: CarteProps) {
   const conteneur = useRef<HTMLDivElement | null>(null);
@@ -97,14 +105,31 @@ export function Carte({
         // La France entière : un point de départ qui ne prétend pas savoir où l'on est.
         center: [46.6, 2.4],
         zoom: 5,
+        maxZoom: ZOOM_MAXIMUM,
         attributionControl: true,
       });
       // OSM est toujours là : c'est le seul fond que Sillon livre, et le seul dont il
       // garantisse la licence. Un fond configuré **s'ajoute** au lieu de le remplacer —
       // sinon on perdrait le plan des rues, qui reste le plus lisible pour se repérer.
-      const plan = L.tileLayer(OSM.url, { attribution: OSM.attribution, maxZoom: 19 });
+      // `maxNativeZoom` est le dernier niveau où les tuiles **existent** ; `maxZoom` est
+      // le dernier où la carte se laisse approcher. Au-delà du premier, Leaflet agrandit
+      // la dernière tuile disponible : l'image devient floue, mais on voit ce qu'on fait.
+      //
+      // C'est nécessaire, pas cosmétique. Au niveau 19, à nos latitudes, un pixel vaut
+      // environ 22 cm : une planche de 80 cm tient dans quatre pixels, et la dessiner à la
+      // souris relève de la devinette. Vérifié le 19 septembre 2026 : OpenStreetMap comme
+      // les orthophotos de l'IGN répondent 404 au-delà de 19.
+      const plan = L.tileLayer(OSM.url, {
+        attribution: OSM.attribution,
+        maxNativeZoom: 19,
+        maxZoom: ZOOM_MAXIMUM,
+      });
       const supplementaire = tuiles
-        ? L.tileLayer(tuiles.url, { attribution: tuiles.attribution, maxZoom: 19 })
+        ? L.tileLayer(tuiles.url, {
+            attribution: tuiles.attribution,
+            maxNativeZoom: 19,
+            maxZoom: ZOOM_MAXIMUM,
+          })
         : null;
 
       // Le choix se retient d'une visite à l'autre : on ne veut pas rebasculer sur

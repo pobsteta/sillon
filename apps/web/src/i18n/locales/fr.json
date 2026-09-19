@@ -506,6 +506,13 @@
     "measured": "« {{nom}} » : {{surface}} m², plus grand côté {{longueur}} m. La longueur de planche saisie n’a pas été modifiée.",
     "planLayer": "Plan",
     "useMeasure": "Régler la planche sur {{longueur}} m",
-    "measureApplied": "Longueur de planche mise à jour. Les calculs de semences et de commande en tiennent compte."
+    "measureApplied": "Longueur de planche mise à jour. Les calculs de semences et de commande en tiennent compte.",
+    "rotate": "Faire pivoter",
+    "rotateHint": "Un angle positif tourne dans le sens horaire. Tout le parcellaire pivote autour de son centre commun : les planches gardent leurs positions relatives et leurs passe-pieds.",
+    "angle": "Angle (degrés)",
+    "angleHint": "De −360 à 360.",
+    "rotateOne": "Cet emplacement",
+    "rotateAll": "Tous les contours ({{count}})",
+    "rotated": "{{count}} contour(s) pivoté(s) de {{angle}}°."
   }
 }

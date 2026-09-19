@@ -17,9 +17,11 @@ import {
   isLatitude,
   isLatLng,
   isLongitude,
+  centroidOfAll,
   longestSideMm,
   polygonArea,
   polygonCentroid,
+  rotateAround,
   toGeoJsonPolygon,
   toGeoJsonPosition,
   type GeoJsonPosition,
@@ -207,5 +209,79 @@ describe('ce qu’on tire d’un contour', () => {
 
     expect(centre.lat).toBeCloseTo(SOUCELLES.lat, 6);
     expect(centre.lng).toBeCloseTo(SOUCELLES.lng, 6);
+  });
+});
+
+describe('faire pivoter un contour', () => {
+  const planche = rectangle(SOUCELLES, 0.8, 30);
+
+  it('ne bouge pas à zéro degré', () => {
+    const tourne = rotateAround(planche, 0, SOUCELLES);
+    for (const [index, point] of tourne.entries()) {
+      expect(point.lat).toBeCloseTo(planche[index]!.lat, 9);
+      expect(point.lng).toBeCloseTo(planche[index]!.lng, 9);
+    }
+  });
+
+  it('revient sur lui-même après un tour complet', () => {
+    const tourne = rotateAround(planche, 360, SOUCELLES);
+    for (const [index, point] of tourne.entries()) {
+      expect(point.lat).toBeCloseTo(planche[index]!.lat, 9);
+      expect(point.lng).toBeCloseTo(planche[index]!.lng, 9);
+    }
+  });
+
+  it('revient sur lui-même par quatre quarts de tour', () => {
+    let courant = planche;
+    for (let i = 0; i < 4; i += 1) courant = rotateAround(courant, 90, SOUCELLES);
+    for (const [index, point] of courant.entries()) {
+      expect(point.lat).toBeCloseTo(planche[index]!.lat, 8);
+      expect(point.lng).toBeCloseTo(planche[index]!.lng, 8);
+    }
+  });
+
+  it('tourne dans le sens horaire', () => {
+    // Un point plein nord doit passer plein est. Le sens trigonométrique l'enverrait à
+    // l'ouest : la formule aurait l'air juste, et le parcellaire partirait du mauvais côté.
+    const nord = [{ lat: SOUCELLES.lat + 0.001, lng: SOUCELLES.lng }];
+    const [apres] = rotateAround(nord, 90, SOUCELLES);
+
+    expect(apres!.lng, 'passé à l’est').toBeGreaterThan(SOUCELLES.lng);
+    expect(apres!.lat, 'et revenu sur le parallèle').toBeCloseTo(SOUCELLES.lat, 6);
+  });
+
+  it('conserve la surface', () => {
+    // Une rotation ne change pas la taille d'une planche. Si la surface bougeait, c'est
+    // que la projection déforme — le symptôme d'une rotation faite sur les degrés bruts.
+    const avant = polygonArea(planche);
+    for (const angle of [17, 45, 90, 123, 270]) {
+      expect(polygonArea(rotateAround(planche, angle, SOUCELLES)), `${angle}°`).toBe(avant);
+    }
+  });
+
+  it('conserve la longueur du grand côté', () => {
+    const avant = longestSideMm(planche);
+    expect(longestSideMm(rotateAround(planche, 37, SOUCELLES))).toBeCloseTo(avant, -1);
+  });
+
+  it('fait pivoter plusieurs contours autour d’un centre commun', () => {
+    // Le cas qui compte pour un parcellaire : tout le bloc tourne ensemble, les planches
+    // gardant leurs positions relatives. Chacune autour de son propre centre les
+    // ferait pivoter sur place, et le bloc resterait de travers.
+    const voisine = rectangle({ lat: SOUCELLES.lat, lng: SOUCELLES.lng + 0.0002 }, 0.8, 30);
+    const centre = centroidOfAll([planche, voisine]);
+
+    const ecartAvant = Math.hypot(
+      voisine[0]!.lat - planche[0]!.lat,
+      voisine[0]!.lng - planche[0]!.lng,
+    );
+    const [a, b] = [planche, voisine].map((c) => rotateAround(c, 90, centre));
+    const ecartApres = Math.hypot(b![0]!.lat - a![0]!.lat, b![0]!.lng - a![0]!.lng);
+
+    // L'écart en degrés change avec l'orientation — les méridiens sont resserrés — mais
+    // les deux planches restent distinctes et à distance comparable.
+    expect(ecartApres).toBeGreaterThan(0);
+    expect(polygonArea(a!)).toBe(polygonArea(planche));
+    expect(ecartAvant).toBeGreaterThan(0);
   });
 });

@@ -162,6 +162,62 @@ test('poser la position de la ferme', async ({ page }, info) => {
     expect(apres!.bedLength, 'et seulement après qu’on l’a demandé').not.toBe(30000);
   });
 
+  await test.step('le parcellaire pivote d’un bloc, sans se déformer', async () => {
+    // Deux planches parallèles : ce qui compte est qu'elles tournent **ensemble**, autour
+    // d'un centre commun. Chacune sur elle-même les ferait pivoter en croix, et le
+    // parcellaire n'aurait plus de sens.
+    const session = await page.request.get('/api/auth/me').then((r) => r.json());
+    const ferme = session.farms[0].id;
+    const seconde = await page.request
+      .post(`/api/farms/${ferme}/locations`, {
+        data: { name: 'Planche du bas', parentId: null, bedLength: 30000, greenhouse: false },
+      })
+      .then((r) => r.json());
+    await page.request.put(`/api/farms/${ferme}/locations/${seconde.id}/geometry`, {
+      data: {
+        points: [
+          { lat: 47.5985, lng: -0.44077 },
+          { lat: 47.5985, lng: -0.44076 },
+          { lat: 47.59877, lng: -0.44076 },
+          { lat: 47.59877, lng: -0.44077 },
+        ],
+      },
+    });
+
+    /** Étendue de chaque contour, en degrés : de quoi dire s'il est debout ou couché. */
+    const etendues = async () => {
+      const lieux = await page.request.get(`/api/farms/${ferme}/locations`).then((r) => r.json());
+      return lieux
+        .filter((lieu: { geometry: unknown }) => lieu.geometry)
+        .map((lieu: { geometry: { coordinates: number[][][] } }) => {
+          const anneau = lieu.geometry.coordinates[0]!;
+          const lngs = anneau.map((position) => position[0]!);
+          const lats = anneau.map((position) => position[1]!);
+          return {
+            lng: Math.max(...lngs) - Math.min(...lngs),
+            lat: Math.max(...lats) - Math.min(...lats),
+          };
+        });
+    };
+
+    await page.goto('/carte');
+    const avant = await etendues();
+    expect(avant.length, 'deux contours à faire pivoter').toBe(2);
+    // Des planches orientées nord-sud : longues en latitude, étroites en longitude.
+    for (const etendue of avant) expect(etendue.lat).toBeGreaterThan(etendue.lng);
+
+    await page.getByLabel('Angle (degrés)').fill('90');
+    await page.getByRole('button', { name: /Tous les contours/ }).click();
+    await expect(page.getByText(/contour\(s\) pivoté\(s\) de 90°/)).toBeVisible();
+
+    // Un quart de tour les couche : elles deviennent longues en longitude. C'est la seule
+    // chose qui se voit à l'écran, et donc la seule qu'un essai de bout en bout puisse
+    // prouver — la conservation des surfaces est vérifiée dans le noyau, en mètres.
+    const apres = await etendues();
+    expect(apres.length).toBe(2);
+    for (const etendue of apres) expect(etendue.lng).toBeGreaterThan(etendue.lat);
+  });
+
   await test.step('le plan s’imprime', async () => {
     // Un bouton qui appelle `window.print()` : on vérifie qu'il est là et qu'il ne
     // disparaît pas au profit d'autre chose. Le rendu papier lui-même se juge à l'œil.
