@@ -952,3 +952,80 @@ model NotePhoto {
   @@index([noteId])
   @@map("notes_photos")
 }
+
+// ───────────────────── Valeurs de référence (recherche) ─────────────────────
+
+/// Source publiée d'où proviennent des valeurs de référence.
+///
+/// **Hors RLS** : ces données n'appartiennent à aucune ferme. Elles sont publiées, citées,
+/// et lues par tout le monde. Voir la migration `20260920180000_valeurs_de_reference`.
+model ReferenceSource {
+  id         String   @id
+  titre      String
+  auteurs    String[]
+  annee      Int
+  url        String
+  /// Identifiant SPDX (« etalab-2.0 ») ou valeur conventionnelle de `@sillon/core`.
+  licence    String
+  notes      String   @default("")
+  insertedAt DateTime @default(now()) @map("inserted_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  values     ReferenceValue[]
+  farmValues ReferenceFarmValue[]
+
+  @@map("reference_sources")
+}
+
+/// Ce qu'une source dit d'une culture, dans un contexte donné.
+///
+/// Pas de `cropId` : les espèces sont par ferme, une table globale ne peut pas les
+/// référencer sans traverser le cloisonnement. Le rapprochement passe par `cropKey`, que
+/// `cropKeysFor` traduit depuis le nom de l'espèce.
+model ReferenceValue {
+  id                Int      @id @default(autoincrement())
+  sourceId          String   @map("source_id")
+  cropKey           String   @map("crop_key")
+  /// { abri, systeme, conduite } — `null` signifie « la source ne distingue pas ».
+  context           Json
+  /// { low, median, high } — les unités sont dans les noms, et les valeurs des entiers.
+  yieldMilliKgM2    Json?    @map("yield_milli_kg_m2")
+  laborSeconds100m2 Json?    @map("labor_seconds_100m2")
+  priceCentsKg      Json?    @map("price_cents_kg")
+  /// Effectif, quand la source est une enquête. Nul pour une base compilée.
+  n                 Int?
+  pageRef           String   @map("page_ref")
+  notes             String   @default("")
+  insertedAt        DateTime @default(now()) @map("inserted_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  source ReferenceSource @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+
+  @@index([cropKey])
+  @@index([sourceId])
+  @@map("reference_values")
+}
+
+/// Repère à l'échelle de l'exploitation : surface par ETP, chiffre d'affaires au m²…
+///
+/// À part de `ReferenceValue` : ces grandeurs n'ont pas de culture, et chaque métrique a
+/// sa propre unité de stockage. Voir la migration `20260920200000_reperes_de_ferme`.
+model ReferenceFarmValue {
+  id         Int      @id @default(autoincrement())
+  sourceId   String   @map("source_id")
+  /// L'une des métriques de `@sillon/core` ; elle commande l'unité de `range`.
+  metric     String
+  context    Json
+  range      Json
+  n          Int?
+  pageRef    String   @map("page_ref")
+  notes      String   @default("")
+  insertedAt DateTime @default(now()) @map("inserted_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  source ReferenceSource @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+
+  @@index([metric])
+  @@index([sourceId])
+  @@map("reference_farm_values")
+}

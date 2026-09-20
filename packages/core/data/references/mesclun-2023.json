@@ -1,0 +1,2374 @@
+{
+  "source": {
+    "id": "mesclun-2023",
+    "titre": "Base de données pour la planification en maraîchage (Pépinière-Mesclun)",
+    "auteurs": ["Morel, Kevin (INRAE)"],
+    "annee": 2023,
+    "url": "https://doi.org/10.57745/IQVM2I",
+    "licence": "etalab-2.0",
+    "notes": "Recherche Data Gouv, version 1.1, fichier BDD_synthese_27_novembre_2023. Licence Ouverte Etalab 2.0, relevée le 20 septembre 2026 via l’API de l’entrepôt (champ license : « etalab 2.0 », URI spdx.org/licenses/etalab-2.0.html) ; attribution obligatoire. Produit par scripts/importer-mesclun.mjs : rendements et prix en circuit court, pour les seules cultures dont l’unité récoltée est le kilogramme. Le classeur ne porte pas de temps de travail."
+  },
+  "values": [
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "ail-conservation",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "biologique"
+      },
+      "yield_kg_m2": {
+        "low": 0.2,
+        "median": 0.8,
+        "high": 2.1
+      },
+      "price_eur_kg": {
+        "low": 6,
+        "median": 10,
+        "high": 15
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Ail conservation » (Biologique)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "ail-conservation",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "conventionnelle"
+      },
+      "yield_kg_m2": {
+        "low": 0.2,
+        "median": 0.9,
+        "high": 2.5
+      },
+      "price_eur_kg": {
+        "low": 4.444,
+        "median": 7.407,
+        "high": 11.111
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Ail conservation » (Conventionnelle en terre)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "aubergine",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "biologique"
+      },
+      "yield_kg_m2": {
+        "low": 1,
+        "median": 3.7,
+        "high": 7.4
+      },
+      "price_eur_kg": {
+        "low": 3.3,
+        "median": 4,
+        "high": 5
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Aubergine » (Biologique)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "aubergine",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "conventionnelle"
+      },
+      "yield_kg_m2": {
+        "low": 1.2,
+        "median": 4.4,
+        "high": 8.9
+      },
+      "price_eur_kg": {
+        "low": 2.444,
+        "median": 2.963,
+        "high": 3.704
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Aubergine » (Conventionnelle en terre)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "betterave-conservation",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "biologique"
+      },
+      "yield_kg_m2": {
+        "low": 2,
+        "median": 3.05,
+        "high": 5.4
+      },
+      "price_eur_kg": {
+        "low": 2,
+        "median": 3,
+        "high": 5
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Betterave conservation » (Biologique)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "betterave-conservation",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "conventionnelle"
+      },
+      "yield_kg_m2": {
+        "low": 2.4,
+        "median": 3.7,
+        "high": 6.5
+      },
+      "price_eur_kg": {
+        "low": 1.481,
+        "median": 2.222,
+        "high": 3.704
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Betterave conservation » (Conventionnelle en terre)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "blette",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "biologique"
+      },
+      "yield_kg_m2": {
+        "low": 1.4,
+        "median": 1.9,
+        "high": 10
+      },
+      "price_eur_kg": {
+        "low": 1.6,
+        "median": 2.9,
+        "high": 4
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Blette » (Biologique)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "blette",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "conventionnelle"
+      },
+      "yield_kg_m2": {
+        "low": 1.7,
+        "median": 2.3,
+        "high": 12
+      },
+      "price_eur_kg": {
+        "low": 1.185,
+        "median": 2.148,
+        "high": 2.963
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Blette » (Conventionnelle en terre)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "brocoli",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "biologique"
+      },
+      "yield_kg_m2": {
+        "low": 0.3,
+        "median": 0.625,
+        "high": 1.2
+      },
+      "price_eur_kg": {
+        "low": 2.5,
+        "median": 3.9,
+        "high": 6.2
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Brocoli » (Biologique)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "brocoli",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "conventionnelle"
+      },
+      "yield_kg_m2": {
+        "low": 0.4,
+        "median": 0.8,
+        "high": 1.4
+      },
+      "price_eur_kg": {
+        "low": 1.852,
+        "median": 2.889,
+        "high": 4.593
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Brocoli » (Conventionnelle en terre)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "cardon",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "biologique"
+      },
+      "yield_kg_m2": {
+        "low": 1.3,
+        "median": 1.8,
+        "high": 2
+      },
+      "price_eur_kg": {
+        "low": 4,
+        "median": 4.5,
+        "high": 5
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Cardon » (Biologique)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "cardon",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "conventionnelle"
+      },
+      "yield_kg_m2": {
+        "low": 1.6,
+        "median": 2,
+        "high": 2.4
+      },
+      "price_eur_kg": {
+        "low": 2.963,
+        "median": 3.333,
+        "high": 3.704
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Cardon » (Conventionnelle en terre)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "carotte-conservation",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "biologique"
+      },
+      "yield_kg_m2": {
+        "low": 2,
+        "median": 2.775,
+        "high": 7.5
+      },
+      "price_eur_kg": {
+        "low": 1.8,
+        "median": 2.7,
+        "high": 3.5
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Carotte conservation » (Biologique)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "carotte-conservation",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "conventionnelle"
+      },
+      "yield_kg_m2": {
+        "low": 2.4,
+        "median": 3.3,
+        "high": 9
+      },
+      "price_eur_kg": {
+        "low": 1.333,
+        "median": 2.2,
+        "high": 2.593
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Carotte conservation » (Conventionnelle en terre)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "celeri-branche",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "biologique"
+      },
+      "yield_kg_m2": {
+        "low": 1,
+        "median": 2.613,
+        "high": 8
+      },
+      "price_eur_kg": {
+        "low": 2,
+        "median": 2.9,
+        "high": 3
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Céleri branche » (Biologique)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "celeri-branche",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "conventionnelle"
+      },
+      "yield_kg_m2": {
+        "low": 1.2,
+        "median": 3.1,
+        "high": 9.6
+      },
+      "price_eur_kg": {
+        "low": 1.481,
+        "median": 2.148,
+        "high": 2.222
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Céleri branche » (Conventionnelle en terre)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "celeri-rave",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "biologique"
+      },
+      "yield_kg_m2": {
+        "low": 1,
+        "median": 2.313,
+        "high": 5
+      },
+      "price_eur_kg": {
+        "low": 2.5,
+        "median": 3,
+        "high": 3.4
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Céleri rave » (Biologique)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "celeri-rave",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "conventionnelle"
+      },
+      "yield_kg_m2": {
+        "low": 1.2,
+        "median": 2.8,
+        "high": 6
+      },
+      "price_eur_kg": {
+        "low": 1.852,
+        "median": 2.222,
+        "high": 2.519
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Céleri rave » (Conventionnelle en terre)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "cerfeuil-tubereux",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "biologique"
+      },
+      "yield_kg_m2": {
+        "low": 1.5,
+        "median": 1.8,
+        "high": 2
+      },
+      "price_eur_kg": {
+        "low": 5,
+        "median": 6,
+        "high": 7
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Cerfeuil tubéreux » (Biologique)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "cerfeuil-tubereux",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "conventionnelle"
+      },
+      "yield_kg_m2": {
+        "low": 1.5,
+        "median": 1.8,
+        "high": 2
+      },
+      "price_eur_kg": {
+        "low": 3.704,
+        "median": 4.444,
+        "high": 5.185
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Cerfeuil tubéreux » (Conventionnelle en terre)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "chou-chinois",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "biologique"
+      },
+      "yield_kg_m2": {
+        "low": 1.2,
+        "median": 2.45,
+        "high": 4.4
+      },
+      "price_eur_kg": {
+        "low": 2.5,
+        "median": 3,
+        "high": 5
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Chou chinois » (Biologique)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "chou-chinois",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "conventionnelle"
+      },
+      "yield_kg_m2": {
+        "low": 1.4,
+        "median": 2.9,
+        "high": 5.3
+      },
+      "price_eur_kg": {
+        "low": 1.852,
+        "median": 2.222,
+        "high": 3.704
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Chou chinois » (Conventionnelle en terre)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "chou-de-bruxelles",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "biologique"
+      },
+      "yield_kg_m2": {
+        "low": 0.6,
+        "median": 0.95,
+        "high": 1.6
+      },
+      "price_eur_kg": {
+        "low": 4,
+        "median": 5.2,
+        "high": 6
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Chou de Bruxelles » (Biologique)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "chou-de-bruxelles",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "conventionnelle"
+      },
+      "yield_kg_m2": {
+        "low": 0.7,
+        "median": 1.1,
+        "high": 1.9
+      },
+      "price_eur_kg": {
+        "low": 2.963,
+        "median": 3.852,
+        "high": 4.444
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Chou de Bruxelles » (Conventionnelle en terre)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "chou-kale-frise-non-pomme",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "biologique"
+      },
+      "yield_kg_m2": {
+        "low": 0.6,
+        "median": 0.85,
+        "high": 0.9
+      },
+      "price_eur_kg": {
+        "low": 3,
+        "median": 4,
+        "high": 5
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Chou kale-frisé non pommé » (Biologique)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "chou-kale-frise-non-pomme",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "conventionnelle"
+      },
+      "yield_kg_m2": {
+        "low": 0.7,
+        "median": 1,
+        "high": 1.1
+      },
+      "price_eur_kg": {
+        "low": 2.222,
+        "median": 2.963,
+        "high": 3.704
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Chou kale-frisé non pommé » (Conventionnelle en terre)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "chou-rave",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "biologique"
+      },
+      "yield_kg_m2": {
+        "low": 1.2,
+        "median": 2.9,
+        "high": 6.7
+      },
+      "price_eur_kg": {
+        "low": 2.8,
+        "median": 3,
+        "high": 6
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Chou rave » (Biologique)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "chou-rave",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "conventionnelle"
+      },
+      "yield_kg_m2": {
+        "low": 1.4,
+        "median": 3.5,
+        "high": 8
+      },
+      "price_eur_kg": {
+        "low": 2.074,
+        "median": 2.222,
+        "high": 4.444
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Chou rave » (Conventionnelle en terre)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "cornichon",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "biologique"
+      },
+      "yield_kg_m2": {
+        "low": 1.8,
+        "median": 2,
+        "high": 2.2
+      },
+      "price_eur_kg": {
+        "low": 8,
+        "median": 9,
+        "high": 10
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Cornichon » (Biologique)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "cornichon",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "conventionnelle"
+      },
+      "yield_kg_m2": {
+        "low": 2.2,
+        "median": 2.4,
+        "high": 2.6
+      },
+      "price_eur_kg": {
+        "low": 5.926,
+        "median": 6.667,
+        "high": 7.407
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Cornichon » (Conventionnelle en terre)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "courge",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "biologique"
+      },
+      "yield_kg_m2": {
+        "low": 1.8,
+        "median": 2.65,
+        "high": 4.7
+      },
+      "price_eur_kg": {
+        "low": 1.5,
+        "median": 2.7,
+        "high": 3.2
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Courge » (Biologique)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "courge",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "conventionnelle"
+      },
+      "yield_kg_m2": {
+        "low": 2.2,
+        "median": 3.2,
+        "high": 5.6
+      },
+      "price_eur_kg": {
+        "low": 1.111,
+        "median": 2,
+        "high": 2.37
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Courge » (Conventionnelle en terre)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "courgette",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "biologique"
+      },
+      "yield_kg_m2": {
+        "low": 0.45,
+        "median": 4,
+        "high": 9
+      },
+      "price_eur_kg": {
+        "low": 1.8,
+        "median": 3.5,
+        "high": 5.5
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Courgette » (Biologique)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "courgette",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "conventionnelle"
+      },
+      "yield_kg_m2": {
+        "low": 2.4,
+        "median": 5.6,
+        "high": 12.7
+      },
+      "price_eur_kg": {
+        "low": 1.333,
+        "median": 3,
+        "high": 4.074
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Courgette » (Conventionnelle en terre)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "crosne",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "biologique"
+      },
+      "yield_kg_m2": {
+        "median": 1
+      },
+      "price_eur_kg": {
+        "low": 16,
+        "median": 18,
+        "high": 20
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Crosne » (Biologique)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "crosne",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "conventionnelle"
+      },
+      "yield_kg_m2": {
+        "median": 1
+      },
+      "price_eur_kg": {
+        "low": 13,
+        "median": 17,
+        "high": 19
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Crosne » (Conventionnelle en terre)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "echalote",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "biologique"
+      },
+      "yield_kg_m2": {
+        "low": 0.4,
+        "median": 1.2,
+        "high": 3.1
+      },
+      "price_eur_kg": {
+        "low": 4,
+        "median": 6,
+        "high": 12
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Echalote » (Biologique)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "echalote",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "conventionnelle"
+      },
+      "yield_kg_m2": {
+        "low": 0.5,
+        "median": 1.4,
+        "high": 3.7
+      },
+      "price_eur_kg": {
+        "low": 2.963,
+        "median": 4.444,
+        "high": 8.889
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Echalote » (Conventionnelle en terre)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "endive",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "biologique"
+      },
+      "yield_kg_m2": {
+        "low": 0.3,
+        "median": 0.875,
+        "high": 1.5
+      },
+      "price_eur_kg": {
+        "low": 4.5,
+        "median": 5.9,
+        "high": 6.8
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Endive » (Biologique)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "endive",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "conventionnelle"
+      },
+      "yield_kg_m2": {
+        "low": 0.4,
+        "median": 1.1,
+        "high": 1.8
+      },
+      "price_eur_kg": {
+        "low": 3.333,
+        "median": 4.37,
+        "high": 5.037
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Endive » (Conventionnelle en terre)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "epinard",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "biologique"
+      },
+      "yield_kg_m2": {
+        "low": 0.3,
+        "median": 1.4,
+        "high": 5
+      },
+      "price_eur_kg": {
+        "low": 4,
+        "median": 5.7,
+        "high": 7
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Epinard » (Biologique)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "epinard",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "conventionnelle"
+      },
+      "yield_kg_m2": {
+        "low": 0.4,
+        "median": 1.7,
+        "high": 6
+      },
+      "price_eur_kg": {
+        "low": 2.963,
+        "median": 4.5,
+        "high": 5.185
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Epinard » (Conventionnelle en terre)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "fenouil",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "biologique"
+      },
+      "yield_kg_m2": {
+        "low": 0.4,
+        "median": 2.225,
+        "high": 2.5
+      },
+      "price_eur_kg": {
+        "low": 2.6,
+        "median": 3.6,
+        "high": 5
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Fenouil » (Biologique)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "fenouil",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "conventionnelle"
+      },
+      "yield_kg_m2": {
+        "low": 0.5,
+        "median": 2.7,
+        "high": 3
+      },
+      "price_eur_kg": {
+        "low": 1.926,
+        "median": 2.667,
+        "high": 3.704
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Fenouil » (Conventionnelle en terre)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "feve",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "biologique"
+      },
+      "yield_kg_m2": {
+        "low": 1,
+        "median": 1.75,
+        "high": 3
+      },
+      "price_eur_kg": {
+        "low": 2.5,
+        "median": 4.2,
+        "high": 7
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Fève » (Biologique)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "feve",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "conventionnelle"
+      },
+      "yield_kg_m2": {
+        "low": 1.2,
+        "median": 2.1,
+        "high": 3.6
+      },
+      "price_eur_kg": {
+        "low": 1.852,
+        "median": 3.111,
+        "high": 5.185
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Fève » (Conventionnelle en terre)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "fraise",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "biologique"
+      },
+      "yield_kg_m2": {
+        "low": 0.6,
+        "median": 1.175,
+        "high": 2
+      },
+      "price_eur_kg": {
+        "low": 9,
+        "median": 12.6,
+        "high": 15
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Fraise » (Biologique)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "fraise",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "conventionnelle"
+      },
+      "yield_kg_m2": {
+        "low": 0.7,
+        "median": 1.4,
+        "high": 2.4
+      },
+      "price_eur_kg": {
+        "low": 6.667,
+        "median": 9.333,
+        "high": 11.111
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Fraise » (Conventionnelle en terre)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "haricot-sec-ou-demi-sec",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "biologique"
+      },
+      "yield_kg_m2": {
+        "low": 0.5,
+        "median": 1,
+        "high": 1.5
+      },
+      "price_eur_kg": {
+        "low": 6,
+        "median": 6.9,
+        "high": 8
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Haricot sec ou demi-sec » (Biologique)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "haricot-sec-ou-demi-sec",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "conventionnelle"
+      },
+      "yield_kg_m2": {
+        "low": 0.6,
+        "median": 1.2,
+        "high": 1.8
+      },
+      "price_eur_kg": {
+        "low": 4.444,
+        "median": 5.111,
+        "high": 5.926
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Haricot sec ou demi-sec » (Conventionnelle en terre)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "haricot-vert",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "biologique"
+      },
+      "yield_kg_m2": {
+        "low": 0.5,
+        "median": 1.2,
+        "high": 3
+      },
+      "price_eur_kg": {
+        "low": 4,
+        "median": 6.9,
+        "high": 10
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Haricot vert » (Biologique)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "haricot-vert",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "conventionnelle"
+      },
+      "yield_kg_m2": {
+        "low": 0.6,
+        "median": 1.4,
+        "high": 3.6
+      },
+      "price_eur_kg": {
+        "low": 2.963,
+        "median": 5.111,
+        "high": 7.407
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Haricot vert » (Conventionnelle en terre)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "mache",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "biologique"
+      },
+      "yield_kg_m2": {
+        "low": 0.5,
+        "median": 1,
+        "high": 2
+      },
+      "price_eur_kg": {
+        "low": 8,
+        "median": 11.7,
+        "high": 16.5
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Mâche » (Biologique)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "mache",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "conventionnelle"
+      },
+      "yield_kg_m2": {
+        "low": 0.6,
+        "median": 1.2,
+        "high": 2.4
+      },
+      "price_eur_kg": {
+        "low": 5.926,
+        "median": 8.667,
+        "high": 12.222
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Mâche » (Conventionnelle en terre)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "mais-doux",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "biologique"
+      },
+      "yield_kg_m2": {
+        "low": 1.1,
+        "median": 1.5,
+        "high": 2.1
+      },
+      "price_eur_kg": {
+        "low": 1,
+        "median": 2.9,
+        "high": 4
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Maïs doux » (Biologique)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "mais-doux",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "conventionnelle"
+      },
+      "yield_kg_m2": {
+        "low": 1.3,
+        "median": 1.8,
+        "high": 2.5
+      },
+      "price_eur_kg": {
+        "low": 0.741,
+        "median": 2.148,
+        "high": 2.963
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Maïs doux » (Conventionnelle en terre)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "mesclun-asiatique-moutarde",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "biologique"
+      },
+      "yield_kg_m2": {
+        "low": 0.4,
+        "median": 1,
+        "high": 1.3
+      },
+      "price_eur_kg": {
+        "low": 7.5,
+        "median": 13,
+        "high": 16.5
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Mesclun asiatique-moutarde » (Biologique)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "mesclun-asiatique-moutarde",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "conventionnelle"
+      },
+      "yield_kg_m2": {
+        "low": 0.5,
+        "median": 1.2,
+        "high": 1.6
+      },
+      "price_eur_kg": {
+        "low": 5.556,
+        "median": 9.63,
+        "high": 12.222
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Mesclun asiatique-moutarde » (Conventionnelle en terre)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "mesclun-blette-betterave",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "biologique"
+      },
+      "yield_kg_m2": {
+        "low": 0.4,
+        "median": 1,
+        "high": 1.3
+      },
+      "price_eur_kg": {
+        "low": 7.5,
+        "median": 13,
+        "high": 16.5
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Mesclun blette-betterave » (Biologique)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "mesclun-blette-betterave",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "conventionnelle"
+      },
+      "yield_kg_m2": {
+        "low": 0.5,
+        "median": 1.2,
+        "high": 1.6
+      },
+      "price_eur_kg": {
+        "low": 5.556,
+        "median": 9.63,
+        "high": 12.222
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Mesclun blette-betterave » (Conventionnelle en terre)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "mesclun-epinard",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "biologique"
+      },
+      "yield_kg_m2": {
+        "low": 0.4,
+        "median": 1,
+        "high": 1.3
+      },
+      "price_eur_kg": {
+        "low": 7.5,
+        "median": 13,
+        "high": 16.5
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Mesclun épinard » (Biologique)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "mesclun-epinard",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "conventionnelle"
+      },
+      "yield_kg_m2": {
+        "low": 0.5,
+        "median": 1.2,
+        "high": 1.6
+      },
+      "price_eur_kg": {
+        "low": 5.556,
+        "median": 9.63,
+        "high": 12.222
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Mesclun épinard » (Conventionnelle en terre)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "mesclun-salade-chicoree",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "biologique"
+      },
+      "yield_kg_m2": {
+        "low": 0.4,
+        "median": 1,
+        "high": 1.3
+      },
+      "price_eur_kg": {
+        "low": 7.5,
+        "median": 13,
+        "high": 16.5
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Mesclun salade-chicorée » (Biologique)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "mesclun-salade-chicoree",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "conventionnelle"
+      },
+      "yield_kg_m2": {
+        "low": 0.5,
+        "median": 1.2,
+        "high": 1.6
+      },
+      "price_eur_kg": {
+        "low": 5.556,
+        "median": 9.63,
+        "high": 12.222
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Mesclun salade-chicorée » (Conventionnelle en terre)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "navet-conservation",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "biologique"
+      },
+      "yield_kg_m2": {
+        "low": 1,
+        "median": 2.225,
+        "high": 5.3
+      },
+      "price_eur_kg": {
+        "low": 1.8,
+        "median": 2.8,
+        "high": 3.5
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Navet conservation » (Biologique)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "navet-conservation",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "conventionnelle"
+      },
+      "yield_kg_m2": {
+        "low": 1.2,
+        "median": 2.7,
+        "high": 6.4
+      },
+      "price_eur_kg": {
+        "low": 1.333,
+        "median": 2.074,
+        "high": 2.593
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Navet conservation » (Conventionnelle en terre)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "oignon-conservation",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "biologique"
+      },
+      "yield_kg_m2": {
+        "low": 1.1,
+        "median": 2.5,
+        "high": 5
+      },
+      "price_eur_kg": {
+        "low": 1.5,
+        "median": 3,
+        "high": 5
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Oignon conservation » (Biologique)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "oignon-conservation",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "conventionnelle"
+      },
+      "yield_kg_m2": {
+        "low": 1.3,
+        "median": 3,
+        "high": 6
+      },
+      "price_eur_kg": {
+        "low": 1.111,
+        "median": 2.222,
+        "high": 3.704
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Oignon conservation » (Conventionnelle en terre)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "panais",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "biologique"
+      },
+      "yield_kg_m2": {
+        "low": 1.5,
+        "median": 2.9,
+        "high": 7.4
+      },
+      "price_eur_kg": {
+        "low": 2.5,
+        "median": 3.8,
+        "high": 4.5
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Panais » (Biologique)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "panais",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "conventionnelle"
+      },
+      "yield_kg_m2": {
+        "low": 1.8,
+        "median": 3.5,
+        "high": 8.9
+      },
+      "price_eur_kg": {
+        "low": 1.852,
+        "median": 2.815,
+        "high": 3.333
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Panais » (Conventionnelle en terre)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "pasteque",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "biologique"
+      },
+      "yield_kg_m2": {
+        "low": 7,
+        "median": 7.5,
+        "high": 8
+      },
+      "price_eur_kg": {
+        "low": 2.5,
+        "median": 2.6,
+        "high": 3
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Pastèque » (Biologique)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "pasteque",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "conventionnelle"
+      },
+      "yield_kg_m2": {
+        "low": 8.4,
+        "median": 9,
+        "high": 9.6
+      },
+      "price_eur_kg": {
+        "low": 1.852,
+        "median": 1.926,
+        "high": 2.222
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Pastèque » (Conventionnelle en terre)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "patate-douce",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "biologique"
+      },
+      "yield_kg_m2": {
+        "low": 2,
+        "median": 3,
+        "high": 4
+      },
+      "price_eur_kg": {
+        "low": 3.5,
+        "median": 4.1,
+        "high": 5
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Patate douce » (Biologique)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "patate-douce",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "conventionnelle"
+      },
+      "yield_kg_m2": {
+        "low": 2.4,
+        "median": 3.6,
+        "high": 4.8
+      },
+      "price_eur_kg": {
+        "low": 2.593,
+        "median": 3.037,
+        "high": 3.704
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Patate douce » (Conventionnelle en terre)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "pdt-conservation",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "biologique"
+      },
+      "yield_kg_m2": {
+        "low": 1.8,
+        "median": 2,
+        "high": 5
+      },
+      "price_eur_kg": {
+        "low": 1.5,
+        "median": 2,
+        "high": 4
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « PDT conservation » (Biologique)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "pdt-conservation",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "conventionnelle"
+      },
+      "yield_kg_m2": {
+        "low": 2.2,
+        "median": 2.4,
+        "high": 6
+      },
+      "price_eur_kg": {
+        "low": 1.111,
+        "median": 1.481,
+        "high": 2.963
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « PDT conservation » (Conventionnelle en terre)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "pdt-primeur",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "biologique"
+      },
+      "yield_kg_m2": {
+        "low": 2,
+        "median": 2,
+        "high": 4
+      },
+      "price_eur_kg": {
+        "low": 2.5,
+        "median": 4.2,
+        "high": 8
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « PDT primeur » (Biologique)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "pdt-primeur",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "conventionnelle"
+      },
+      "yield_kg_m2": {
+        "low": 2.4,
+        "median": 2.4,
+        "high": 4.8
+      },
+      "price_eur_kg": {
+        "low": 1.852,
+        "median": 3.111,
+        "high": 5.926
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « PDT primeur » (Conventionnelle en terre)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "petit-pois-et-mange-tout",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "biologique"
+      },
+      "yield_kg_m2": {
+        "low": 0.5,
+        "median": 0.6,
+        "high": 0.8
+      },
+      "price_eur_kg": {
+        "low": 6,
+        "median": 8,
+        "high": 12
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Petit pois et mange tout » (Biologique)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "petit-pois-et-mange-tout",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "conventionnelle"
+      },
+      "yield_kg_m2": {
+        "low": 0.6,
+        "median": 0.7,
+        "high": 1
+      },
+      "price_eur_kg": {
+        "low": 4.444,
+        "median": 5.926,
+        "high": 8.889
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Petit pois et mange tout » (Conventionnelle en terre)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "piment",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "biologique"
+      },
+      "yield_kg_m2": {
+        "low": 0.2,
+        "median": 0.25
+      },
+      "price_eur_kg": {
+        "low": 10,
+        "median": 11.3,
+        "high": 12.7
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Piment » (Biologique)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "piment",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "conventionnelle"
+      },
+      "yield_kg_m2": {
+        "low": 0.2,
+        "median": 0.3
+      },
+      "price_eur_kg": {
+        "low": 7.407,
+        "median": 8.37,
+        "high": 9.407
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Piment » (Conventionnelle en terre)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "poireau",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "biologique"
+      },
+      "yield_kg_m2": {
+        "low": 1.3,
+        "median": 1.9,
+        "high": 3.1
+      },
+      "price_eur_kg": {
+        "low": 2.5,
+        "median": 3.2,
+        "high": 5
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Poireau » (Biologique)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "poireau",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "conventionnelle"
+      },
+      "yield_kg_m2": {
+        "low": 1.6,
+        "median": 2.3,
+        "high": 3.7
+      },
+      "price_eur_kg": {
+        "low": 1.852,
+        "median": 2.37,
+        "high": 3.704
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Poireau » (Conventionnelle en terre)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "poivron",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "biologique"
+      },
+      "yield_kg_m2": {
+        "low": 1.5,
+        "median": 3.35,
+        "high": 6
+      },
+      "price_eur_kg": {
+        "low": 3,
+        "median": 4.5,
+        "high": 9.3
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Poivron » (Biologique)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "poivron",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "conventionnelle"
+      },
+      "yield_kg_m2": {
+        "low": 1.8,
+        "median": 4,
+        "high": 7.2
+      },
+      "price_eur_kg": {
+        "low": 2.222,
+        "median": 3.333,
+        "high": 6.889
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Poivron » (Conventionnelle en terre)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "pourpier",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "biologique"
+      },
+      "yield_kg_m2": {
+        "low": 0.5,
+        "median": 0.75,
+        "high": 2
+      },
+      "price_eur_kg": {
+        "low": 5,
+        "median": 8,
+        "high": 12
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Pourpier » (Biologique)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "pourpier",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "conventionnelle"
+      },
+      "yield_kg_m2": {
+        "low": 0.6,
+        "median": 0.9,
+        "high": 2.4
+      },
+      "price_eur_kg": {
+        "low": 3.704,
+        "median": 5.926,
+        "high": 8.889
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Pourpier » (Conventionnelle en terre)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "radis-conservation",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "biologique"
+      },
+      "yield_kg_m2": {
+        "low": 1.2,
+        "median": 2.4,
+        "high": 5.3
+      },
+      "price_eur_kg": {
+        "low": 3,
+        "median": 5,
+        "high": 6.8
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Radis conservation » (Biologique)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "radis-conservation",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "conventionnelle"
+      },
+      "yield_kg_m2": {
+        "low": 1.4,
+        "median": 2.9,
+        "high": 6.4
+      },
+      "price_eur_kg": {
+        "low": 2.222,
+        "median": 3.704,
+        "high": 5.037
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Radis conservation » (Conventionnelle en terre)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "rhubarbe",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "biologique"
+      },
+      "yield_kg_m2": {
+        "low": 1.5,
+        "median": 2,
+        "high": 3
+      },
+      "price_eur_kg": {
+        "low": 3.333,
+        "median": 5,
+        "high": 9.667
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Rhubarbe » (Biologique)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "rhubarbe",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "conventionnelle"
+      },
+      "yield_kg_m2": {
+        "low": 1.8,
+        "median": 2.4,
+        "high": 3.6
+      },
+      "price_eur_kg": {
+        "low": 2.469,
+        "median": 3.704,
+        "high": 7.16
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Rhubarbe » (Conventionnelle en terre)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "roquette",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "biologique"
+      },
+      "yield_kg_m2": {
+        "low": 0.8,
+        "median": 1.2,
+        "high": 2.5
+      },
+      "price_eur_kg": {
+        "low": 7.5,
+        "median": 13,
+        "high": 16.5
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Roquette » (Biologique)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "roquette",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "conventionnelle"
+      },
+      "yield_kg_m2": {
+        "low": 1,
+        "median": 1.4,
+        "high": 3
+      },
+      "price_eur_kg": {
+        "low": 5.556,
+        "median": 9.63,
+        "high": 12.222
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Roquette » (Conventionnelle en terre)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "rutabaga",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "biologique"
+      },
+      "yield_kg_m2": {
+        "low": 1.1,
+        "median": 2.9,
+        "high": 5.3
+      },
+      "price_eur_kg": {
+        "low": 2.3,
+        "median": 3,
+        "high": 3.4
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Rutabaga » (Biologique)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "rutabaga",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "conventionnelle"
+      },
+      "yield_kg_m2": {
+        "low": 1.3,
+        "median": 3.5,
+        "high": 6.4
+      },
+      "price_eur_kg": {
+        "low": 1.704,
+        "median": 2.222,
+        "high": 2.519
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Rutabaga » (Conventionnelle en terre)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "salsifi",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "biologique"
+      },
+      "yield_kg_m2": {
+        "low": 1.5,
+        "median": 2,
+        "high": 3
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Salsifi » (Biologique)",
+      "notes": "Aucun prix en kg pour cette ligne."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "salsifi",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "conventionnelle"
+      },
+      "yield_kg_m2": {
+        "low": 1.8,
+        "median": 2.4,
+        "high": 3.6
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Salsifi » (Conventionnelle en terre)",
+      "notes": "Aucun prix en kg pour cette ligne."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "scorsonere",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "biologique"
+      },
+      "yield_kg_m2": {
+        "low": 1,
+        "median": 2.5,
+        "high": 4
+      },
+      "price_eur_kg": {
+        "low": 3.5,
+        "median": 3.8,
+        "high": 4.5
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Scorsonère » (Biologique)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "scorsonere",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "conventionnelle"
+      },
+      "yield_kg_m2": {
+        "low": 1,
+        "median": 2.5,
+        "high": 4
+      },
+      "price_eur_kg": {
+        "low": 2.593,
+        "median": 2.815,
+        "high": 3.333
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Scorsonère » (Conventionnelle en terre)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "tomate-ancienne",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "biologique"
+      },
+      "yield_kg_m2": {
+        "low": 3.4,
+        "median": 5.088,
+        "high": 12
+      },
+      "price_eur_kg": {
+        "low": 3,
+        "median": 4.5,
+        "high": 7
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Tomate ancienne » (Biologique)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "tomate-ancienne",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "conventionnelle"
+      },
+      "yield_kg_m2": {
+        "low": 4.1,
+        "median": 6.1,
+        "high": 14.4
+      },
+      "price_eur_kg": {
+        "low": 2.222,
+        "median": 3.333,
+        "high": 5.185
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Tomate ancienne » (Conventionnelle en terre)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "tomate-cerise",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "biologique"
+      },
+      "yield_kg_m2": {
+        "low": 2.7,
+        "median": 6.125,
+        "high": 12
+      },
+      "price_eur_kg": {
+        "low": 4,
+        "median": 7.8,
+        "high": 14
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Tomate cerise » (Biologique)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "tomate-cerise",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "conventionnelle"
+      },
+      "yield_kg_m2": {
+        "low": 3.2,
+        "median": 7.4,
+        "high": 14.4
+      },
+      "price_eur_kg": {
+        "low": 2.963,
+        "median": 5.778,
+        "high": 10.37
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Tomate cerise » (Conventionnelle en terre)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "tomate-classique",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "biologique"
+      },
+      "yield_kg_m2": {
+        "low": 5,
+        "median": 8.15,
+        "high": 15
+      },
+      "price_eur_kg": {
+        "low": 2.5,
+        "median": 3.5,
+        "high": 5
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Tomate classique » (Biologique)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "tomate-classique",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "conventionnelle"
+      },
+      "yield_kg_m2": {
+        "low": 6,
+        "median": 9.8,
+        "high": 18
+      },
+      "price_eur_kg": {
+        "low": 1.852,
+        "median": 2.593,
+        "high": 3.704
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Tomate classique » (Conventionnelle en terre)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "topinambour",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "biologique"
+      },
+      "yield_kg_m2": {
+        "low": 1,
+        "median": 2.5,
+        "high": 4
+      },
+      "price_eur_kg": {
+        "low": 4.5,
+        "median": 4.8,
+        "high": 6
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Topinambour » (Biologique)",
+      "notes": "Prix en circuit court, onglet Prix."
+    },
+    {
+      "source_id": "mesclun-2023",
+      "crop_key": "topinambour",
+      "context": {
+        "abri": null,
+        "systeme": "tous",
+        "conduite": "conventionnelle"
+      },
+      "yield_kg_m2": {
+        "low": 1,
+        "median": 2.5,
+        "high": 4
+      },
+      "price_eur_kg": {
+        "low": 3.333,
+        "median": 3.556,
+        "high": 4.444
+      },
+      "n": null,
+      "page_ref": "onglet Rendements, ligne « Topinambour » (Conventionnelle en terre)",
+      "notes": "Prix en circuit court, onglet Prix."
+    }
+  ],
+  "farm_values": []
+}

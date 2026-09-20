@@ -27,10 +27,12 @@ import {
 } from '@sillon/core';
 import { useCurrentSession, useFarmId } from '../lib/session.js';
 import { MoonDateHint } from '../components/MoonDateHint.js';
+import { SuggestionRendement } from '../components/SuggestionReference.js';
 import {
   useAvailableLocations,
   useContainers,
   useCrops,
+  useFarm,
   useFarmMutation,
   usePlanting,
   useTags,
@@ -106,6 +108,9 @@ export function PlantingDetailPage({ plantingId }: { plantingId: number | null }
   const { t } = useTranslation();
   const locale = useLocale();
   const farmId = useFarmId();
+  // La largeur de planche de la ferme : sans elle, un rendement publié au mètre carré ne
+  // se convertit pas en rendement au mètre de planche, et la suggestion se tait.
+  const reglagesFerme = useFarm(farmId);
   const { canEdit, can } = useCurrentSession();
   const navigate = useNavigate();
 
@@ -356,13 +361,25 @@ export function PlantingDetailPage({ plantingId }: { plantingId: number | null }
               value={form.spacingPlants}
               onChange={(event) => update('spacingPlants', event.target.value)}
             />
-            <Field
-              label={t('planting.yield')}
-              type="number"
-              inputMode="numeric"
-              value={form.yieldPerBedMeter}
-              onChange={(event) => update('yieldPerBedMeter', event.target.value)}
-            />
+            <div>
+              <Field
+                label={t('planting.yield')}
+                type="number"
+                inputMode="numeric"
+                value={form.yieldPerBedMeter}
+                onChange={(event) => update('yieldPerBedMeter', event.target.value)}
+              />
+              {/* Le repère publié se **propose** sous le champ, et ne le remplit que sur
+                  un clic : « les références ne remplacent jamais les données de la
+                  ferme » (brief microfermes, principe directeur). */}
+              <SuggestionRendement
+                farmId={farmId}
+                speciesId={form.cropId ? Number(form.cropId) : null}
+                valeurSaisie={form.yieldPerBedMeter}
+                largeurPlancheMm={reglagesFerme.data?.bedSettings?.bedWidth ?? null}
+                onAccepter={(valeur) => update('yieldPerBedMeter', valeur)}
+              />
+            </div>
             <Field
               label={`${t('planting.price')} (€)`}
               type="number"
