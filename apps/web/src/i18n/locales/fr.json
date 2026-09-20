@@ -183,7 +183,15 @@
     "containers": "Plaques",
     "seedsNumber": "Graines",
     "tasksRescheduled": "{{count}} tâche recalée sur les nouvelles dates",
-    "tasksRescheduled_other": "{{count}} tâches recalées sur les nouvelles dates"
+    "tasksRescheduled_other": "{{count}} tâches recalées sur les nouvelles dates",
+    "harvestedPart": {
+      "all": "Tous",
+      "root": "Racine",
+      "leaf": "Feuille",
+      "fruit": "Fruit",
+      "flower": "Fleur",
+      "filter": "Filtrer par ce qu’on récolte"
+    }
   },
   "tasks": {
     "title": "Tâches",
@@ -476,7 +484,508 @@
       "6": "dim"
     },
     "matchesCrop": "correspond à la culture",
-    "nearby": "jours {{type}} proches :"
+    "nearby": "jours {{type}} proches :",
+    "day": {
+      "back": "Retour au mois",
+      "heading": "{{date}}",
+      "moonTimes": "{{rise}} → {{set}}",
+      "moonTimesRiseOnly": "lever {{rise}}, pas de coucher",
+      "moonTimesSetOnly": "coucher {{set}}, pas de lever",
+      "moonTimesNone": "ni lever ni coucher aujourd’hui",
+      "sunTimes": "{{rise}} – {{set}}",
+      "fullMoonIn": "Pleine lune dans {{count}} j",
+      "fullMoonIn_one": "Pleine lune demain",
+      "fullMoonToday": "Pleine lune aujourd’hui",
+      "newMoonIn": "Nouvelle lune dans {{count}} j",
+      "newMoonIn_one": "Nouvelle lune demain",
+      "newMoonToday": "Nouvelle lune aujourd’hui",
+      "noPosition": "Situez la ferme sur la carte pour connaître les levers et les couchers.",
+      "indexAria": "Indice du jour : {{score}} sur 100",
+      "explain": "Comment cet indice est calculé",
+      "explainTitle": "D’où vient cet indice",
+      "explainBody": "Cent points, moins ce que la tradition du calendrier lunaire retranche : un passage au nœud, un périgée, un apogée, une journée coupée entre deux types. Il n’a jamais été confronté à une mesure de rendement, et n’en est pas une : les études contrôlées ne mettent pas en évidence d’effet reproductible des phases lunaires sur la croissance des plantes. Il ne bloque rien et ne déplace rien.",
+      "reasonsTitle": "Ce qui a joué",
+      "reasonsNone": "Rien ne vient retrancher de points à cette journée.",
+      "window": "{{from}} – {{to}}",
+      "windowHint": "Heures où la lune est au-dessus de l’horizon et où il fait jour.",
+      "noWindow": "La lune n’est pas au-dessus de l’horizon pendant qu’il fait jour.",
+      "tips": "Conseils du jour",
+      "suggested": "Tâches suggérées",
+      "suggestedHint": "Travaux d’usage pour un jour {{type}} en {{month}}. Rien n’est ajouté à votre plan.",
+      "farmTasks": "Vos tâches ce jour-là",
+      "farmTasksNone": "Aucune tâche prévue ce jour-là dans votre plan.",
+      "matches": "correspond au jour",
+      "cropsTitle": "Ce que vous cultivez de ce type",
+      "cropsNone": "Aucune espèce de votre référentiel n’est qualifiée de ce type. La partie récoltée se renseigne sur l’espèce.",
+      "disclaimer": "Les conseils et les tâches suggérées sont des travaux d’usage, écrits pour Sillon. Ils ne recopient aucun calendrier publié, ne tiennent pas compte de votre terrain et ne remplacent pas votre itinéraire technique.",
+      "cropsMore_one": "et 1 autre",
+      "cropsMore_other": "et {{count}} autres"
+    },
+    "phaseDetail": {
+      "nouvelle": "Nouvelle lune",
+      "premier-croissant": "Premier croissant",
+      "premier-quartier": "Premier quartier",
+      "gibbeuse-croissante": "Gibbeuse croissante",
+      "pleine": "Pleine lune",
+      "gibbeuse-decroissante": "Gibbeuse décroissante",
+      "dernier-quartier": "Dernier quartier",
+      "dernier-croissant": "Dernier croissant"
+    },
+    "element": {
+      "feu": "Feu",
+      "terre": "Terre",
+      "air": "Air",
+      "eau": "Eau"
+    },
+    "indexLabel": {
+      "exceptionnel": "Exceptionnel",
+      "tres-favorable": "Très favorable",
+      "favorable": "Favorable",
+      "moyen": "Moyen",
+      "a-eviter": "À éviter"
+    },
+    "indexReason": {
+      "noeud": "Passage au nœud lunaire",
+      "perigee": "Lune au périgée",
+      "apogee": "Lune à l’apogée",
+      "journee-partagee": "Journée partagée entre deux types",
+      "lune-absente-du-jour": "Lune sous l’horizon pendant le jour"
+    },
+    "dayPart": {
+      "matin": "Jardiner le matin",
+      "milieu-de-journee": "Jardiner en milieu de journée",
+      "apres-midi": "Jardiner l’après-midi",
+      "fin-d-apres-midi": "Jardiner en fin d’après-midi",
+      "soiree": "Jardiner en soirée"
+    },
+    "period": {
+      "fruit": {
+        "montante": "Période favorable aux semis, aux greffes et aux récoltes de fruits",
+        "descendante": "Période favorable aux plantations de fruitiers et aux tailles"
+      },
+      "racine": {
+        "montante": "Période favorable aux semis de racines et aux récoltes à consommer vite",
+        "descendante": "Période favorable aux semis, plantations et récoltes de conservation"
+      },
+      "feuille": {
+        "montante": "Période favorable aux semis de feuillages et aux récoltes de feuilles",
+        "descendante": "Période favorable aux repiquages, plantations et tailles des feuillages"
+      },
+      "fleur": {
+        "montante": "Période favorable aux semis de fleurs et aux récoltes de fleurs à couper",
+        "descendante": "Période favorable aux plantations, divisions et bouturages"
+      }
+    },
+    "advice": {
+      "racine": {
+        "1": {
+          "tips": ["Planter l’ail blanc et l’ail violet dès que le sol est ressuyé"],
+          "tasks": [
+            "Trier les pommes de terre de conservation",
+            "Butter les poireaux d’hiver",
+            "Faire germer les plants de pomme de terre"
+          ]
+        },
+        "2": {
+          "tips": ["Semer les premières carottes sous châssis ou tunnel"],
+          "tasks": [
+            "Mettre les plants de pomme de terre à prégermer",
+            "Planter les échalotes",
+            "Récolter les topinambours au besoin"
+          ]
+        },
+        "3": {
+          "tips": ["Semer carottes, radis et navets de printemps"],
+          "tasks": [
+            "Planter les oignons de couleur",
+            "Éclaircir les semis de radis",
+            "Préparer les planches à pommes de terre"
+          ]
+        },
+        "4": {
+          "tips": ["Planter les pommes de terre primeur"],
+          "tasks": [
+            "Semer betteraves et panais",
+            "Biner les jeunes carottes",
+            "Repiquer les céleris-raves sous abri"
+          ]
+        },
+        "5": {
+          "tips": ["Semer les carottes de conservation"],
+          "tasks": [
+            "Butter les pommes de terre",
+            "Planter les céleris-raves",
+            "Éclaircir les betteraves"
+          ]
+        },
+        "6": {
+          "tips": ["Arracher l’ail et l’échalote dès que le feuillage jaunit"],
+          "tasks": [
+            "Semer les carottes d’automne",
+            "Récolter les pommes de terre primeur",
+            "Biner les planches de racines"
+          ]
+        },
+        "7": {
+          "tips": ["Semer les navets et les radis d’hiver"],
+          "tasks": [
+            "Récolter et faire sécher les oignons",
+            "Arroser au pied les carottes tardives",
+            "Arracher les pommes de terre de conservation"
+          ]
+        },
+        "8": {
+          "tips": ["Semer les carottes d’hiver et les radis noirs"],
+          "tasks": [
+            "Rentrer oignons et échalotes au sec",
+            "Récolter les betteraves",
+            "Préparer les planches d’automne"
+          ]
+        },
+        "9": {
+          "tips": ["Semer les navets d’hiver sur planche propre"],
+          "tasks": [
+            "Arracher les dernières pommes de terre",
+            "Récolter les carottes de conservation",
+            "Planter l’ail blanc"
+          ]
+        },
+        "10": {
+          "tips": ["Planter l’ail et les échalotes"],
+          "tasks": [
+            "Arracher betteraves et céleris-raves",
+            "Mettre les racines en silo ou en cave",
+            "Pailler les planches libérées"
+          ]
+        },
+        "11": {
+          "tips": ["Butter et pailler les racines qui restent en terre"],
+          "tasks": [
+            "Récolter panais et salsifis",
+            "Trier les légumes en conservation",
+            "Planter l’ail violet"
+          ]
+        },
+        "12": {
+          "tips": ["Récolter les racines au fur et à mesure des besoins"],
+          "tasks": [
+            "Vérifier les légumes en cave",
+            "Récolter topinambours et crosnes",
+            "Commander les plants de pomme de terre"
+          ]
+        }
+      },
+      "feuille": {
+        "1": {
+          "tips": ["Semer les premières salades sous abri"],
+          "tasks": [
+            "Récolter mâche et chicorées d’hiver",
+            "Blanchir les endives",
+            "Nettoyer les abris avant les semis"
+          ]
+        },
+        "2": {
+          "tips": ["Semer épinards et laitues de printemps sous châssis"],
+          "tasks": [
+            "Repiquer les premières salades",
+            "Récolter les poireaux d’hiver",
+            "Semer le persil sous abri"
+          ]
+        },
+        "3": {
+          "tips": ["Semer choux, laitues et épinards"],
+          "tasks": [
+            "Repiquer les salades sous tunnel",
+            "Semer les poireaux en pépinière",
+            "Éclaircir les épinards"
+          ]
+        },
+        "4": {
+          "tips": ["Repiquer les salades de printemps"],
+          "tasks": [
+            "Semer blettes et roquette",
+            "Planter les choux de printemps",
+            "Désherber les planches de feuilles"
+          ]
+        },
+        "5": {
+          "tips": ["Planter les poireaux d’été"],
+          "tasks": [
+            "Semer les laitues à couper",
+            "Repiquer les choux d’automne",
+            "Arroser régulièrement les feuillages"
+          ]
+        },
+        "6": {
+          "tips": ["Semer chicorées et scaroles"],
+          "tasks": [
+            "Planter les poireaux d’automne",
+            "Récolter les épinards avant la montée à graines",
+            "Pailler les salades contre la chaleur"
+          ]
+        },
+        "7": {
+          "tips": ["Semer les choux d’hiver"],
+          "tasks": [
+            "Repiquer scaroles et chicorées",
+            "Récolter les blettes feuille à feuille",
+            "Arroser tôt le matin"
+          ]
+        },
+        "8": {
+          "tips": ["Semer mâche, épinards d’hiver et roquette"],
+          "tasks": [
+            "Planter les salades d’automne",
+            "Récolter les choux d’été",
+            "Semer un engrais vert sur les planches libérées"
+          ]
+        },
+        "9": {
+          "tips": ["Repiquer les salades et les mâches d’hiver"],
+          "tasks": [
+            "Récolter choux et blettes",
+            "Semer les épinards d’hiver",
+            "Butter les poireaux"
+          ]
+        },
+        "10": {
+          "tips": ["Semer la mâche et le cerfeuil sous abri"],
+          "tasks": [
+            "Récolter les derniers épinards",
+            "Poser un voile sur les salades",
+            "Récolter les choux de Bruxelles"
+          ]
+        },
+        "11": {
+          "tips": ["Protéger les salades d’hiver sous voile ou tunnel"],
+          "tasks": [
+            "Récolter poireaux et mâche",
+            "Butter les choux",
+            "Retirer les feuilles abîmées"
+          ]
+        },
+        "12": {
+          "tips": ["Récolter mâche, chicorées et poireaux au besoin"],
+          "tasks": [
+            "Blanchir les endives en cave",
+            "Aérer les tunnels aux heures douces",
+            "Commander les semences de salades"
+          ]
+        }
+      },
+      "fleur": {
+        "1": {
+          "tips": ["Semer les premiers choux-fleurs sous abri"],
+          "tasks": [
+            "Trier les semences de fleurs",
+            "Récolter les choux-fleurs d’hiver",
+            "Préparer les planches à artichauts"
+          ]
+        },
+        "2": {
+          "tips": ["Semer brocolis et choux-fleurs de printemps"],
+          "tasks": [
+            "Diviser les souches d’artichauts",
+            "Semer les fleurs annuelles sous abri",
+            "Nettoyer les planches de vivaces"
+          ]
+        },
+        "3": {
+          "tips": ["Repiquer les brocolis et les choux-fleurs"],
+          "tasks": [
+            "Planter les œilletons d’artichaut",
+            "Semer capucines et soucis",
+            "Désherber les planches de fleurs"
+          ]
+        },
+        "4": {
+          "tips": ["Semer les fleurs comestibles en place"],
+          "tasks": [
+            "Planter les brocolis de printemps",
+            "Récolter les premiers artichauts",
+            "Tuteurer les fleurs à couper"
+          ]
+        },
+        "5": {
+          "tips": ["Planter les choux-fleurs d’été"],
+          "tasks": [
+            "Semer tournesols et zinnias",
+            "Récolter les artichauts",
+            "Pincer les fleurs pour les faire ramifier"
+          ]
+        },
+        "6": {
+          "tips": ["Récolter brocolis et choux-fleurs au fur et à mesure"],
+          "tasks": [
+            "Semer les choux-fleurs d’automne",
+            "Couper les fleurs le matin",
+            "Arroser au pied par temps sec"
+          ]
+        },
+        "7": {
+          "tips": ["Semer les choux-fleurs d’hiver"],
+          "tasks": [
+            "Récolter les fleurs à couper",
+            "Rabattre les artichauts après récolte",
+            "Supprimer les fleurs fanées"
+          ]
+        },
+        "8": {
+          "tips": ["Repiquer les choux-fleurs d’automne"],
+          "tasks": [
+            "Récolter les brocolis",
+            "Semer les bisannuelles à fleurs",
+            "Diviser les vivaces"
+          ]
+        },
+        "9": {
+          "tips": ["Récolter brocolis et choux-fleurs"],
+          "tasks": [
+            "Planter les bulbes de printemps",
+            "Récolter les semences de fleurs",
+            "Nettoyer les planches de fleurs"
+          ]
+        },
+        "10": {
+          "tips": ["Planter les bulbes à floraison printanière"],
+          "tasks": [
+            "Protéger les artichauts avant les gelées",
+            "Récolter les derniers brocolis",
+            "Composter les fleurs fanées"
+          ]
+        },
+        "11": {
+          "tips": ["Pailler les artichauts et les vivaces"],
+          "tasks": [
+            "Récolter les choux-fleurs d’automne",
+            "Trier et étiqueter les semences de fleurs",
+            "Nettoyer les planches"
+          ]
+        },
+        "12": {
+          "tips": ["Récolter les choux-fleurs d’hiver protégés"],
+          "tasks": [
+            "Commander les semences de fleurs",
+            "Vérifier les paillages",
+            "Préparer les semis de brocolis"
+          ]
+        }
+      },
+      "fruit": {
+        "1": {
+          "tips": ["Tailler les arbres fruitiers à pépins"],
+          "tasks": [
+            "Commander les semences de tomates",
+            "Nettoyer et affûter le sécateur",
+            "Vérifier les fruits en conservation"
+          ]
+        },
+        "2": {
+          "tips": ["Semer les premières tomates et aubergines au chaud"],
+          "tasks": [
+            "Tailler les fruitiers",
+            "Planter les arbres fruitiers à racines nues",
+            "Semer les pois à grains ronds"
+          ]
+        },
+        "3": {
+          "tips": ["Semer tomates, poivrons et aubergines sous abri"],
+          "tasks": [
+            "Semer les pois et les fèves",
+            "Greffer les fruitiers",
+            "Préparer les planches à courges"
+          ]
+        },
+        "4": {
+          "tips": ["Repiquer les tomates en godets"],
+          "tasks": [
+            "Semer courges et courgettes sous abri",
+            "Planter les fraisiers",
+            "Palisser les framboisiers"
+          ]
+        },
+        "5": {
+          "tips": ["Planter tomates, courgettes et concombres"],
+          "tasks": [
+            "Semer les haricots une fois le risque de gel passé",
+            "Tuteurer les tomates",
+            "Éclaircir les fruits des arbres"
+          ]
+        },
+        "6": {
+          "tips": ["Semer les haricots en plusieurs fois"],
+          "tasks": [
+            "Effeuiller et tailler les tomates",
+            "Récolter les premières fraises",
+            "Arroser les courges au pied"
+          ]
+        },
+        "7": {
+          "tips": ["Récolter tomates et haricots"],
+          "tasks": [
+            "Semer les derniers haricots",
+            "Récolter groseilles et cassis",
+            "Surveiller le mildiou après les pluies"
+          ]
+        },
+        "8": {
+          "tips": ["Récolter tomates, courgettes et haricots"],
+          "tasks": [
+            "Récolter les graines des cucurbitacées",
+            "Cueillir les premières pommes",
+            "Étêter les tomates"
+          ]
+        },
+        "9": {
+          "tips": ["Récolter les graines des cucurbitacées"],
+          "tasks": [
+            "Préparer les conserves et les confitures",
+            "Cueillir pommes et poires",
+            "Rentrer les courges avant les premiers froids"
+          ]
+        },
+        "10": {
+          "tips": ["Rentrer les courges au sec"],
+          "tasks": [
+            "Stocker les pommes et les poires",
+            "Nettoyer le verger",
+            "Arracher les pieds de tomates"
+          ]
+        },
+        "11": {
+          "tips": ["Planter les arbres fruitiers à racines nues"],
+          "tasks": [
+            "Tailler les framboisiers",
+            "Ramasser les feuilles du verger",
+            "Protéger les fraisiers"
+          ]
+        },
+        "12": {
+          "tips": ["Tailler la vigne et les fruitiers à pépins"],
+          "tasks": [
+            "Vérifier les fruits en cave",
+            "Commander les porte-greffes",
+            "Badigeonner les troncs"
+          ]
+        }
+      }
+    },
+    "weather": {
+      "clear": "Ciel dégagé",
+      "partly": "Peu nuageux",
+      "cloudy": "Couvert",
+      "fog": "Brouillard",
+      "drizzle": "Bruine",
+      "rain": "Pluie",
+      "snow": "Neige",
+      "showers": "Averses",
+      "thunder": "Orage",
+      "unknown": "Temps inconnu",
+      "range": "{{min}} / {{max}}",
+      "wind": "vent {{value}} km/h",
+      "rainfall": "{{value}} mm",
+      "off": "Météo non activée sur ce déploiement."
+    }
   },
   "map": {
     "title": "Carte du jardin",
@@ -513,6 +1022,15 @@
     "angleHint": "De −360 à 360.",
     "rotateOne": "Cet emplacement",
     "rotateAll": "Tous les contours ({{count}})",
-    "rotated": "{{count}} contour(s) pivoté(s) de {{angle}}°."
+    "rotated": "{{count}} contour(s) pivoté(s) de {{angle}}°.",
+    "fullscreen": "Carte en plein écran",
+    "exitFullscreen": "Quitter le plein écran"
+  },
+  "references": {
+    "suggested": "Repère publié : {{value}} par mètre de planche",
+    "badge": "réf. {{source}}",
+    "use": "reprendre",
+    "noBedWidth": "Des repères publiés existent pour cette espèce, mais ils sont au mètre carré : renseignez la largeur de planche de la ferme pour qu’ils puissent être proposés ici.",
+    "disclaimer": "Les repères viennent de travaux publiés et cités. Ils ne connaissent ni votre sol ni votre climat : votre propre historique les remplace dès qu’il existe."
   }
 }

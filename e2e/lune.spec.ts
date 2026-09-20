@@ -4,8 +4,11 @@
 // Calendrier lunaire, dans un vrai navigateur.
 //
 // Le calcul est éprouvé dans le noyau, contre des calendriers publiés. Ce parcours vérifie
-// les deux promesses que le code seul ne garantit pas : qu'on ne voit **rien** tant qu'on
-// n'a pas allumé, et qu'une fois allumé, le bandeau dit des faits et pas des conseils.
+// les promesses que le code seul ne garantit pas : qu'on ne voit **rien** tant qu'on n'a
+// pas allumé ; qu'une fois allumé, le bandeau et la grille disent des faits et pas des
+// conseils ; et que la fiche du jour, qui porte un indice chiffré, l'**explique** —
+// garde-fou n° 1 du §11 du brief, sans lequel ce chiffre ne serait qu'un argument
+// d'autorité.
 
 import { expect, test, type Page } from '@playwright/test';
 
@@ -146,5 +149,132 @@ test('la vue mois, le calage et l’indice de date', async ({ page }, info) => {
     // Le compte rendu dit combien de séries ont bougé — et donc combien n'ont pas bougé.
     // Sans lui, un calage sans effet ressemblerait à un bouton cassé.
     await expect(page.getByRole('status').filter({ hasText: /calée/ })).toBeVisible();
+  });
+});
+
+test('la fiche du jour porte un indice, et l’explique', async ({ page }, info) => {
+  const email = `e2e-lune-jour-${info.project.name}-${Date.now()}@example.org`;
+
+  await test.step('créer un compte et allumer le calendrier', async () => {
+    await page.goto('/connexion');
+    await page.getByRole('button', { name: 'Pas encore de compte ?' }).click();
+    await page.getByLabel('Adresse électronique').fill(email);
+    await page.getByLabel('Mot de passe', { exact: true }).fill(password);
+    await page.getByLabel('Nom de la ferme').fill('Ferme de la fiche');
+    await page.getByRole('button', { name: 'Créer un compte', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Tableau de bord' })).toBeVisible();
+
+    await page.goto('/parametres');
+    await basculer(page, true);
+  });
+
+  await test.step('cliquer un jour de la grille ouvre sa fiche', async () => {
+    await page.goto('/calendrier-lunaire');
+    // Les cases sont des **liens** : elles s'ouvrent au clavier et dans un onglet. Un
+    // `div` muni d'un `onClick` passerait ce clic et échouerait à tout le reste.
+    //
+    // Repérée par son contenu, qui est aussi son nom accessible : « 15 Fruit montante ».
+    // Un `aria-label` posé sur la case remplacerait tout cela par un libellé plus pauvre,
+    // et cet essai le verrait.
+    const quinze = page.getByRole('grid').getByRole('link').filter({ hasText: /^15/ });
+    await expect(quinze).toBeVisible();
+    await expect(quinze).toContainText(/Racine|Feuille|Fleur|Fruit/);
+    await quinze.click();
+
+    await expect(page).toHaveURL(/\/calendrier-lunaire\/\d{4}-\d{2}-15$/);
+    // La phase à huit noms, que la grille du mois ne donne pas.
+    await expect(
+      page.getByRole('heading', {
+        name: /Nouvelle lune|croissant|quartier|Gibbeuse|Pleine lune/,
+      }),
+    ).toBeVisible();
+  });
+
+  await test.step('l’indice s’ouvre et rend ses comptes', async () => {
+    // Le garde-fou n° 1 du §11. Un indice qu'on ne peut pas ouvrir change la nature de
+    // l'écran, et rien ne casserait si le bouton disparaissait d'une retouche.
+    const jauge = page.getByRole('img', { name: /Indice du jour : \d+ sur 100/ });
+    await expect(jauge).toBeVisible();
+
+    const explication = page.getByRole('button', { name: 'Comment cet indice est calculé' });
+    await expect(explication).toHaveAttribute('aria-expanded', 'false');
+    await explication.click();
+
+    await expect(page.getByRole('heading', { name: 'D’où vient cet indice' })).toBeVisible();
+    // La phrase qui empêche le chiffre de passer pour une mesure. Elle est le garde-fou
+    // lui-même, pas son emballage : une reformulation qui la perdrait doit échouer ici.
+    await expect(page.getByText(/ne mettent pas en évidence d’effet reproductible/)).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Ce qui a joué' })).toBeVisible();
+  });
+
+  await test.step('les tâches suggérées disent qu’elles ne touchent à rien', async () => {
+    // Règles 1 à 3 du §7, qui tiennent toujours : la lune ne commande rien. Sans cette
+    // phrase, ces lignes ressembleraient à des tâches ajoutées au plan de la ferme.
+    await expect(page.getByRole('heading', { name: /Tâches suggérées/ })).toBeVisible();
+    await expect(page.getByText(/Rien n’est ajouté à votre plan/)).toBeVisible();
+    await expect(page.getByText(/ne recopient aucun calendrier publié/)).toBeVisible();
+  });
+
+  await test.step('et l’on revient au mois', async () => {
+    await page.getByRole('link', { name: 'Retour au mois' }).click();
+    await expect(page.getByRole('grid')).toBeVisible();
+  });
+});
+
+test('le plan se filtre par ce qu’on récolte', async ({ page }, info) => {
+  const email = `e2e-parties-${info.project.name}-${Date.now()}@example.org`;
+
+  await test.step('créer un compte', async () => {
+    await page.goto('/connexion');
+    await page.getByRole('button', { name: 'Pas encore de compte ?' }).click();
+    await page.getByLabel('Adresse électronique').fill(email);
+    await page.getByLabel('Mot de passe', { exact: true }).fill(password);
+    await page.getByLabel('Nom de la ferme').fill('Ferme des parties');
+    await page.getByRole('button', { name: 'Créer un compte', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Tableau de bord' })).toBeVisible();
+  });
+
+  await test.step('semer une carotte et une tomate', async () => {
+    for (const [espece, date] of [
+      ['Carotte', '2027-03-10'],
+      ['Tomate', '2027-03-12'],
+    ] as const) {
+      await page.goto('/plan/nouvelle');
+      await page.getByLabel('Espèce', { exact: true }).selectOption({ label: espece });
+      await page.getByLabel('Date de semis').fill(date);
+      await page.getByLabel('Longueur de planche (m)').fill('30');
+      await page.getByLabel('Rangs').fill('2');
+      await page.getByLabel('Espacement sur le rang (cm)').fill('5');
+      await page.getByRole('button', { name: 'Enregistrer' }).click();
+      await expect(page.getByRole('heading', { name: 'Modifier la série' })).toBeVisible();
+    }
+  });
+
+  await test.step('la puce « Racine » ne laisse que la carotte', async () => {
+    await page.goto('/plan');
+    await page.getByLabel('Année').selectOption('2027');
+    await expect(page.getByText('Carotte').first()).toBeVisible();
+    await expect(page.getByText('Tomate').first()).toBeVisible();
+
+    await page.getByRole('button', { name: 'Racine' }).click();
+    await expect(page.getByText('Carotte').first()).toBeVisible();
+    await expect(page.getByText('Tomate')).toHaveCount(0);
+  });
+
+  await test.step('le Gantt suit le même filtre', async () => {
+    // Le filtre porte sur la requête, pas sur l'affichage : sans cela, la liste et le
+    // diagramme montreraient deux choses différentes, et la sélection du traitement par
+    // lot contiendrait des séries invisibles.
+    await page.getByRole('button', { name: 'Diagramme de Gantt' }).click();
+    const gantt = page.getByRole('img', { name: 'Diagramme de Gantt' });
+    await expect(gantt).toBeVisible();
+    await expect(gantt).toContainText('Carotte');
+    await expect(gantt).not.toContainText('Tomate');
+  });
+
+  await test.step('« Tous » les ramène', async () => {
+    await page.getByRole('button', { name: 'Tous' }).click();
+    const gantt = page.getByRole('img', { name: 'Diagramme de Gantt' });
+    await expect(gantt).toContainText('Tomate');
   });
 });

@@ -183,7 +183,15 @@
     "containers": "Trays",
     "seedsNumber": "Seeds",
     "tasksRescheduled": "{{count}} task moved to the new dates",
-    "tasksRescheduled_other": "{{count}} tasks moved to the new dates"
+    "tasksRescheduled_other": "{{count}} tasks moved to the new dates",
+    "harvestedPart": {
+      "all": "All",
+      "root": "Root",
+      "leaf": "Leaf",
+      "fruit": "Fruit",
+      "flower": "Flower",
+      "filter": "Filter by harvested part"
+    }
   },
   "tasks": {
     "title": "Tasks",
@@ -476,7 +484,464 @@
       "6": "Sun"
     },
     "matchesCrop": "matches the crop",
-    "nearby": "nearby {{type}} days:"
+    "nearby": "nearby {{type}} days:",
+    "day": {
+      "back": "Back to the month",
+      "heading": "{{date}}",
+      "moonTimes": "{{rise}} → {{set}}",
+      "moonTimesRiseOnly": "rises {{rise}}, does not set",
+      "moonTimesSetOnly": "sets {{set}}, does not rise",
+      "moonTimesNone": "neither rises nor sets today",
+      "sunTimes": "{{rise}} – {{set}}",
+      "fullMoonIn": "Full moon in {{count}} days",
+      "fullMoonIn_one": "Full moon tomorrow",
+      "fullMoonToday": "Full moon today",
+      "newMoonIn": "New moon in {{count}} days",
+      "newMoonIn_one": "New moon tomorrow",
+      "newMoonToday": "New moon today",
+      "noPosition": "Place the farm on the map to get rise and set times.",
+      "indexAria": "Day index: {{score}} out of 100",
+      "explain": "How this index is worked out",
+      "explainTitle": "Where this index comes from",
+      "explainBody": "A hundred points, less what the lunar calendar tradition takes away: a lunar node, a perigee, an apogee, a day split between two types. It has never been measured against a yield, and is not one: controlled studies show no reproducible effect of lunar phases on plant growth. It blocks nothing and moves nothing.",
+      "reasonsTitle": "What counted",
+      "reasonsNone": "Nothing takes points off this day.",
+      "window": "{{from}} – {{to}}",
+      "windowHint": "Hours when the moon is above the horizon and there is daylight.",
+      "noWindow": "The moon is not above the horizon during daylight.",
+      "tips": "Today's notes",
+      "suggested": "Suggested jobs",
+      "suggestedHint": "Customary jobs for a {{type}} day in {{month}}. Nothing is added to your plan.",
+      "farmTasks": "Your tasks that day",
+      "farmTasksNone": "No task planned that day in your plan.",
+      "matches": "matches the day",
+      "cropsTitle": "What you grow of this type",
+      "cropsNone": "No crop in your reference list carries this harvested part. It is set on the crop.",
+      "disclaimer": "The notes and suggested jobs are customary tasks, written for Sillon. They copy no published calendar, know nothing of your ground, and do not replace your growing plan.",
+      "cropsMore_one": "and 1 more",
+      "cropsMore_other": "and {{count}} more"
+    },
+    "phaseDetail": {
+      "nouvelle": "New moon",
+      "premier-croissant": "Waxing crescent",
+      "premier-quartier": "First quarter",
+      "gibbeuse-croissante": "Waxing gibbous",
+      "pleine": "Full moon",
+      "gibbeuse-decroissante": "Waning gibbous",
+      "dernier-quartier": "Last quarter",
+      "dernier-croissant": "Waning crescent"
+    },
+    "element": {
+      "feu": "Fire",
+      "terre": "Earth",
+      "air": "Air",
+      "eau": "Water"
+    },
+    "indexLabel": {
+      "exceptionnel": "Exceptional",
+      "tres-favorable": "Very favourable",
+      "favorable": "Favourable",
+      "moyen": "Average",
+      "a-eviter": "Best avoided"
+    },
+    "indexReason": {
+      "noeud": "Lunar node crossing",
+      "perigee": "Moon at perigee",
+      "apogee": "Moon at apogee",
+      "journee-partagee": "Day split between two types",
+      "lune-absente-du-jour": "Moon below the horizon in daylight"
+    },
+    "dayPart": {
+      "matin": "Work in the morning",
+      "milieu-de-journee": "Work around midday",
+      "apres-midi": "Work in the afternoon",
+      "fin-d-apres-midi": "Work in the late afternoon",
+      "soiree": "Work in the evening"
+    },
+    "period": {
+      "fruit": {
+        "montante": "A time for sowing, grafting and picking fruit",
+        "descendante": "A time for planting fruit trees and pruning"
+      },
+      "racine": {
+        "montante": "A time for sowing roots and lifting for immediate use",
+        "descendante": "A time for sowing, planting and lifting roots for storage"
+      },
+      "feuille": {
+        "montante": "A time for sowing leaf crops and cutting leaves",
+        "descendante": "A time for pricking out, planting and cutting back leaf crops"
+      },
+      "fleur": {
+        "montante": "A time for sowing flowers and cutting them",
+        "descendante": "A time for planting, dividing and taking cuttings"
+      }
+    },
+    "advice": {
+      "racine": {
+        "1": {
+          "tips": ["Plant white and purple garlic as soon as the soil has drained"],
+          "tasks": [
+            "Sort the storage potatoes",
+            "Earth up the winter leeks",
+            "Set seed potatoes out to sprout"
+          ]
+        },
+        "2": {
+          "tips": ["Sow the first carrots under a frame or tunnel"],
+          "tasks": [
+            "Pre-sprout the seed potatoes",
+            "Plant the shallots",
+            "Lift Jerusalem artichokes as needed"
+          ]
+        },
+        "3": {
+          "tips": ["Sow spring carrots, radishes and turnips"],
+          "tasks": [
+            "Plant the maincrop onions",
+            "Thin the radish sowings",
+            "Prepare the potato beds"
+          ]
+        },
+        "4": {
+          "tips": ["Plant the early potatoes"],
+          "tasks": [
+            "Sow beetroot and parsnip",
+            "Hoe around the young carrots",
+            "Prick out celeriac under cover"
+          ]
+        },
+        "5": {
+          "tips": ["Sow the storage carrots"],
+          "tasks": ["Earth up the potatoes", "Plant the celeriac", "Thin the beetroot"]
+        },
+        "6": {
+          "tips": ["Lift garlic and shallots as soon as the leaves yellow"],
+          "tasks": ["Sow the autumn carrots", "Lift the early potatoes", "Hoe the root beds"]
+        },
+        "7": {
+          "tips": ["Sow winter turnips and radishes"],
+          "tasks": [
+            "Lift and dry the onions",
+            "Water late carrots at the base",
+            "Lift the storage potatoes"
+          ]
+        },
+        "8": {
+          "tips": ["Sow winter carrots and black radishes"],
+          "tasks": [
+            "Bring onions and shallots in to dry",
+            "Lift the beetroot",
+            "Prepare the autumn beds"
+          ]
+        },
+        "9": {
+          "tips": ["Sow winter turnips on a clean bed"],
+          "tasks": ["Lift the last potatoes", "Lift the storage carrots", "Plant the white garlic"]
+        },
+        "10": {
+          "tips": ["Plant garlic and shallots"],
+          "tasks": [
+            "Lift beetroot and celeriac",
+            "Clamp or cellar the roots",
+            "Mulch the cleared beds"
+          ]
+        },
+        "11": {
+          "tips": ["Earth up and mulch the roots left in the ground"],
+          "tasks": [
+            "Lift parsnips and salsify",
+            "Sort the stored vegetables",
+            "Plant the purple garlic"
+          ]
+        },
+        "12": {
+          "tips": ["Lift roots as they are needed"],
+          "tasks": [
+            "Check the vegetables in the cellar",
+            "Lift Jerusalem artichokes and crosnes",
+            "Order the seed potatoes"
+          ]
+        }
+      },
+      "feuille": {
+        "1": {
+          "tips": ["Sow the first lettuces under cover"],
+          "tasks": [
+            "Cut lamb's lettuce and winter chicory",
+            "Blanch the endives",
+            "Clean the covers before sowing"
+          ]
+        },
+        "2": {
+          "tips": ["Sow spring spinach and lettuce under a frame"],
+          "tasks": [
+            "Prick out the first lettuces",
+            "Cut the winter leeks",
+            "Sow parsley under cover"
+          ]
+        },
+        "3": {
+          "tips": ["Sow cabbages, lettuces and spinach"],
+          "tasks": [
+            "Prick out lettuces in the tunnel",
+            "Sow leeks in the seedbed",
+            "Thin the spinach"
+          ]
+        },
+        "4": {
+          "tips": ["Prick out the spring lettuces"],
+          "tasks": ["Sow chard and rocket", "Plant the spring cabbages", "Weed the leaf beds"]
+        },
+        "5": {
+          "tips": ["Plant the summer leeks"],
+          "tasks": [
+            "Sow cut-and-come-again lettuce",
+            "Prick out the autumn cabbages",
+            "Water the leaf crops regularly"
+          ]
+        },
+        "6": {
+          "tips": ["Sow chicory and escarole"],
+          "tasks": [
+            "Plant the autumn leeks",
+            "Cut the spinach before it bolts",
+            "Mulch the lettuces against the heat"
+          ]
+        },
+        "7": {
+          "tips": ["Sow the winter cabbages"],
+          "tasks": [
+            "Prick out escarole and chicory",
+            "Pick chard leaf by leaf",
+            "Water early in the morning"
+          ]
+        },
+        "8": {
+          "tips": ["Sow lamb's lettuce, winter spinach and rocket"],
+          "tasks": [
+            "Plant the autumn lettuces",
+            "Cut the summer cabbages",
+            "Sow a green manure on the cleared beds"
+          ]
+        },
+        "9": {
+          "tips": ["Prick out winter lettuces and lamb's lettuce"],
+          "tasks": ["Cut cabbages and chard", "Sow the winter spinach", "Earth up the leeks"]
+        },
+        "10": {
+          "tips": ["Sow lamb's lettuce and chervil under cover"],
+          "tasks": [
+            "Cut the last spinach",
+            "Lay fleece over the lettuces",
+            "Pick the Brussels sprouts"
+          ]
+        },
+        "11": {
+          "tips": ["Protect the winter lettuces under fleece or a tunnel"],
+          "tasks": [
+            "Cut leeks and lamb's lettuce",
+            "Earth up the cabbages",
+            "Remove the damaged leaves"
+          ]
+        },
+        "12": {
+          "tips": ["Cut lamb's lettuce, chicory and leeks as needed"],
+          "tasks": [
+            "Blanch the endives in the cellar",
+            "Air the tunnels during the mild hours",
+            "Order the lettuce seed"
+          ]
+        }
+      },
+      "fleur": {
+        "1": {
+          "tips": ["Sow the first cauliflowers under cover"],
+          "tasks": [
+            "Sort the flower seed",
+            "Cut the winter cauliflowers",
+            "Prepare the artichoke beds"
+          ]
+        },
+        "2": {
+          "tips": ["Sow spring broccoli and cauliflower"],
+          "tasks": [
+            "Divide the artichoke stools",
+            "Sow annual flowers under cover",
+            "Clean the perennial beds"
+          ]
+        },
+        "3": {
+          "tips": ["Prick out the broccoli and cauliflower"],
+          "tasks": [
+            "Plant the artichoke offsets",
+            "Sow nasturtiums and marigolds",
+            "Weed the flower beds"
+          ]
+        },
+        "4": {
+          "tips": ["Sow the edible flowers where they are to grow"],
+          "tasks": [
+            "Plant the spring broccoli",
+            "Cut the first artichokes",
+            "Stake the cut flowers"
+          ]
+        },
+        "5": {
+          "tips": ["Plant the summer cauliflowers"],
+          "tasks": [
+            "Sow sunflowers and zinnias",
+            "Cut the artichokes",
+            "Pinch the flowers to make them branch"
+          ]
+        },
+        "6": {
+          "tips": ["Cut broccoli and cauliflower as they come"],
+          "tasks": [
+            "Sow the autumn cauliflowers",
+            "Cut the flowers in the morning",
+            "Water at the base in dry weather"
+          ]
+        },
+        "7": {
+          "tips": ["Sow the winter cauliflowers"],
+          "tasks": [
+            "Cut the flowers for market",
+            "Cut back the artichokes after harvest",
+            "Remove the spent flowers"
+          ]
+        },
+        "8": {
+          "tips": ["Prick out the autumn cauliflowers"],
+          "tasks": ["Cut the broccoli", "Sow the biennial flowers", "Divide the perennials"]
+        },
+        "9": {
+          "tips": ["Cut broccoli and cauliflower"],
+          "tasks": ["Plant the spring bulbs", "Save the flower seed", "Clean the flower beds"]
+        },
+        "10": {
+          "tips": ["Plant the spring-flowering bulbs"],
+          "tasks": [
+            "Protect the artichokes before the frosts",
+            "Cut the last broccoli",
+            "Compost the spent flowers"
+          ]
+        },
+        "11": {
+          "tips": ["Mulch the artichokes and the perennials"],
+          "tasks": [
+            "Cut the autumn cauliflowers",
+            "Sort and label the flower seed",
+            "Clean the beds"
+          ]
+        },
+        "12": {
+          "tips": ["Cut the protected winter cauliflowers"],
+          "tasks": ["Order the flower seed", "Check the mulches", "Get ready to sow broccoli"]
+        }
+      },
+      "fruit": {
+        "1": {
+          "tips": ["Prune the pome fruit trees"],
+          "tasks": [
+            "Order the tomato seed",
+            "Clean and sharpen the secateurs",
+            "Check the fruit in store"
+          ]
+        },
+        "2": {
+          "tips": ["Sow the first tomatoes and aubergines with heat"],
+          "tasks": [
+            "Prune the fruit trees",
+            "Plant bare-root fruit trees",
+            "Sow the round-seeded peas"
+          ]
+        },
+        "3": {
+          "tips": ["Sow tomatoes, peppers and aubergines under cover"],
+          "tasks": ["Sow peas and broad beans", "Graft the fruit trees", "Prepare the squash beds"]
+        },
+        "4": {
+          "tips": ["Pot on the tomatoes"],
+          "tasks": [
+            "Sow squash and courgettes under cover",
+            "Plant the strawberries",
+            "Tie in the raspberries"
+          ]
+        },
+        "5": {
+          "tips": ["Plant tomatoes, courgettes and cucumbers"],
+          "tasks": [
+            "Sow the beans once the frost risk has passed",
+            "Stake the tomatoes",
+            "Thin the fruit on the trees"
+          ]
+        },
+        "6": {
+          "tips": ["Sow the beans in succession"],
+          "tasks": [
+            "Deleaf and side-shoot the tomatoes",
+            "Pick the first strawberries",
+            "Water the squash at the base"
+          ]
+        },
+        "7": {
+          "tips": ["Pick the tomatoes and beans"],
+          "tasks": [
+            "Sow the last beans",
+            "Pick redcurrants and blackcurrants",
+            "Watch for blight after the rain"
+          ]
+        },
+        "8": {
+          "tips": ["Pick tomatoes, courgettes and beans"],
+          "tasks": [
+            "Save the seed from the cucurbits",
+            "Pick the first apples",
+            "Stop the tomatoes"
+          ]
+        },
+        "9": {
+          "tips": ["Save the seed from the cucurbits"],
+          "tasks": [
+            "Put up preserves and jams",
+            "Pick apples and pears",
+            "Bring the squashes in before the first cold"
+          ]
+        },
+        "10": {
+          "tips": ["Bring the squashes into the dry"],
+          "tasks": [
+            "Store the apples and pears",
+            "Clean up the orchard",
+            "Pull out the tomato plants"
+          ]
+        },
+        "11": {
+          "tips": ["Plant the bare-root fruit trees"],
+          "tasks": ["Prune the raspberries", "Rake the orchard leaves", "Protect the strawberries"]
+        },
+        "12": {
+          "tips": ["Prune the vines and the pome fruit trees"],
+          "tasks": ["Check the fruit in the cellar", "Order the rootstocks", "Whitewash the trunks"]
+        }
+      }
+    },
+    "weather": {
+      "clear": "Clear sky",
+      "partly": "Partly cloudy",
+      "cloudy": "Overcast",
+      "fog": "Fog",
+      "drizzle": "Drizzle",
+      "rain": "Rain",
+      "snow": "Snow",
+      "showers": "Showers",
+      "thunder": "Thunderstorm",
+      "unknown": "Unknown weather",
+      "range": "{{min}} / {{max}}",
+      "wind": "wind {{value}} km/h",
+      "rainfall": "{{value}} mm",
+      "off": "Weather is not enabled on this deployment."
+    }
   },
   "map": {
     "title": "Garden map",
@@ -513,6 +978,15 @@
     "angleHint": "From −360 to 360.",
     "rotateOne": "This location",
     "rotateAll": "All outlines ({{count}})",
-    "rotated": "{{count}} outline(s) rotated by {{angle}}°."
+    "rotated": "{{count}} outline(s) rotated by {{angle}}°.",
+    "fullscreen": "Full-screen map",
+    "exitFullscreen": "Leave full screen"
+  },
+  "references": {
+    "suggested": "Published figure: {{value}} per bed metre",
+    "badge": "ref. {{source}}",
+    "use": "use it",
+    "noBedWidth": "Published figures exist for this crop, but they are per square metre: set the farm bed width so they can be offered here.",
+    "disclaimer": "These figures come from published, cited work. They know nothing of your soil or your climate: your own records replace them as soon as they exist."
   }
 }
