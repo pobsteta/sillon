@@ -17,3 +17,11 @@ test-results/
 
 # Photos téléversées en développement (stockage local)
 uploads/
+
+# Sources de référence lues pour le brief microfermes (specs/brief-sillon-references-microfermes.md).
+# Elles restent DEHORS du dépôt : la thèse Morel 2016 est sous CC BY-NC-ND 4.0, dont les
+# clauses « pas d'usage commercial » et « pas de modification » sont incompatibles avec la
+# promesse de l'AGPL — exécuter le programme pour tout usage, y compris commercial. Les y
+# committer ferait porter à chaque personne qui installe Sillon une restriction qu'elle n'a
+# pas choisie, et la CI REUSE la lui reprocherait. On les lit, on ne les redistribue pas.
+docs/references/

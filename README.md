@@ -41,6 +41,7 @@ les fichiers qui en dérivent conservent son copyright (convention REUSE / SPDX)
 | PWA : installation, cache des lectures, file d'attente des saisies hors ligne                                     | ✅   |
 | Interface fr/en, mode sombre, cibles tactiles ≥ 44 px, feuilles d'impression                                      | ✅   |
 | Export complet des données de la ferme (RGPD, auto-service)                                                       | ✅   |
+| Repères publiés (Pépinière-Mesclun, Licence Ouverte) : rendements et prix proposés à la saisie d'une série        | ✅   |
 | Abonnements et centres de formation : **tables présentes, interface à écrire**                                    | ⏳   |
 | Second facteur TOTP : enrôlement, codes de secours, anti-rejeu                                                    | ✅   |
 | Courriels : invitation, confirmation d'adresse, mot de passe oublié                                               | ✅   |
@@ -302,11 +303,14 @@ l'emporter ou l'afficher dans la remise.
 
 Deux choses méritent d'être sues avant de s'en servir :
 
-- **la recherche d'adresse est le seul endroit où Sillon parle à l'extérieur.** Elle envoie
-  l'adresse saisie au service configuré, ne part jamais pendant la frappe, et s'éteint par
-  `GEOCODING=none` — on saisit alors ses coordonnées à la main et rien ne sort. Hors de
-  France, `GEOCODING=ban+nominatim` ajoute un recours à Nominatim, sollicité seulement
-  quand la Base Adresse Nationale n'a rien trouvé ;
+- **la recherche d'adresse est l'un des deux endroits où Sillon parle à l'extérieur.** Elle
+  envoie l'adresse saisie au service configuré, ne part jamais pendant la frappe, et
+  s'éteint par `GEOCODING=none` — on saisit alors ses coordonnées à la main et rien ne sort.
+  Hors de France, `GEOCODING=ban+nominatim` ajoute un recours à Nominatim, sollicité
+  seulement quand la Base Adresse Nationale n'a rien trouvé. **L'autre est la météo** de la
+  fiche du jour du calendrier lunaire : elle s'éteint par `WEATHER=none`, et n'envoie que
+  des coordonnées arrondies au centième de degré — environ un kilomètre, soit plus fin que
+  la maille des modèles météo et moins fin que la parcelle ;
 - **Sillon ne livre qu'OpenStreetMap.** `MAP_TILE_URL` ajoute un second fond, que la carte
   propose alors dans un sélecteur — le choix se retient d'une visite à l'autre. Les
   orthophotos de l'IGN, par exemple, pour une ferme française.
@@ -344,11 +348,17 @@ l'assolement et la feuille de commande ne se comprennent qu'avec une saison sous
 node scripts/jardin-exemple.mjs --email vous@example.org --password '…' --annee 2026
 ```
 
-Trente-huit séries du 10 janvier au 5 novembre, quarante planches, les tâches, les récoltes
-des fenêtres déjà passées et quelques notes de saison. Le script **passe par l'API** : les
-dates dérivées, les durées et les quantités de semences sont donc calculées par le vrai
-code — un jeu de données posé en SQL serait cohérent avec lui-même et faux vis-à-vis de
-l'application.
+Trente-huit séries du 10 janvier au 5 novembre, quarante planches **dessinées sur la
+carte**, les tâches, les récoltes des fenêtres déjà passées et quelques notes de saison. Le
+script **passe par l'API** : les dates dérivées, les durées, les contours et les quantités
+de semences sont donc calculés par le vrai code — un jeu de données posé en SQL serait
+cohérent avec lui-même et faux vis-à-vis de l'application.
+
+La ferme est **située** (plaine dijonnaise par défaut, `--latitude` et `--longitude` pour
+en décider autrement) et ses planches sont tracées à leurs mesures réelles. Sans cela,
+l'écran Carte s'ouvrait sur la France entière avec un parcellaire vide, et la fiche du jour
+du calendrier lunaire n'avait ni lever ni coucher à donner : le jeu d'exemple laissait
+croire que ces écrans ne marchaient pas. `--sans-carte` s'en tient à l'ancien comportement.
 
 Le placement respecte la **rotation** : une famille botanique ne revient pas sur une planche
 avant son délai de retour. C'est ce qui dimensionne le parcellaire, et non la surface — une
@@ -358,6 +368,32 @@ la plus représentée en compte.
 Il refuse de tourner sur une année qui contient déjà des séries, sauf `--force` : un jeu de
 démonstration posé sur des données réelles serait difficile à distinguer du travail de
 quelqu'un.
+
+### Charger les repères publiés
+
+```bash
+npm run db:seed:references -w @sillon/api
+```
+
+Idempotent : chaque source est remplacée, si bien qu'une valeur retirée d'un jeu disparaît
+aussi de la base. Les jeux vivent dans `packages/core/data/references/`, à côté du schéma
+Zod qui les valide, et **portent chacun leur licence**.
+
+| Jeu                                                  | Contenu                                         | Licence                    |
+| ---------------------------------------------------- | ----------------------------------------------- | -------------------------- |
+| [Pépinière-Mesclun](https://doi.org/10.57745/IQVM2I) | 108 rendements et prix sur 54 cultures          | Licence Ouverte Etalab 2.0 |
+| [Charge de travail](https://doi.org/10.57745/NQHB1I) | 3 repères de surface par équivalent temps plein | Licence Ouverte Etalab 2.0 |
+| Morel 2016 (thèse)                                   | —                                               | **CC BY-NC-ND**, écartée   |
+| MMBio (ITAB)                                         | —                                               | à vérifier                 |
+
+Les deux premiers sont de Kevin Morel (INRAE) et exigent l'attribution. Le jeu Mesclun est
+produit par `scripts/importer-mesclun.mjs` depuis le classeur publié ; les classeurs
+eux-mêmes ne sont pas versionnés, seuls les JSON relus entrent dans le dépôt.
+
+La thèse est écartée parce que ses clauses « pas d'usage commercial » et « pas de
+modification » contredisent la promesse de l'AGPL — exécuter le programme pour tout usage.
+Ses chiffres de charge de travail restent accessibles autrement : leur **republication**
+sous Licence Ouverte, dans le module de dimensionnement, est ce qui les rend reprenables.
 
 ### Tester sur un smartphone
 
@@ -950,6 +986,20 @@ en SVG et en CSS : aucune bibliothèque de visualisation n'est téléchargée.
   ce qu'un centre de formation fait qu'une ferme ne fait pas de l'autre.
 - **Traductions** : les fichiers `apps/web/src/i18n/locales/*.json` sont prêts pour Weblate ;
   l'espagnol et le néerlandais n'attendent qu'un fichier de plus.
+- **Repères publiés** : la base, l'API et la suggestion à la saisie fonctionnent
+  (`specs/brief-sillon-references-microfermes.md`, lot A). Trois manques, tous dus aux
+  sources et non au code :
+  - **le temps de travail reste grossier.** Pépinière-Mesclun n'en porte pas ; le module de
+    dimensionnement donne des surfaces par équivalent temps plein à l'échelle de la ferme,
+    mais aucune source ouverte ne publie d'heures **par culture**. Le lot B comparera donc
+    des ordres de grandeur d'exploitation, pas des itinéraires ;
+  - **le référentiel ne porte ni rendement ni prix.** Le brief prévoyait une cascade
+    « variété → espèce → référence » ; `Crop` et `Variety` n'ont aucun de ces champs, et
+    seule la série en a. La cascade réalisée est donc **série → référence**. Les étendre
+    est l'objet de `specs/brief-donnees-mesclun.md` §7.3 ;
+  - **les noms ne se recouvrent pas.** Les sources séparent ce que Sillon réunit
+    (« carotte conservation » et « carotte frais ») et décrivent des légumes qu'il ne
+    connaît pas. Le rattachement manuel côté interface reste à écrire.
 
 ---
 
