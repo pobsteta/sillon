@@ -3,9 +3,10 @@
 //
 // Recherche d'adresse (lot 1 de `brief/carte-du-jardin.md`).
 //
-// **C'est le seul endroit où Sillon parle à l'extérieur.** Chercher une adresse, c'est
-// envoyer celle de la ferme à un tiers ; pour une exploitation individuelle, c'est une
-// donnée personnelle. Trois conséquences, toutes visibles dans ce fichier :
+// **C'est l'un des deux endroits où Sillon parle à l'extérieur** — l'autre est la météo de
+// la fiche du jour (`weather.ts`), ajoutée le 20 septembre 2026, qui tient les mêmes règles.
+// Chercher une adresse, c'est envoyer celle de la ferme à un tiers ; pour une exploitation
+// individuelle, c'est une donnée personnelle. Trois conséquences, toutes visibles ici :
 //
 // 1. la requête passe par le **serveur** et non par le navigateur — un seul endroit à
 //    éteindre, un seul endroit qui s'identifie, et rien à ouvrir dans la CSP ;

@@ -155,6 +155,17 @@ const moonRoute = createRoute({
   path: '/calendrier-lunaire',
   component: lazyRouteComponent(() => import('./routes/moonMonth.js'), 'MoonMonthPage'),
 });
+// Hors du composant : `lazyRouteComponent` appelé au rendu fabriquerait un composant neuf
+// à chaque passage, et la fiche se remonterait — perdant son état — à chaque frappe.
+const MoonDayPage = lazyRouteComponent(() => import('./routes/moonDay.js'), 'MoonDayPage');
+const moonDayRoute = createRoute({
+  getParentRoute: () => protectedRoute,
+  path: '/calendrier-lunaire/$date',
+  component: function MoonDayRoute() {
+    const { date } = moonDayRoute.useParams();
+    return <MoonDayPage date={date} />;
+  },
+});
 const settingsRoute = createRoute({
   getParentRoute: () => protectedRoute,
   path: '/parametres',
@@ -189,6 +200,7 @@ const routeTree = rootRoute.addChildren([
     trainingRoute,
     mapRoute,
     moonRoute,
+    moonDayRoute,
     settingsRoute,
   ]),
   notFoundRoute,
