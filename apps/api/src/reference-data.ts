@@ -57,6 +57,11 @@ export const DEFAULT_FAMILIES: FamilySeed[] = [
     interval: 4,
     crops: [
       { name: 'Chou', nameEn: 'Cabbage', harvestedPart: 'leaf' },
+      // Le brocoli et le chou-fleur sont des **inflorescences** : on récolte la fleur
+      // avant qu'elle ne s'ouvre, là où le chou pommé est une feuille. La distinction
+      // n'est pas une subtilité de botaniste — c'est elle qui décide du jour lunaire.
+      { name: 'Brocoli', nameEn: 'Broccoli', harvestedPart: 'flower' },
+      { name: 'Chou-fleur', nameEn: 'Cauliflower', harvestedPart: 'flower' },
       { name: 'Navet', nameEn: 'Turnip', harvestedPart: 'root' },
       { name: 'Radis', nameEn: 'Radish', harvestedPart: 'root' },
       { name: 'Roquette', nameEn: 'Rocket', harvestedPart: 'leaf' },
@@ -83,6 +88,7 @@ export const DEFAULT_FAMILIES: FamilySeed[] = [
       { name: 'Laitue', nameEn: 'Lettuce', harvestedPart: 'leaf' },
       { name: 'Chicorée', nameEn: 'Chicory', harvestedPart: 'leaf' },
       { name: 'Mâche', nameEn: 'Corn salad', harvestedPart: 'leaf' },
+      { name: 'Artichaut', nameEn: 'Artichoke', harvestedPart: 'flower' },
     ],
   },
   {
