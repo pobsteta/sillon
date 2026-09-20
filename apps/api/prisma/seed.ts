@@ -1,18 +1,27 @@
 // SPDX-FileCopyrightText: © 2026 Sillon contributors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Jeu de démonstration : un compte, une ferme, son référentiel, un jardin de six planches
-// et quelques séries réalistes de la saison en cours. `npm run db:seed -w @sillon/api`.
+// Jeu de démonstration : un compte, une ferme **située**, son référentiel, un jardin de six
+// planches dessinées sur la carte, et quelques séries réalistes de la saison en cours.
+// `npm run db:seed -w @sillon/api`.
+//
+// Situer la ferme et dessiner ses planches n'est pas de l'ornement : sans coordonnées, la
+// carte s'ouvre sur la France entière et n'a rien à montrer, et la fiche du jour du
+// calendrier lunaire n'a ni lever ni coucher à donner. Une démonstration doit montrer
+// l'outil en marche, pas ses écrans vides.
 
 import { PrismaClient } from '@prisma/client';
 import {
   addDays,
+  bedOutline,
   centimetersToTenthsOfMillimeter,
   deriveDates,
   metersToMillimeters,
   minutesToSeconds,
   PlantingType,
+  offsetMeters,
   seedsPerGramToStorage,
+  toGeoJsonPolygon,
   unitsToThousandths,
 } from '@sillon/core';
 import { hashPassword } from '../src/auth.js';
@@ -22,6 +31,24 @@ const prisma = new PrismaClient();
 
 const DEMO_EMAIL = process.env.SEED_EMAIL ?? 'maraichere@example.org';
 const DEMO_PASSWORD = process.env.SEED_PASSWORD ?? 'sillon-demonstration';
+
+/**
+ * Où se trouve la ferme de démonstration : en plaine dijonnaise.
+ *
+ * **Une position, et pas seulement un point.** Sans coordonnées, la carte s'ouvrait sur la
+ * France entière et le parcellaire n'existait pas — un écran vide dont rien ne disait s'il
+ * était cassé ou simplement inutilisé. Et une saisie manuelle laissée à blanc envoyait la
+ * ferme par 0°, 0° : au large du golfe de Guinée, ce qui se voit tout de suite et
+ * n'apprend rien.
+ *
+ * Le lieu est arbitraire, mais il est **réel** : un jeu de démonstration sert à montrer
+ * l'outil qui marche, et des planches posées en plein océan ne montrent rien. Le calendrier
+ * lunaire s'en sert aussi, pour les levers et couchers de sa fiche du jour.
+ */
+const DEMO_POSITION = { lat: 47.322, lng: 5.041 };
+
+/** Cap du parcellaire, en degrés depuis le nord. De biais, comme un vrai champ. */
+const DEMO_ORIENTATION = 18;
 
 /**
  * Une série de démonstration, décrite dans les unités de saisie ; la conversion vers
@@ -153,6 +180,17 @@ async function main(): Promise<void> {
         },
       });
       const farm = await createFarm(tx, { name: 'Ferme de démonstration', ownerId: user.id });
+      await tx.farm.update({
+        where: { id: farm.id },
+        data: {
+          latitude: DEMO_POSITION.lat,
+          longitude: DEMO_POSITION.lng,
+          // Le calendrier lunaire reste éteint par défaut partout ailleurs (brief
+          // lunaire §1) ; sur la ferme de démonstration il est allumé, parce qu'une
+          // démonstration doit montrer ce que l'outil sait faire.
+          moonCalendar: true,
+        },
+      });
 
       // Parcellaire : un jardin de quatre planches et une serre de deux planches.
       const garden = await tx.location.create({
@@ -167,8 +205,16 @@ async function main(): Promise<void> {
       const greenhouse = await tx.location.create({
         data: { farmId: farm.id, name: 'Serre 1', bedLength: 0, greenhouse: true, position: 2 },
       });
+      // Les planches sont **dessinées** autant que décrites : le parcellaire posé sur la
+      // carte est ce qui fait la différence entre une démonstration qu'on regarde et une
+      // démonstration qu'on essaie. Les contours sont calculés depuis les mêmes mesures
+      // que `bedLength`, donc les deux ne peuvent pas se contredire.
+      //
+      // 80 cm de planche et 60 cm de passe-pied : la maille courante en maraîchage sur
+      // sol vivant, et celle que `BedSettings` propose par défaut.
       const beds = [];
       for (let index = 1; index <= 4; index += 1) {
+        const coin = offsetMeters(DEMO_POSITION, (index - 1) * 1.4, 0);
         beds.push(
           await tx.location.create({
             data: {
@@ -180,12 +226,16 @@ async function main(): Promise<void> {
               bedWidth: 800,
               greenhouse: false,
               position: index,
+              geometry: toGeoJsonPolygon(bedOutline(coin, 50, 0.8, DEMO_ORIENTATION)),
             },
           }),
         );
       }
+      // La serre est posée à dix mètres à l'est du jardin : assez pour qu'on distingue les
+      // deux blocs sur la carte, assez près pour qu'ils tiennent dans le même cadrage.
       const coveredBeds = [];
       for (let index = 1; index <= 2; index += 1) {
+        const coin = offsetMeters(DEMO_POSITION, 10 + (index - 1) * 1.4, 0);
         coveredBeds.push(
           await tx.location.create({
             data: {
@@ -197,6 +247,7 @@ async function main(): Promise<void> {
               bedWidth: 800,
               greenhouse: true,
               position: index,
+              geometry: toGeoJsonPolygon(bedOutline(coin, 30, 0.8, DEMO_ORIENTATION)),
             },
           }),
         );

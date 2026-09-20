@@ -14,7 +14,20 @@
 //   node scripts/jardin-exemple.mjs --email moi@example.org --password '…' [--annee 2026]
 //
 // Options : --api (défaut http://localhost:3000), --annee (défaut : année courante),
-//           --force (peupler même si l'année contient déjà des séries).
+//           --force (peupler même si l'année contient déjà des séries),
+//           --latitude / --longitude (où poser la ferme ; défaut : plaine dijonnaise),
+//           --sans-carte (ne pas situer la ferme ni dessiner le parcellaire).
+//
+// **Le parcellaire est dessiné sur la carte**, et pas seulement décrit. Sans position ni
+// contour, l'écran Carte s'ouvre sur la France entière et n'a rien à montrer : le jeu
+// d'exemple laisserait croire que la fonctionnalité ne marche pas. Les contours sont
+// calculés depuis les mêmes mesures que `bedLength`, par le code du noyau — les deux ne
+// peuvent donc pas se contredire.
+
+// Le noyau plutôt qu'une copie : poser un rectangle de 30 m sur 80 cm à partir de degrés
+// demande le cosinus de la latitude, et une seconde implémentation de ce calcul finirait
+// par ne plus donner le même parcellaire que l'application.
+import { bedOutline, offsetMeters } from '../packages/core/dist/geo.js';
 
 const args = new Map();
 for (let i = 2; i < process.argv.length; i += 1) {
@@ -34,6 +47,25 @@ const EMAIL = args.get('email') ?? process.env.EMAIL;
 const PASSWORD = args.get('password') ?? process.env.PASSWORD;
 const ANNEE = Number(args.get('annee') ?? new Date().getFullYear());
 const FORCE = args.get('force') === 'true';
+const SANS_CARTE = args.get('sans-carte') === 'true';
+
+/**
+ * Où poser la ferme d'exemple : en plaine dijonnaise, sur des terres cultivées.
+ *
+ * Le lieu est arbitraire mais **réel**. Une ferme sans position ouvre la carte sur la
+ * France entière ; une ferme posée par 0°, 0° l'ouvre au large du golfe de Guinée. Ni
+ * l'une ni l'autre ne montre ce que l'écran sait faire.
+ */
+const POSITION = {
+  lat: Number(args.get('latitude') ?? 47.322),
+  lng: Number(args.get('longitude') ?? 5.041),
+};
+
+/** Cap du parcellaire, en degrés depuis le nord. De biais, comme un vrai champ. */
+const ORIENTATION = 18;
+
+/** Largeur d'une planche et de son passe-pied, en mètres. La maille courante. */
+const PAS_ENTRE_PLANCHES = 1.4;
 
 if (!EMAIL || !PASSWORD) {
   console.error('Usage : node scripts/jardin-exemple.mjs --email … --password … [--annee 2026]');
@@ -167,8 +199,28 @@ const main = async () => {
   }
 
   // ── Parcellaire ──
+  if (!SANS_CARTE) {
+    // Poser la position **avant** les contours : sans elle, la carte n'a pas de quoi se
+    // cadrer au premier affichage, et les planches apparaîtraient perdues sur un fond
+    // vide. L'écriture est réservée au rôle propriétaire ; un compte de moindre rôle voit
+    // la position mais ne la change pas, et le script continue alors sans elle.
+    try {
+      await appel('PATCH', `/api/farms/${ferme.id}`, {
+        latitude: POSITION.lat,
+        longitude: POSITION.lng,
+      });
+      console.log(`Ferme située en ${POSITION.lat}, ${POSITION.lng}`);
+    } catch (erreur) {
+      console.warn(`Position non posée (${erreur.statut ?? '?'}) — la carte restera vide.`);
+    }
+  }
+
   const planches = [];
   const emplacements = await appel('GET', url('/locations'));
+  // Décalage vers l'est du bloc en cours, en mètres. Les trois parcelles se suivent, avec
+  // dix mètres entre elles : assez pour qu'on les distingue, assez peu pour qu'elles
+  // tiennent dans le même cadrage.
+  let decalageEst = 0;
   for (const parcelle of PARCELLES) {
     let parent = emplacements.find((e) => e.name === parcelle.nom);
     if (!parent) {
@@ -191,10 +243,22 @@ const main = async () => {
           greenhouse: parcelle.serre,
         });
       }
+      if (!SANS_CARTE) {
+        const coin = offsetMeters(POSITION, decalageEst + (numero - 1) * PAS_ENTRE_PLANCHES, 0);
+        const contour = bedOutline(coin, parcelle.longueur / 1000, 0.8, ORIENTATION);
+        // Les quatre sommets **ouverts** : c'est la route qui referme l'anneau, comme le
+        // veut GeoJSON. Lui passer les cinq points d'un polygone déjà fermé ajouterait un
+        // sommet en double, que rien ne signalerait et que le calcul de surface avalerait.
+        //
+        // `PUT` et non `PATCH` : le contour remplace le précédent. Un script relancé ne
+        // doit pas empiler deux tracés sur la même planche.
+        await appel('PUT', url(`/locations/${planche.id}/geometry`), { points: contour });
+      }
       planches.push({ ...planche, serre: parcelle.serre, longueur: parcelle.longueur });
     }
+    decalageEst += parcelle.planches * PAS_ENTRE_PLANCHES + 10;
   }
-  console.log(`${planches.length} planches`);
+  console.log(`${planches.length} planches${SANS_CARTE ? '' : ', dessinées sur la carte'}`);
 
   // ── Référentiel ──
   const especes = await appel('GET', url('/crops'));

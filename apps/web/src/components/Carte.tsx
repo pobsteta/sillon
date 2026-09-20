@@ -13,6 +13,7 @@
 // cinquantaine de lignes : monter une carte, la détruire au démontage, poser un point.
 
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { fromGeoJsonPolygon, type GeoJsonPolygon, type LatLng } from '@sillon/core';
@@ -54,11 +55,11 @@ export interface CarteProps {
    */
   onDessin?: ((points: LatLng[]) => void) | undefined;
   /**
-   * Hauteur de la carte. Doublée par rapport au premier jet, mais bornée par la hauteur
-   * de l'écran : sur un téléphone, 48 rem dépasseraient la fenêtre et l'on perdrait les
-   * commandes en bas de page sans comprendre pourquoi.
+   * Hauteur imposée. Absente, la carte prend celle de la classe `.carte`, qui s'adapte à
+   * l'écran : haute sur un poste fixe, bornée par la fenêtre sur un téléphone — sinon
+   * l'on perdrait les commandes du bas de page sans comprendre pourquoi.
    */
-  hauteur?: string;
+  hauteur?: string | undefined;
   etiquette: string;
 }
 
@@ -71,9 +72,10 @@ export function Carte({
   avecDessin = false,
   onDessin,
   nomDuPlan = 'Plan',
-  hauteur = 'min(48rem, 75vh)',
+  hauteur,
   etiquette,
 }: CarteProps) {
+  const { t } = useTranslation();
   const conteneur = useRef<HTMLDivElement | null>(null);
   const carte = useRef<L.Map | null>(null);
   const marque = useRef<L.CircleMarker | null>(null);
@@ -84,9 +86,13 @@ export function Carte({
   const dessin = useRef(onDessin);
   dessin.current = onDessin;
   const couche = useRef<L.LayerGroup | null>(null);
+  // Le parcellaire a-t-il déjà donné le cadrage ? Une référence et non un état : elle se
+  // lit dans un effet voisin, et un rendu de plus n'apporterait rien.
+  const cadre = useRef(false);
   // La carte naît de façon asynchrone (Geoman d'abord) : ce compteur réveille les effets
   // qui l'attendent, faute de quoi ils s'exécuteraient sur une carte pas encore là.
   const [prete, setPrete] = useState(0);
+  const [pleinEcran, setPleinEcran] = useState(false);
 
   useEffect(() => {
     if (!conteneur.current || carte.current) return;
@@ -186,6 +192,7 @@ export function Carte({
       carte.current = null;
       marque.current = null;
       couche.current = null;
+      cadre.current = false;
     };
     // Monté une fois : le fond et la possibilité de dessiner ne changent pas en cours de
     // vie de l'écran.
@@ -216,7 +223,9 @@ export function Carte({
         fillOpacity: 0.35,
       }).addTo(instance);
     }
-    instance.setView(position, zoom);
+    // Le parcellaire commande le cadrage quand il existe : recentrer ici le défairait,
+    // les deux effets se déclenchant dans un ordre qui dépend de l'arrivée des requêtes.
+    if (!cadre.current) instance.setView(position, zoom);
   }, [point, zoom, prete]);
 
   // Les outils suivent le choix d'un emplacement : on ne dessine que pour quelqu'un.
@@ -263,25 +272,83 @@ export function Carte({
         .addTo(groupe);
     }
 
-    // Cadrer sur ce qui est dessiné, sauf si un point précis est demandé : sans cela, on
-    // ouvrirait la carte sur la France entière alors que le parcellaire est tracé.
-    // `LayerGroup` n'a pas d'emprise — on l'assemble à partir des contours posés.
-    if (!point) {
-      const limites = L.latLngBounds([]);
-      groupe.eachLayer((couchePosee) => {
-        if (couchePosee instanceof L.Polygon) limites.extend(couchePosee.getBounds());
-      });
-      if (limites.isValid()) instance.fitBounds(limites, { padding: [24, 24] });
+    // Cadrer sur ce qui est **dessiné**, et non sur le point de la ferme.
+    //
+    // L'inverse était fait jusqu'ici, et donnait le pire des deux : dès que la ferme avait
+    // une position, la carte s'ouvrait dessus à un zoom fixe et le parcellaire pouvait
+    // tomber hors champ — visible sur la carte, invisible à l'écran. Le point situe la
+    // ferme ; les planches sont ce qu'on vient regarder, et elles se suffisent à
+    // elles-mêmes. Sans contour, l'effet du point reprend la main.
+    //
+    // `LayerGroup` n'a pas d'emprise : on l'assemble à partir des contours posés.
+    const limites = L.latLngBounds([]);
+    groupe.eachLayer((couchePosee) => {
+      if (couchePosee instanceof L.Polygon) limites.extend(couchePosee.getBounds());
+    });
+    // Un jardin de six planches tient dans quelques dizaines de mètres : sans plafond,
+    // `fitBounds` irait au zoom maximum et l'on ne verrait plus que des tuiles floues.
+    if (limites.isValid()) {
+      instance.fitBounds(limites, { padding: [32, 32], maxZoom: 20 });
+      cadre.current = true;
     }
-  }, [contours, point, prete]);
+  }, [contours, prete]);
+
+  /**
+   * Prévenir Leaflet que son conteneur a changé de taille.
+   *
+   * Leaflet mesure le conteneur au montage et n'y revient pas. Agrandir la carte sans le
+   * lui dire laisse la moitié de la surface en **tuiles grises** — la carte a l'air
+   * cassée, et rien dans la console ne l'explique. Le délai zéro laisse le navigateur
+   * appliquer la nouvelle mise en page avant la mesure.
+   */
+  useEffect(() => {
+    const instance = carte.current;
+    if (!instance) return;
+    const minuteur = window.setTimeout(() => instance.invalidateSize(), 0);
+    return () => window.clearTimeout(minuteur);
+  }, [pleinEcran, prete]);
+
+  // Échap referme, comme partout ailleurs dans Sillon : une carte en plein écran masque
+  // la navigation, et il faut pouvoir en sortir sans chercher le bouton.
+  useEffect(() => {
+    if (!pleinEcran) return;
+    const surTouche = (evenement: KeyboardEvent) => {
+      if (evenement.key === 'Escape') setPleinEcran(false);
+    };
+    window.addEventListener('keydown', surTouche);
+    return () => window.removeEventListener('keydown', surTouche);
+  }, [pleinEcran]);
 
   return (
     <div
-      ref={conteneur}
-      role="application"
-      aria-label={etiquette}
-      className="w-full rounded-lg border border-earth-200 dark:border-earth-700"
-      style={{ height: hauteur }}
-    />
+      className={pleinEcran ? 'fixed inset-0 z-50 bg-earth-50 p-2 dark:bg-earth-900' : 'relative'}
+    >
+      <div
+        ref={conteneur}
+        role="application"
+        aria-label={etiquette}
+        className={`w-full rounded-lg border border-earth-200 dark:border-earth-700 ${
+          pleinEcran ? 'h-full' : hauteur ? '' : 'carte'
+        }`}
+        {...(hauteur && !pleinEcran ? { style: { height: hauteur } } : {})}
+      />
+      {/* Au-dessus des commandes de Leaflet, qui montent à 1000. Un `z-10` suffirait à
+          l'écran et laisserait le bouton sous le sélecteur de fond dès qu'un déploiement
+          en configure un : la panne serait invisible ici et visible chez l'utilisateur. */}
+      <button
+        type="button"
+        className="btn-ghost no-print absolute right-3 top-3 z-[1100] min-h-11 w-11 px-0"
+        // En plein écran, la carte couvre la barre d'état : sans l'encoche, le bouton de
+        // sortie passerait dessous sur un téléphone, et l'on ne pourrait plus refermer
+        // autrement qu'au clavier — que ces appareils n'ont pas.
+        {...(pleinEcran ? { style: { top: 'calc(0.75rem + env(safe-area-inset-top, 0px))' } } : {})}
+        aria-pressed={pleinEcran}
+        aria-label={pleinEcran ? t('map.exitFullscreen') : t('map.fullscreen')}
+        title={pleinEcran ? t('map.exitFullscreen') : t('map.fullscreen')}
+        onClick={() => setPleinEcran((etat) => !etat)}
+      >
+        <span aria-hidden>{pleinEcran ? '⤡' : '⤢'}</span>
+      </button>
+    </div>
   );
 }

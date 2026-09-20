@@ -136,6 +136,51 @@ function projeter(point: LatLng, reference: LatLng): { x: number; y: number } {
   };
 }
 
+/**
+ * Déplace un point de tant de mètres vers l'**est** et vers le **nord**.
+ *
+ * L'opération inverse de `projeter`, et le seul moyen honnête de poser un parcellaire à
+ * partir de mesures de terrain : « quatre planches de cinquante mètres, espacées de
+ * quatre-vingts centimètres » se dit en mètres, pas en degrés.
+ *
+ * **Le piège est le cosinus de la latitude.** Un degré de latitude vaut 111 km partout ;
+ * un degré de longitude vaut 111 km à l'équateur et 75 km à Dijon. Ajouter le même nombre
+ * de degrés dans les deux directions donnerait, à nos latitudes, un rectangle allongé d'un
+ * tiers — sans erreur, et sans que rien n'ait l'air faux.
+ */
+export function offsetMeters(origine: LatLng, estM: number, nordM: number): LatLng {
+  const versRadians = Math.PI / 180;
+  return {
+    lat: origine.lat + nordM / RAYON / versRadians,
+    lng: origine.lng + estM / (RAYON * Math.cos(origine.lat * versRadians)) / versRadians,
+  };
+}
+
+/**
+ * Le contour d'une planche rectangulaire, posée depuis son coin sud-ouest.
+ *
+ * `orientation` est le cap du **grand côté**, en degrés depuis le nord et dans le sens
+ * horaire : 0 pour une planche orientée nord-sud, 90 pour une planche est-ouest. Les
+ * quatre sommets sont rendus dans le sens direct, ce qu'attend `toGeoJsonPolygon`.
+ */
+export function bedOutline(
+  coin: LatLng,
+  longueurM: number,
+  largeurM: number,
+  orientation = 0,
+): LatLng[] {
+  const sommets = [
+    offsetMeters(coin, 0, 0),
+    offsetMeters(coin, largeurM, 0),
+    offsetMeters(coin, largeurM, longueurM),
+    offsetMeters(coin, 0, longueurM),
+  ];
+  if (orientation === 0) return sommets;
+  // Autour du coin de départ, et non du centre : c'est le coin qui est connu sur le
+  // terrain, et faire tourner autour du centre déplacerait la planche sans le dire.
+  return rotateAround(sommets, orientation, coin);
+}
+
 /** Barycentre des sommets. Suffit à centrer une projection ; ce n'est pas le centre de masse. */
 export function polygonCentroid(points: LatLng[]): LatLng {
   if (points.length === 0) throw new RangeError('Contour vide');
