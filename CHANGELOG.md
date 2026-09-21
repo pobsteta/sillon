@@ -1,5 +1,38 @@
 # Changelog
 
+## [0.7.0](https://github.com/pobsteta/sillon/compare/v0.6.0...v0.7.0) (2026-09-21)
+
+
+### Fonctionnalités
+
+* **carte:** faire pivoter le parcellaire, carte plus haute et plus zoomable ([#40](https://github.com/pobsteta/sillon/issues/40)) ([00f8de2](https://github.com/pobsteta/sillon/commit/00f8de28035e09fabc0764a9d67b435ab0b19993))
+* **carte:** Nominatim en recours, mesure applicable, plan imprimable ([#37](https://github.com/pobsteta/sillon/issues/37)) ([4f166b7](https://github.com/pobsteta/sillon/commit/4f166b7f8854d950a3f177c1c3796b4c94e43167))
+* **docker:** APP_URL et CORS_ORIGINS se posent dans .env ([#33](https://github.com/pobsteta/sillon/issues/33)) ([7401114](https://github.com/pobsteta/sillon/commit/7401114bfa83ecc1a01ae80bebbacf7c4f9f650c))
+* **fournisseurs:** trois semenciers de plus, et un jardin d'exemple ([#32](https://github.com/pobsteta/sillon/issues/32)) ([5679a90](https://github.com/pobsteta/sillon/commit/5679a9053542f075cf2daf47072d12c9ef5f6287))
+* **lune:** fiche du jour, avec son indice et sa météo ([41d750b](https://github.com/pobsteta/sillon/commit/41d750bfe80be2c63fa52a9b482735d57deaf0ac))
+* **lune:** le ciel du jour sur le tableau de bord ([d98ca47](https://github.com/pobsteta/sillon/commit/d98ca47641ef9eed2b59c47d43909a6833071562))
+* **plan:** filtrer les séries par ce qu'on récolte ([f1e3881](https://github.com/pobsteta/sillon/commit/f1e38810cffadba0c62ee66721816fa3862eca19))
+* **references:** repères publiés proposés à la saisie d'une série ([3238394](https://github.com/pobsteta/sillon/commit/3238394f9bc49030246a91cee2117c7fcf49a3ce))
+* **web:** add polished login visual design ([e5bc204](https://github.com/pobsteta/sillon/commit/e5bc20423766a3324a2f0b8b3d20b7da6e595afe))
+* **web:** redesign login page ([64b74a1](https://github.com/pobsteta/sillon/commit/64b74a101435b04b1e0ddb689eb1292627721003))
+* **web:** redesign Sillon dashboard ([44080f8](https://github.com/pobsteta/sillon/commit/44080f8b0cd9f6b40939739f1382e8afc259651a))
+* **web:** style Sillon dashboard ([dd16c25](https://github.com/pobsteta/sillon/commit/dd16c2592f48e68b329e0730a667d7779b269056))
+
+
+### Corrections
+
+* **api:** la partie récoltée n'était écrite nulle part ([fbe8ae4](https://github.com/pobsteta/sillon/commit/fbe8ae4cdb5176eaa7529acba4e34f73d552c270))
+* **carte:** la ferme n'atterrit plus au milieu de l'océan ([e7eae1a](https://github.com/pobsteta/sillon/commit/e7eae1ae4c7ec40901420e041de51178c940b2d3))
+* **docker:** tout ce que .env contient arrive au conteneur ([#38](https://github.com/pobsteta/sillon/issues/38)) ([8c79c5f](https://github.com/pobsteta/sillon/commit/8c79c5f57755bfb004f342284d647e7c9ed4c566))
+* **web:** nginx suit l'API quand son conteneur change d'adresse ([#39](https://github.com/pobsteta/sillon/issues/39)) ([7a4ad2c](https://github.com/pobsteta/sillon/commit/7a4ad2c8998e8af6a36d63e333b69a8a589a4a71))
+
+
+### Documentation
+
+* **brief:** dessiner son jardin sur une carte ([#34](https://github.com/pobsteta/sillon/issues/34)) ([bde6222](https://github.com/pobsteta/sillon/commit/bde6222d9998dcf1c200e32752aef26e1464cbc2))
+* **lune:** chiffrer l'écart entre les deux conventions zodiacales ([294c1a3](https://github.com/pobsteta/sillon/commit/294c1a356090519bc163e13d4e71c98848fd2cf3))
+* README des repères publiés, et les sources hors du dépôt ([27b6acf](https://github.com/pobsteta/sillon/commit/27b6acf05e6e5a96fe18501536ce981cceedf519))
+
 ## [0.6.0](https://github.com/pobsteta/sillon/compare/v0.5.1...v0.6.0) (2026-09-18)
 
 
