@@ -251,14 +251,21 @@ test('le plan se filtre par ce qu’on récolte', async ({ page }, info) => {
   });
 
   await test.step('la puce « Racine » ne laisse que la carotte', async () => {
+    // **Ne regarder que ce qui se voit.** Le plan rend des cartes sur téléphone et un
+    // tableau sur PC, et garde les deux dans le document : celui qui ne sert pas est
+    // masqué par CSS (`lg:hidden`). Un sélecteur qui prendrait la première occurrence
+    // attraperait la carte masquée sur un écran de bureau, et l'essai échouerait sur une
+    // ligne pourtant correctement affichée juste à côté.
+    const affiche = (texte: string) => page.getByText(texte).filter({ visible: true });
+
     await page.goto('/plan');
     await page.getByLabel('Année').selectOption('2027');
-    await expect(page.getByText('Carotte').first()).toBeVisible();
-    await expect(page.getByText('Tomate').first()).toBeVisible();
+    await expect(affiche('Carotte').first()).toBeVisible();
+    await expect(affiche('Tomate').first()).toBeVisible();
 
     await page.getByRole('button', { name: 'Racine' }).click();
-    await expect(page.getByText('Carotte').first()).toBeVisible();
-    await expect(page.getByText('Tomate')).toHaveCount(0);
+    await expect(affiche('Carotte').first()).toBeVisible();
+    await expect(affiche('Tomate')).toHaveCount(0);
   });
 
   await test.step('le Gantt suit le même filtre', async () => {

@@ -60,6 +60,13 @@ export default defineConfig({
         // Un second fond, pour que le sélecteur existe. L'adresse est volontairement
         // injoignable : l'essai vérifie le sélecteur, pas les tuiles, et joindre un
         // service tiers depuis une suite d'essais est ce qu'on évite partout ailleurs.
+        // Aucun appel à un tiers depuis une suite d'essais : la fiche du jour du
+        // calendrier lunaire interroge la météo, et la laisser joindre Open-Meteo ferait
+        // dépendre les parcours d'un service extérieur — un échec le jour de sa
+        // maintenance, sur du code qui n'a pas bougé. La route rend alors `null`, et
+        // l'écran s'affiche sans météo : c'est précisément ce que le réglage promet.
+        WEATHER: 'none',
+        GEOCODING: 'none',
         MAP_TILE_URL: 'https://fond.exemple.test/{z}/{x}/{y}.png',
         MAP_TILE_ATTRIBUTION: 'Fond d’essai',
         MAP_TILE_NAME: 'Vue aérienne',
