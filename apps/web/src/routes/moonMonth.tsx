@@ -11,6 +11,7 @@
 // prévus ». Rien n'est pour autant recommandé ni déplacé : la lune ne commande rien.
 
 import { useState } from 'react';
+import { Link } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { addDays, toIsoDate, type IsoDate } from '@sillon/core';
 import { useMoonYear, useTasks } from '../lib/queries.js';
@@ -132,30 +133,42 @@ export function MoonMonthPage() {
           const jour = parDate.get(date);
           const duJour = tachesParDate.get(date) ?? [];
           return (
-            <div
-              key={date}
-              role="gridcell"
-              className={`min-h-20 rounded-lg border border-earth-200 p-1 dark:border-earth-700 ${
-                jour ? FOND[jour.dayType] : ''
-              }`}
-            >
-              <p className="font-semibold tabular-nums">{date.slice(8)}</p>
-              {jour ? (
-                <>
-                  <p className="truncate">{t(`moon.dayType.${jour.dayType}`)}</p>
-                  <p className="truncate text-earth-700 dark:text-earth-200">
-                    {t(`moon.trend.${jour.trend}`)}
-                  </p>
-                  {jour.singularities.map((point) => (
-                    <p key={point} className="truncate text-earth-700 dark:text-earth-200">
-                      {t(`moon.singularity.${point}`)}
+            <div key={date} role="gridcell" className="contents">
+              {/* Toute la case est un lien, et non un `div` muni d'un `onClick` : on
+                  l'ouvre au clavier, dans un nouvel onglet, on l'imprime avec son adresse.
+                  Un gestionnaire de clic aurait l'air de marcher et ne ferait rien de tout
+                  cela. */}
+              {/* Pas d'`aria-label` : il **remplacerait** le contenu de la case au lieu de
+                  s'y ajouter, et un lecteur d'écran annoncerait « journée du 15 » là où il
+                  lit aujourd'hui « 15, Fruit, montante, 2 tâches ». Le contenu de la case
+                  est déjà le meilleur nom qu'on puisse lui donner. */}
+              <Link
+                to="/calendrier-lunaire/$date"
+                params={{ date }}
+                className={`block min-h-20 rounded-lg border border-earth-200 p-1 hover:border-sillon-600 dark:border-earth-700 ${
+                  jour ? FOND[jour.dayType] : ''
+                }`}
+              >
+                <p className="font-semibold tabular-nums">{date.slice(8)}</p>
+                {jour ? (
+                  <>
+                    <p className="truncate">{t(`moon.dayType.${jour.dayType}`)}</p>
+                    <p className="truncate text-earth-700 dark:text-earth-200">
+                      {t(`moon.trend.${jour.trend}`)}
                     </p>
-                  ))}
-                </>
-              ) : null}
-              {duJour.length > 0 ? (
-                <p className="mt-1 font-medium">{t('moon.tasksOnDay', { count: duJour.length })}</p>
-              ) : null}
+                    {jour.singularities.map((point) => (
+                      <p key={point} className="truncate text-earth-700 dark:text-earth-200">
+                        {t(`moon.singularity.${point}`)}
+                      </p>
+                    ))}
+                  </>
+                ) : null}
+                {duJour.length > 0 ? (
+                  <p className="mt-1 font-medium">
+                    {t('moon.tasksOnDay', { count: duJour.length })}
+                  </p>
+                ) : null}
+              </Link>
             </div>
           );
         })}

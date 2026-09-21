@@ -68,6 +68,7 @@ export default tseslint.config(
       '**/*.test.{ts,tsx}',
       'e2e/**/*.ts',
       'apps/api/prisma/seed.ts',
+      'apps/api/prisma/seed-references.ts',
     ],
     languageOptions: {
       globals: { ...globals.node },
@@ -91,7 +92,14 @@ export default tseslint.config(
   // Les tests et les scripts d'outillage parlent à la console et jonglent avec des
   // valeurs peu typées : on y desserre ce qui n'a pas de sens à cet endroit.
   {
-    files: ['**/*.test.ts', '**/*.test.tsx', 'e2e/**', 'scripts/**', 'apps/api/prisma/seed.ts'],
+    files: [
+      '**/*.test.ts',
+      '**/*.test.tsx',
+      'e2e/**',
+      'scripts/**',
+      'apps/api/prisma/seed.ts',
+      'apps/api/prisma/seed-references.ts',
+    ],
     rules: {
       'no-console': 'off',
       '@typescript-eslint/no-explicit-any': 'off',

@@ -86,6 +86,34 @@ Elles divergent aujourd'hui d'environ 24° — près d'un signe entier. **Il fau
 dire, et s'y tenir**, sans quoi les dates de Sillon ne correspondront à aucun calendrier
 connu et personne ne saura pourquoi.
 
+**Ce que cela coûte, mesuré.** L'argument resterait de principe si les deux conventions ne
+se séparaient que quelques jours par an. Les deux étant implémentées, on peut compter — ces
+chiffres sont figés par `moon.test.ts`, qui échouera s'ils changent :
+
+| Sur l'année 2026                        |                                   |
+| --------------------------------------- | --------------------------------- |
+| Jours portant un type **différent**     | **320 sur 365, soit 88 %**        |
+| Meilleur recalage entre les deux séries | **2 jours** (83 % de concordance) |
+
+Les deux jours sont la précession elle-même : 24° d'écart, et la lune parcourt 13,2° par
+jour. Une implémentation qui donnerait zéro ou cinq aurait un défaut dans la position de la
+lune, pas dans la convention.
+
+**Une conséquence peu connue, et qui compte pour le plan de culture** : les deux ne donnent
+pas la même _répartition_ des types.
+
+|                | racine  | feuille | fleur  | fruit |
+| -------------- | ------- | ------- | ------ | ----- |
+| tropical       | 89      | 93      | 92     | 91    |
+| constellations | **110** | 92      | **66** | 97    |
+
+Le tropical découpe douze secteurs **égaux** : les quatre types sont équilibrés par
+construction. Les constellations réelles sont de largeurs très inégales — la Vierge dépasse
+40°, la Balance en fait moins de 20 — si bien que la biodynamie offre **110 jours racine
+pour 66 jours fleur**. Qui organise ses semis dessus n'a pas le même nombre d'occasions
+selon ce qu'il cultive, et le décalage par lot (§6) en héritera : caler des brocolis sur un
+jour fleur est plus contraint que caler des carottes sur un jour racine.
+
 ---
 
 ## 4. Le pivot : la partie récoltée
@@ -240,3 +268,77 @@ Cinq questions, toutes pour toi, aucune technique :
 - **L'attente d'un contenu éditorial.** Lunaterra propose des conseils par plante. Sillon
   n'a pas vocation à écrire du contenu horticole, et devra dire non à cette demande — ou
   l'assumer comme un projet à part, avec un auteur.
+
+---
+
+## 11. Décision du 20 septembre 2026 : la fiche du jour
+
+Une fiche s'ouvre désormais au clic sur une journée de la vue mois
+(`/calendrier-lunaire/2026-09-20`). Elle porte deux choses que les sections précédentes
+avaient écartées, et cette section existe pour que l'écart soit **écrit** plutôt que
+découvert en revue de code.
+
+### Ce qui a été demandé, et accordé
+
+| Élément                                                                  | Ce que disait ce brief                                          | Décision                                                                       |
+| ------------------------------------------------------------------------ | --------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| **Indice chiffré 0-100** et son étiquette (« Exceptionnel »…)            | §7 règle 5 : pas de vocabulaire d'efficacité                    | **Accordé**, sous les garde-fous ci-dessous                                    |
+| **Créneau conseillé** (« Jardiner en fin d'après-midi · 17h04 – 19h41 ») | §1 règle 1 : pas de « meilleur moment pour semer »              | **Accordé**                                                                    |
+| **Conseils du jour** et **tâches suggérées**, par type × mois            | §10 : « Sillon n'a pas vocation à écrire du contenu horticole » | **Accordé** — le contenu est écrit et maintenu dans les fichiers de traduction |
+| **Météo du jour** (Open-Meteo)                                           | brief général §3.8 : hors périmètre V1                          | **Accordé**, extinguible (`WEATHER=none`)                                      |
+
+La demande est légitime : c'est la forme qu'ont les compagnons de jardinage du marché, et
+un calendrier lunaire qui refuserait d'en avoir l'air rate une partie de son public. Ce
+qu'il faut, c'est que l'honnêteté tienne **autrement** que par le silence.
+
+### Les quatre garde-fous qui remplacent la règle 5
+
+Ils ne sont pas facultatifs. Chacun tient une promesse que le vocabulaire ne tient plus.
+
+1. **L'indice s'ouvre.** `MoonIndex.reasons` dit ce qui a retiré des points et de combien,
+   et l'interface l'affiche derrière un bouton ⓘ avec cette phrase : _« Il n'a jamais été
+   confronté à une mesure de rendement, et n'en est pas une : les études contrôlées ne
+   mettent pas en évidence d'effet reproductible des phases lunaires sur la croissance des
+   plantes. »_ Un chiffre affiché gros au milieu d'un écran passe pour une mesure ; c'est
+   ce bouton qui l'en empêche, et le retirer changerait la nature de l'écran.
+2. **L'indice n'agrège que des conventions.** Cent points, moins le nœud (−45), le périgée
+   ou l'apogée (−20), la journée partagée entre deux types (−10), la lune sous l'horizon
+   pendant le jour (−5). Aucune de ces valeurs ne sort d'une mesure ; toutes sortent de ce
+   que les calendriers traditionnels marquent comme journées singulières. Le calcul est
+   dans `packages/core/src/moon-detail.ts`, et `moon-detail.test.ts` vérifie qu'il est
+   reproductible et que le compte rendu explique l'écart **en entier**.
+3. **Le créneau est un fait, pas un conseil déguisé.** C'est l'intersection de deux choses
+   vérifiables en levant la tête : la lune est au-dessus de l'horizon, et il fait jour.
+   Aucune règle de tradition ne fixe d'heure dans la journée, et en inventer une aurait été
+   ajouter une affirmation de plus.
+4. **Les règles 1 à 4 du §7 tiennent toujours.** La lune ne bloque rien, ne déplace rien,
+   ne s'impose pas au plan, et ne recopie aucun calendrier publié. Les tâches suggérées ne
+   s'ajoutent à aucun plan : ce sont des lignes de texte, et la fiche le dit.
+
+### Ce que Sillon ajoute, et qu'aucun compagnon ne peut ajouter
+
+C'est le point d'appui du §2, et il est visible sur cette fiche : sous les conseils d'usage
+viennent **les espèces du référentiel de la ferme** qui se récoltent de ce type, puis **les
+tâches réellement prévues ce jour-là**, marquées quand la culture correspond au type du
+jour. Lunaterra doit demander ce qu'on cultive ; Sillon le sait déjà.
+
+### Le contenu éditorial, et ce qu'il engage
+
+Quarante-huit entrées — quatre types de jour × douze mois —, chacune portant un conseil et
+deux ou trois travaux d'usage, en français et en anglais, sous `moon.advice` dans les
+fichiers de traduction. Ce sont des travaux courants de maraîchage en France
+métropolitaine, écrits pour Sillon : ils ne recopient aucun calendrier publié, ce que la
+licence de ces ouvrages interdirait. Le risque nommé au §10 demeure entier, et il n'a pas
+disparu parce qu'on l'a accepté : **ce contenu a désormais un coût de maintenance, et il
+n'a pas d'auteur désigné.** Il vieillira, il sera faux quelque part, et il faudra quelqu'un
+pour le relire. À rouvrir si la demande s'étend à un conseil par espèce.
+
+### La météo
+
+`WEATHER=open-meteo` par défaut, `none` pour couper. C'est le **second** endroit où Sillon
+parle à l'extérieur, après la recherche d'adresse, et il tient les mêmes règles : la
+requête passe par le serveur, elle s'éteint d'un réglage, et les coordonnées partent
+arrondies au centième de degré — environ un kilomètre, soit plus fin que la maille des
+modèles et moins fin que la parcelle. Hors de la fenêtre couverte, la route rend `null`
+plutôt qu'une prévision inventée, et la fiche s'affiche sans météo. Voir
+`apps/api/src/routes/weather.ts`.

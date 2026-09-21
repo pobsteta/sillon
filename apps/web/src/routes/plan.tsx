@@ -33,6 +33,18 @@ import { firstHarvestDate, mainDate } from '../lib/planting.js';
 import { formatDate, formatLength, formatMoney } from '../lib/format.js';
 import type { Planting } from '../lib/types.js';
 
+/**
+ * Les puces de filtre, dans l'ordre où elles se lisent. La chaîne vide est « toutes » :
+ * elle vaut absence de filtre côté serveur, et évite un cas particulier à chaque appel.
+ */
+const PARTIES: { valeur: '' | 'root' | 'leaf' | 'fruit' | 'flower'; glyphe: string }[] = [
+  { valeur: '', glyphe: '✳' },
+  { valeur: 'root', glyphe: '🥕' },
+  { valeur: 'leaf', glyphe: '🌿' },
+  { valeur: 'fruit', glyphe: '🍐' },
+  { valeur: 'flower', glyphe: '🌸' },
+];
+
 export function PlanPage() {
   const { t } = useTranslation();
   const locale = useLocale();
@@ -46,6 +58,8 @@ export function PlanPage() {
   const [cropId, setCropId] = useState('');
   const [tagId, setTagId] = useState('');
   const [plantingType, setPlantingType] = useState('');
+  /** Ce qu'on récolte. Vide = toutes les séries, ce qui est l'état de départ. */
+  const [harvestedPart, setHarvestedPart] = useState('');
   const [underCover, setUnderCover] = useState<'' | 'true' | 'false'>('');
   const [placed, setPlaced] = useState<'' | 'true' | 'false'>('');
   const [search, setSearch] = useState('');
@@ -64,6 +78,7 @@ export function PlanPage() {
     cropId: cropId || undefined,
     tagId: tagId || undefined,
     plantingType: plantingType || undefined,
+    harvestedPart: harvestedPart || undefined,
     inGreenhouse: underCover || undefined,
     placed: placed || undefined,
     search: search || undefined,
@@ -143,6 +158,41 @@ export function PlanPage() {
             {t('common.selected', { count: selection.length })} · {t('planting.bulk')}
           </button>
         ) : null}
+      </div>
+
+      {/* Filtre par partie récoltée.
+          Il porte sur la **requête**, non sur l'affichage : la liste, les cartes et le
+          Gantt suivent donc ensemble, et le traitement par lot agit sur ce qu'on voit. Un
+          filtre posé sur le seul rendu du Gantt laisserait la sélection contenir des
+          séries invisibles, ce qui est la façon la plus sûre de modifier la mauvaise.
+
+          Ces quatre mots sont ceux du calendrier lunaire, mais `harvestedPart` est un
+          attribut d'espèce comme un autre : ces puces ne disent pas un mot de la lune, et
+          restent donc visibles calendrier éteint (brief lunaire §1, règle 3). */}
+      <div
+        className="no-print mb-4 flex flex-wrap items-center gap-2"
+        role="group"
+        aria-label={t('planting.harvestedPart.filter')}
+      >
+        {PARTIES.map(({ valeur, glyphe }) => {
+          const actif = harvestedPart === valeur;
+          return (
+            <button
+              key={valeur || 'all'}
+              type="button"
+              aria-pressed={actif}
+              onClick={() => setHarvestedPart(valeur)}
+              className={`chip min-h-9 gap-1.5 border px-3 py-1.5 text-sm ${
+                actif
+                  ? 'border-sillon-600 bg-sillon-100 text-sillon-900 dark:bg-sillon-900 dark:text-sillon-100'
+                  : 'border-earth-200 bg-white text-earth-800 dark:border-earth-700 dark:bg-earth-800 dark:text-earth-100'
+              }`}
+            >
+              <span aria-hidden>{glyphe}</span>
+              {t(`planting.harvestedPart.${valeur || 'all'}`)}
+            </button>
+          );
+        })}
       </div>
 
       {moonNotice !== null ? (

@@ -10,10 +10,15 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./references-schema": {
+      "types": "./dist/references-schema.d.ts",
+      "default": "./dist/references-schema.js"
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "data"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
@@ -21,6 +26,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "astronomy-engine": "^2.1.19"
+    "astronomy-engine": "^2.1.19",
+    "zod": "^4.6.5"
   }
 }

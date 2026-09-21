@@ -108,6 +108,12 @@ const ListQuery = z.object({
   finished: z.stringbool().optional(),
   placed: z.stringbool().optional(),
   tagId: z.coerce.number().int().positive().optional(),
+  /**
+   * Ce qu'on récolte. La série porte une surcharge et l'espèce une valeur par défaut :
+   * filtrer sur l'une sans l'autre laisserait de côté, selon le sens, soit les séries
+   * surchargées, soit toutes les autres. Voir `brief/jardinage-lunaire.md` §4.
+   */
+  harvestedPart: z.enum(['root', 'leaf', 'flower', 'fruit']).optional(),
   search: z.string().trim().min(1).optional(),
   /** Saison : ne garder que les séries actives pendant l'année civile donnée. */
   year: z.coerce.number().int().min(1900).max(2200).optional(),
@@ -253,14 +259,43 @@ export async function plantingRoutes(app: FastifyInstance): Promise<void> {
               : query.placed
                 ? { assignments: { some: {} } }
                 : { assignments: { none: {} } }),
-            ...(query.search
-              ? {
-                  OR: [
-                    { crop: { name: { contains: query.search, mode: 'insensitive' as const } } },
-                    { variety: { name: { contains: query.search, mode: 'insensitive' as const } } },
-                  ],
-                }
-              : {}),
+            // Deux conditions en `OR` cohabitent ici : la recherche textuelle et la partie
+            // récoltée. Les poser toutes deux à la racine ferait que la seconde écraserait
+            // la première en silence — même clé, même objet. D'où le `AND`.
+            AND: [
+              ...(query.search
+                ? [
+                    {
+                      OR: [
+                        {
+                          crop: {
+                            name: { contains: query.search, mode: 'insensitive' as const },
+                          },
+                        },
+                        {
+                          variety: {
+                            name: { contains: query.search, mode: 'insensitive' as const },
+                          },
+                        },
+                      ],
+                    },
+                  ]
+                : []),
+              ...(query.harvestedPart
+                ? [
+                    {
+                      OR: [
+                        // La surcharge de la série gagne, quand elle existe.
+                        { harvestedPart: query.harvestedPart },
+                        // Sinon c'est l'espèce qui répond — et une espèce non qualifiée
+                        // ne répond à aucun filtre, ce qui est la bonne réponse : la
+                        // ranger d'office quelque part serait inventer une donnée.
+                        { harvestedPart: null, crop: { harvestedPart: query.harvestedPart } },
+                      ],
+                    },
+                  ]
+                : []),
+            ],
           },
           include: plantingInclude,
         });

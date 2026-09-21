@@ -98,6 +98,64 @@ describe('les deux conventions zodiacales', () => {
       expect(types, convention).toEqual(new Set(['racine', 'feuille', 'fleur', 'fruit']));
     }
   });
+
+  it('divergent la plupart des jours, et non à la marge', () => {
+    // Le chiffre qui justifie d'avoir à choisir. Le brief §3 dit « il faut choisir, le
+    // dire, et s'y tenir » ; il resterait un argument de principe si les deux conventions
+    // ne se séparaient que quelques jours par an. Elles se séparent presque tous les jours.
+    const tropical = moonYear(2026, { convention: 'tropical' });
+    const constellations = moonYear(2026, { convention: 'constellations' });
+    const differents = tropical.filter(
+      (jour, index) => jour.dayType !== constellations[index]!.dayType,
+    );
+
+    expect(differents.length / tropical.length).toBeGreaterThan(0.8);
+  });
+
+  it('se recalent à deux jours près, comme le prédit la précession', () => {
+    // 24° d'écart, et la lune parcourt 13,2° par jour : l'une devrait suivre l'autre avec
+    // environ deux jours de retard. C'est un contrôle de cohérence sur le calcul lui-même,
+    // et non sur une convention : s'il tombait à zéro ou à cinq, c'est la position de la
+    // lune qui serait fausse quelque part.
+    const tropical = moonYear(2026, { convention: 'tropical' });
+    const constellations = moonYear(2026, { convention: 'constellations' });
+    const concordance = (decalage: number) =>
+      tropical.filter(
+        (jour, index) =>
+          index + decalage < constellations.length &&
+          jour.dayType === constellations[index + decalage]!.dayType,
+      ).length /
+      (tropical.length - decalage);
+
+    const meilleur = [0, 1, 2, 3, 4].reduce((a, b) => (concordance(b) > concordance(a) ? b : a));
+    expect(meilleur, 'le décalage qui aligne le mieux les deux séries').toBe(2);
+  });
+
+  it('ne donnent pas la même répartition des types sur l’année', () => {
+    // Conséquence directe et peu connue : le tropical découpe douze secteurs **égaux**,
+    // donc quatre types équilibrés. Les constellations réelles sont de largeurs très
+    // inégales — la Vierge dépasse 40°, la Balance en fait moins de 20 — et la biodynamie
+    // donne donc nettement plus de jours racine que de jours fleur. Qui organise ses semis
+    // dessus n'a pas le même nombre d'occasions selon ce qu'il cultive.
+    const compter = (convention: 'tropical' | 'constellations') => {
+      const par: Record<string, number> = {};
+      for (const jour of moonYear(2026, { convention })) {
+        par[jour.dayType] = (par[jour.dayType] ?? 0) + 1;
+      }
+      return par;
+    };
+
+    const tropical = compter('tropical');
+    const constellations = compter('constellations');
+
+    // Tropical : douze secteurs égaux, donc un écart faible entre le type le plus et le
+    // moins fréquent.
+    const ecart = (par: Record<string, number>) =>
+      Math.max(...Object.values(par)) - Math.min(...Object.values(par));
+    expect(ecart(tropical), 'tropical, quasi équilibré').toBeLessThan(15);
+    expect(ecart(constellations), 'constellations, déséquilibré').toBeGreaterThan(30);
+    expect(constellations.racine!).toBeGreaterThan(constellations.fleur!);
+  });
 });
 
 describe('le changement de type en cours de journée', () => {

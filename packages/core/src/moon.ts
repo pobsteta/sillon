@@ -104,7 +104,10 @@ export interface MoonOptions {
  * mur. La convention tropicale reste disponible, et donne d'autres dates : voir
  * `moon.test.ts`, où les deux divergent d'un type entier le même jour.
  */
-const DEFAUTS = { convention: 'constellations' as ZodiacConvention, timeZone: 'Europe/Paris' };
+export const DEFAUTS = {
+  convention: 'constellations' as ZodiacConvention,
+  timeZone: 'Europe/Paris',
+};
 
 /**
  * Élément des douze signes, dans l'ordre à partir du Bélier, puis le type de jour qui s'y
@@ -149,8 +152,14 @@ const TYPE_PAR_CONSTELLATION: Record<string, MoonDayType> = {
   Psc: 'feuille',
 };
 
-/** Décalage du fuseau à cet instant, en minutes. */
-function decalageMinutes(instant: Date, timeZone: string): number {
+/**
+ * Décalage du fuseau à cet instant, en minutes.
+ *
+ * Exporté pour `moon-detail.ts` : la fiche du jour range des instants dans la journée
+ * civile locale, et refaire ce calcul ailleurs est le plus sûr moyen d'obtenir deux
+ * frontières de journée qui divergent d'une heure deux fois l'an.
+ */
+export function decalageMinutes(instant: Date, timeZone: string): number {
   // `Intl` donne l'heure locale ; la différence avec l'heure UTC lue au même instant donne
   // le décalage, changements d'heure compris.
   const parties = new Intl.DateTimeFormat('en-US', {
@@ -176,8 +185,11 @@ function decalageMinutes(instant: Date, timeZone: string): number {
   return Math.round((local - instant.getTime()) / 60_000);
 }
 
-/** Instant correspondant à `heure` locale (fraction d'heure acceptée) le jour `date`. */
-function instantLocal(date: IsoDate, heure: number, timeZone: string): Date {
+/**
+ * Instant correspondant à `heure` locale (fraction d'heure acceptée) le jour `date`.
+ * Exporté pour `moon-detail.ts`, qui borne la journée exactement de la même façon.
+ */
+export function instantLocal(date: IsoDate, heure: number, timeZone: string): Date {
   const approximatif = new Date(parseIsoDate(date).getTime() + heure * 3_600_000);
   // Deux passes : le décalage se lit à un instant, et l'instant dépend du décalage. La
   // seconde passe suffit, sauf à viser l'heure même d'un changement d'heure.
@@ -224,8 +236,8 @@ function nommerPhase(fraction: number, angle: number): MoonPhaseName {
   return angle < 180 ? 'croissante' : 'decroissante';
 }
 
-/** Heure locale `HHhMM` d'un instant. */
-function heureLocale(instant: Date, timeZone: string): string {
+/** Heure locale `HHhMM` d'un instant. Exporté pour `moon-detail.ts`. */
+export function heureLocale(instant: Date, timeZone: string): string {
   const texte = new Intl.DateTimeFormat('fr-FR', {
     timeZone,
     hour12: false,
@@ -339,8 +351,11 @@ export function moonYear(year: number, options: MoonOptions = {}): MoonDay[] {
  * Périgées, apogées et passages aux nœuds de l'année. Ils ne se déduisent pas d'une journée
  * isolée : ce sont des instants qu'on cherche, puis qu'on range dans le jour local qui les
  * contient.
+ *
+ * Exporté pour `moon-detail.ts` : la fiche d'un jour en a besoin sans vouloir de l'année
+ * entière, et en tenir une seconde définition serait en tenir deux qui divergent.
  */
-function pointsSinguliers(year: number, timeZone: string): [IsoDate, MoonSingularity][] {
+export function pointsSinguliers(year: number, timeZone: string): [IsoDate, MoonSingularity][] {
   const debut = new Date(Date.UTC(year, 0, 1));
   const finUtc = Date.UTC(year + 1, 0, 1);
   const trouves: [IsoDate, MoonSingularity][] = [];

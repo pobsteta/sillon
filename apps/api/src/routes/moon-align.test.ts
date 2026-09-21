@@ -45,9 +45,20 @@ afterAll(async () => {
 
 /** Crée une série de l'espèce nommée, semée à la date donnée. */
 async function semer(espece: string, date: string): Promise<{ id: number; part: string }> {
-  const crops = (
-    await app.inject({ method: 'GET', url: url('/crops'), headers: entetes() })
-  ).json();
+  const reponseCrops = await app.inject({
+    method: 'GET',
+    url: url('/crops'),
+    headers: entetes(),
+  });
+  const crops = reponseCrops.json();
+  // Le référentiel est le socle de tout ce fichier : sans lui, chaque essai échoue sur
+  // « crops.find n'est pas une fonction », qui ne dit rien de la cause. On montre le
+  // statut et le corps — c'est ainsi qu'on voit qu'une autre suite a vidé la base sous
+  // nos pieds, ou qu'une session a expiré.
+  expect(
+    Array.isArray(crops),
+    `GET /crops → ${reponseCrops.statusCode} ${reponseCrops.body.slice(0, 200)}`,
+  ).toBe(true);
   const crop = crops.find((c: { name: string }) => c.name === espece);
   expect(crop, `${espece} doit exister au référentiel`).toBeDefined();
   expect(crop.harvestedPart, `${espece} doit être qualifiée`).toBeTruthy();
@@ -244,4 +255,89 @@ describe('ce que le calage ne fait pas', () => {
       expect(corps.rescheduled, 'les tâches ont suivi').toBeGreaterThan(0);
     }
   });
+});
+
+describe('filtrer le plan par ce qu’on récolte', () => {
+  // Le pivot du brief §4, vu depuis la liste des séries. Ce filtre alimente les puces du
+  // plan de culture **et** le diagramme de Gantt, qui n'affiche que les séries retenues
+  // par la requête : une erreur ici ferait montrer deux choses différentes aux deux vues,
+  // et le traitement par lot agirait sur une sélection qu'on ne voit pas.
+
+  const lister = async (partie?: string) =>
+    app
+      .inject({
+        method: 'GET',
+        url: url(`/plantings?year=2027${partie ? `&harvestedPart=${partie}` : ''}`),
+        headers: entetes(),
+      })
+      .then((r) => r.json());
+
+  it('ne garde que les séries de la partie demandée', async () => {
+    const carotte = await semer('Carotte', '2027-04-02');
+    const tomate = await semer('Tomate', '2027-04-03');
+    expect(carotte.part, 'la carotte est une racine').toBe('root');
+    expect(tomate.part, 'la tomate est un fruit').toBe('fruit');
+
+    const racines = await lister('root');
+    const identifiants = racines.map((serie: { id: number }) => serie.id);
+
+    expect(identifiants).toContain(carotte.id);
+    expect(identifiants).not.toContain(tomate.id);
+  }, 120_000);
+
+  it('suit la surcharge de la série avant celle de l’espèce', async () => {
+    // « Une carotte porte-graine se mène en jour fruit, pas en jour racine » (§4). La
+    // surcharge doit donc faire sortir la série de son filtre d'origine **et** la faire
+    // entrer dans l'autre. Ne tester qu'un des deux sens laisserait passer une clause qui
+    // ajoute sans retrancher — le défaut le plus probable d'un `OR` mal posé.
+    const porteGraine = await semer('Carotte', '2027-04-04');
+    await app.inject({
+      method: 'PATCH',
+      url: url(`/plantings/${porteGraine.id}`),
+      headers: entetes(),
+      payload: { harvestedPart: 'fruit' },
+    });
+
+    const racines = (await lister('root')).map((serie: { id: number }) => serie.id);
+    const fruits = (await lister('fruit')).map((serie: { id: number }) => serie.id);
+
+    expect(racines, 'la surcharge la sort des racines').not.toContain(porteGraine.id);
+    expect(fruits, 'et la fait entrer dans les fruits').toContain(porteGraine.id);
+  }, 120_000);
+
+  it('cohabite avec la recherche textuelle, sans l’écraser', () => {
+    // Les deux conditions sont des `OR` : posées toutes deux à la racine de la clause
+    // Prisma, la seconde écraserait la première en silence — même clé, même objet. C'est
+    // le défaut que le `AND` existe pour éviter, et il ne se verrait pas autrement.
+    return app
+      .inject({
+        method: 'GET',
+        url: url('/plantings?year=2027&harvestedPart=root&search=tomate'),
+        headers: entetes(),
+      })
+      .then((reponse) => {
+        expect(reponse.statusCode).toBe(200);
+        // Aucune série n'est à la fois une racine et une tomate : les deux filtres
+        // s'appliquent. Si l'un écrasait l'autre, la liste ne serait pas vide.
+        expect(reponse.json()).toHaveLength(0);
+      });
+  }, 120_000);
+
+  it('laisse de côté les espèces non qualifiées, plutôt que de les ranger d’office', async () => {
+    // Une espèce sans partie récoltée ne répond à aucun filtre. La ranger quelque part
+    // par défaut serait inventer une donnée que personne n'a saisie.
+    const sansPartie = await semer('Carotte', '2027-04-05');
+    const crops = (
+      await app.inject({ method: 'GET', url: url('/crops'), headers: entetes() })
+    ).json();
+    const carotte = crops.find((c: { name: string }) => c.name === 'Carotte');
+    await withoutFarmScope((db) =>
+      db.crop.update({ where: { id: carotte.id }, data: { harvestedPart: null } }),
+    );
+
+    for (const partie of ['root', 'leaf', 'flower', 'fruit']) {
+      const identifiants = (await lister(partie)).map((serie: { id: number }) => serie.id);
+      expect(identifiants, partie).not.toContain(sansPartie.id);
+    }
+  }, 120_000);
 });

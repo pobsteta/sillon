@@ -7,9 +7,9 @@
 //
 // - **l'ordre des coordonnées**, parce qu'une inversion placerait chaque ferme française
 //   au large de la Somalie sans lever la moindre erreur ;
-// - **le silence quand on l'a demandé**, parce que c'est le seul endroit où Sillon parle à
-//   l'extérieur, et qu'un réglage qui ne couperait pas vraiment serait pire que pas de
-//   réglage du tout.
+// - **le silence quand on l'a demandé**, parce que c'est l'un des deux endroits où Sillon
+//   parle à l'extérieur — l'autre étant la météo, éprouvée dans `weather.test.ts` — et
+//   qu'un réglage qui ne couperait pas vraiment serait pire que pas de réglage du tout.
 //
 // Aucun essai ne joint la Base Adresse Nationale : un service tiers dans une suite
 // d'essais, c'est un échec du jour où il est en maintenance, sur du code qui n'a pas bougé.

@@ -78,6 +78,21 @@ const EnvSchema = z.object({
   NOMINATIM_URL: z.string().default('https://nominatim.openstreetmap.org/search'),
 
   /**
+   * Météo de la fiche du jour du calendrier lunaire.
+   *
+   * `open-meteo` — service libre, sans clé, données sous CC-BY. `none` éteint l'appel : la
+   * fiche s'affiche alors sans météo, et **rien ne sort de Sillon**.
+   *
+   * Ce réglage existe pour les mêmes raisons que `GEOCODING`, et une de plus : la météo
+   * est hors périmètre V1 du brief (§3.8). Elle est là sur demande explicite ; pouvoir
+   * l'éteindre est ce qui rend l'entorse réversible. Les coordonnées partent arrondies au
+   * centième de degré — voir `routes/weather.ts`.
+   */
+  WEATHER: z.enum(['open-meteo', 'none']).default('open-meteo'),
+  /** Adresse d'Open-Meteo, pour pointer une instance à soi plutôt que la publique. */
+  WEATHER_URL: z.string().default('https://api.open-meteo.com/v1/forecast'),
+
+  /**
    * Fond de carte supplémentaire, à la charge du déploiement. Sillon ne livre
    * qu'OpenStreetMap : les imageries aériennes gratuites d'Esri ou de Google interdisent
    * la redistribution, et les inscrire ici ferait porter à chaque auto-hébergeur une

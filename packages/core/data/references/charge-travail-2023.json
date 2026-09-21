@@ -1,0 +1,62 @@
+{
+  "source": {
+    "id": "charge-travail-2023",
+    "titre": "Module de dimensionnement et d'évolution de la charge de travail à partir de la planification des cultures",
+    "auteurs": ["Morel, Kevin (INRAE)"],
+    "annee": 2023,
+    "url": "https://doi.org/10.57745/NQHB1I",
+    "licence": "etalab-2.0",
+    "notes": "Recherche Data Gouv, fichier Module_dimensionnement_travail. Licence Ouverte Etalab 2.0, relevée le 20 septembre 2026 via l'API de l'entrepôt ; attribution obligatoire. Le classeur cite lui-même le rapport de thèse de Kevin Morel (2016), https://hal.science/hal-01930607 — c'est cette republication sous licence ouverte qui rend les chiffres reprenables, la thèse elle-même étant sous CC BY-NC-ND. Seul l'onglet Repères_temps_travail est repris : le reste du classeur est un outil de calcul, pas un jeu de références."
+  },
+  "values": [],
+  "farm_values": [
+    {
+      "source_id": "charge-travail-2023",
+      "metric": "surface-cultivee-par-etp",
+      "context": {
+        "systeme": "permaculture",
+        "conduite": null
+      },
+      "range": {
+        "low": 1000,
+        "median": 2750,
+        "high": 4500
+      },
+      "n": null,
+      "page_ref": "onglet Repères_temps_travail, ligne 8 « Microferme manuelle avec forte densification »",
+      "notes": "Surface **cultivée** par équivalent temps plein, telle que la source la publie ; elle ne comprend ni les passe-pieds ni les bâtiments. La médiane est le milieu de la fourchette : la source n'en donne pas."
+    },
+    {
+      "source_id": "charge-travail-2023",
+      "metric": "surface-cultivee-par-etp",
+      "context": {
+        "systeme": "bio-intensif",
+        "conduite": null
+      },
+      "range": {
+        "low": 2000,
+        "median": 5000,
+        "high": 8000
+      },
+      "n": null,
+      "page_ref": "onglet Repères_temps_travail, ligne 9 « Maraîchage biointensif (type Coleman, Fortier) »",
+      "notes": "Surface **cultivée** par équivalent temps plein, telle que la source la publie ; elle ne comprend ni les passe-pieds ni les bâtiments. La médiane est le milieu de la fourchette : la source n'en donne pas."
+    },
+    {
+      "source_id": "charge-travail-2023",
+      "metric": "surface-cultivee-par-etp",
+      "context": {
+        "systeme": "mixte",
+        "conduite": null
+      },
+      "range": {
+        "low": 6000,
+        "median": 10500,
+        "high": 15000
+      },
+      "n": null,
+      "page_ref": "onglet Repères_temps_travail, ligne 10 « Maraîchage diversifié mécanisé »",
+      "notes": "Surface **cultivée** par équivalent temps plein, telle que la source la publie ; elle ne comprend ni les passe-pieds ni les bâtiments. La médiane est le milieu de la fourchette : la source n'en donne pas."
+    }
+  ]
+}

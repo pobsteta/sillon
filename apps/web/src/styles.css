@@ -74,6 +74,22 @@
   .chip {
     @apply inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium;
   }
+
+  /* Hauteur de la carte du jardin.
+   *
+   * Deux usages, deux tailles. Sur un téléphone au champ, la carte se consulte : la borner
+   * à 68 % de la fenêtre laisse voir qu'il y a des commandes en dessous, sans quoi on ne
+   * saurait pas qu'il faut faire défiler. Sur un poste fixe, elle sert à **dessiner** des
+   * planches de 80 cm : chaque pixel gagné est de la précision au tracé, et la carte prend
+   * alors presque toute la hauteur utile. Le bouton plein écran va plus loin encore. */
+  .carte {
+    height: min(32rem, 68vh);
+  }
+  @media (min-width: 1024px) {
+    .carte {
+      height: min(60rem, 82vh);
+    }
+  }
 }
 
 @layer components {

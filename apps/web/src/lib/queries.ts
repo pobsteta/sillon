@@ -19,8 +19,10 @@ import type {
   OrderLine,
   Planting,
   Provider,
+  ReferenceAnswer,
   Session,
   MoonDay,
+  MoonDayDetail,
   Stats,
   StudentFarm,
   Tag,
@@ -28,6 +30,7 @@ import type {
   TaskTemplate,
   TrainingCenter,
   Variety,
+  Weather,
 } from './types.js';
 
 export const keys = {
@@ -144,6 +147,8 @@ export const useFarm = (farmId: number) =>
         timezone: string;
         latitude: number | null;
         longitude: number | null;
+        /** Réglages de planches ; `bedWidth` est en millimètres, comme le schéma. */
+        bedSettings: { bedWidth: number | null } | null;
       }>(`/api/farms/${farmId}`),
     enabled: farmId > 0,
   });
@@ -167,6 +172,51 @@ export const useMoonYear = (farmId: number, year: number, enabled: boolean) =>
     enabled,
     staleTime: Infinity,
     gcTime: 24 * 3_600_000,
+  });
+
+/**
+ * La fiche d'une journée. À part de l'année, et pour une raison de fond : elle dépend de
+ * la **position** de la ferme, que l'année ignore. Gardée une journée seulement, contre
+ * une semaine pour l'année — déplacer la ferme doit changer les heures de lever.
+ */
+export const useMoonDayDetail = (farmId: number, date: string, enabled: boolean) =>
+  useQuery({
+    queryKey: keys.list(farmId, 'moon-day', date),
+    queryFn: () => api<MoonDayDetail>(`${base(farmId)}/moon/day/${date}`),
+    enabled,
+    staleTime: 3_600_000,
+    gcTime: 24 * 3_600_000,
+  });
+
+/**
+ * La météo d'une journée, ou `null`.
+ *
+ * `retry: false` : les trois façons de n'avoir pas de météo — déploiement qui l'a éteinte,
+ * ferme sans position, date hors fenêtre — rendent toutes `null` sans erreur, et un échec
+ * réseau ne mérite pas qu'on réessaie une donnée d'agrément. La fiche s'affiche sans.
+ */
+export const useWeather = (farmId: number, date: string, enabled: boolean) =>
+  useQuery({
+    queryKey: keys.list(farmId, 'weather', date),
+    queryFn: () => api<Weather | null>(`${base(farmId)}/weather/${date}`),
+    enabled,
+    retry: false,
+    staleTime: 1_800_000,
+  });
+
+/**
+ * Les références publiées pour une espèce de la ferme.
+ *
+ * Gardées longtemps : elles ne changent qu'au passage d'un seed, et le service worker les
+ * emporte avec le reste — le champ n'a pas de réseau.
+ */
+export const useReferences = (farmId: number, speciesId: number | null) =>
+  useQuery({
+    queryKey: keys.list(farmId, 'references', speciesId ?? 0),
+    queryFn: () => api<ReferenceAnswer>(`${base(farmId)}/references${queryString({ speciesId })}`),
+    enabled: farmId > 0 && speciesId !== null,
+    staleTime: 24 * 3_600_000,
+    gcTime: 7 * 24 * 3_600_000,
   });
 
 export const useTrainingCenter = (farmId: number, enabled: boolean) =>

@@ -77,9 +77,12 @@ services:
       UPLOAD_DIR: /data/uploads
       # Un réglage qui n'arrive pas jusqu'au conteneur n'existe pas : ces trois-là se
       # posent dans `.env`, et seraient sinon ignorés sans que rien ne le dise.
-      # `GEOCODING=none` coupe la seule requête que Sillon adresse à un tiers.
+      # `GEOCODING=none` et `WEATHER=none` coupent les deux seules requêtes que Sillon
+      # adresse à un tiers.
       GEOCODING: ${GEOCODING:-ban}
       GEOCODING_URL: ${GEOCODING_URL:-https://api-adresse.data.gouv.fr/search/}
+      WEATHER: ${WEATHER:-open-meteo}
+      WEATHER_URL: ${WEATHER_URL:-https://api.open-meteo.com/v1/forecast}
       MAP_TILE_URL: ${MAP_TILE_URL:-}
       MAP_TILE_ATTRIBUTION: ${MAP_TILE_ATTRIBUTION:-}
       RATE_LIMIT_MAX: ${RATE_LIMIT_MAX:-600}

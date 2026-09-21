@@ -17,7 +17,9 @@ import {
   isLatitude,
   isLatLng,
   isLongitude,
+  bedOutline,
   centroidOfAll,
+  offsetMeters,
   longestSideMm,
   polygonArea,
   polygonCentroid,
@@ -283,5 +285,47 @@ describe('faire pivoter un contour', () => {
     expect(ecartApres).toBeGreaterThan(0);
     expect(polygonArea(a!)).toBe(polygonArea(planche));
     expect(ecartAvant).toBeGreaterThan(0);
+  });
+});
+
+describe('poser un parcellaire à partir de mesures de terrain', () => {
+  // Dijon : la ferme de démonstration y est installée, et la latitude importe ici.
+  const DIJON = { lat: 47.322, lng: 5.041 };
+
+  it('déplace d’un nombre de mètres, et non d’un nombre de degrés', () => {
+    const cent = offsetMeters(DIJON, 100, 100);
+    // Cent mètres vers le nord font toujours le même écart de latitude ; cent mètres vers
+    // l'est en font un plus grand, les méridiens étant resserrés à cette latitude.
+    expect(cent.lat - DIJON.lat).toBeCloseTo(0.000899, 5);
+    expect(cent.lng - DIJON.lng).toBeGreaterThan(cent.lat - DIJON.lat);
+  });
+
+  it('ne déforme pas le rectangle, malgré le resserrement des méridiens', () => {
+    // Le piège que `offsetMeters` existe pour éviter : ajouter le même nombre de degrés
+    // dans les deux directions donnerait, à Dijon, une planche allongée d'un tiers — un
+    // rectangle plausible, aux mauvaises mesures, sans rien qui signale l'erreur.
+    const planche = bedOutline(DIJON, 50, 0.8);
+
+    expect(polygonArea(planche)).toBe(40);
+    expect(longestSideMm(planche)).toBeGreaterThan(49_900);
+    expect(longestSideMm(planche)).toBeLessThan(50_100);
+  });
+
+  it('oriente la planche sans changer ses mesures', () => {
+    const nordSud = bedOutline(DIJON, 50, 0.8);
+    const estOuest = bedOutline(DIJON, 50, 0.8, 90);
+
+    expect(polygonArea(estOuest)).toBe(polygonArea(nordSud));
+    expect(longestSideMm(estOuest)).toBeCloseTo(longestSideMm(nordSud), -2);
+    // Orientée, elle ne se superpose plus à celle qui ne l'est pas.
+    expect(estOuest[2]!.lat).not.toBeCloseTo(nordSud[2]!.lat, 5);
+  });
+
+  it('garde le coin de départ où il est', () => {
+    // La rotation se fait autour du coin connu sur le terrain. Autour du centre, la
+    // planche se déplacerait aussi, et le parcellaire glisserait sans qu'on l'ait demandé.
+    const tournee = bedOutline(DIJON, 50, 0.8, 30);
+    expect(tournee[0]!.lat).toBeCloseTo(DIJON.lat, 6);
+    expect(tournee[0]!.lng).toBeCloseTo(DIJON.lng, 6);
   });
 });
