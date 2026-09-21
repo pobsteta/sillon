@@ -86,6 +86,34 @@ Elles divergent aujourd'hui d'environ 24° — près d'un signe entier. **Il fau
 dire, et s'y tenir**, sans quoi les dates de Sillon ne correspondront à aucun calendrier
 connu et personne ne saura pourquoi.
 
+**Ce que cela coûte, mesuré.** L'argument resterait de principe si les deux conventions ne
+se séparaient que quelques jours par an. Les deux étant implémentées, on peut compter — ces
+chiffres sont figés par `moon.test.ts`, qui échouera s'ils changent :
+
+| Sur l'année 2026                        |                                   |
+| --------------------------------------- | --------------------------------- |
+| Jours portant un type **différent**     | **320 sur 365, soit 88 %**        |
+| Meilleur recalage entre les deux séries | **2 jours** (83 % de concordance) |
+
+Les deux jours sont la précession elle-même : 24° d'écart, et la lune parcourt 13,2° par
+jour. Une implémentation qui donnerait zéro ou cinq aurait un défaut dans la position de la
+lune, pas dans la convention.
+
+**Une conséquence peu connue, et qui compte pour le plan de culture** : les deux ne donnent
+pas la même _répartition_ des types.
+
+|                | racine  | feuille | fleur  | fruit |
+| -------------- | ------- | ------- | ------ | ----- |
+| tropical       | 89      | 93      | 92     | 91    |
+| constellations | **110** | 92      | **66** | 97    |
+
+Le tropical découpe douze secteurs **égaux** : les quatre types sont équilibrés par
+construction. Les constellations réelles sont de largeurs très inégales — la Vierge dépasse
+40°, la Balance en fait moins de 20 — si bien que la biodynamie offre **110 jours racine
+pour 66 jours fleur**. Qui organise ses semis dessus n'a pas le même nombre d'occasions
+selon ce qu'il cultive, et le décalage par lot (§6) en héritera : caler des brocolis sur un
+jour fleur est plus contraint que caler des carottes sur un jour racine.
+
 ---
 
 ## 4. Le pivot : la partie récoltée
