@@ -9,6 +9,7 @@ import { usePlantings, useStats, useTasks } from '../lib/queries.js';
 import { EmptyState, Loading, PageHeader } from '../components/ui.js';
 import { formatDate, formatLaborTime } from '../lib/format.js';
 import { TaskList } from './tasks.js';
+import { CielDuTableauDeBord } from '../components/CielDuTableauDeBord.js';
 
 export function DashboardPage() {
   const locale = useLocale();
@@ -114,6 +115,11 @@ export function DashboardPage() {
           </div>
         </article>
       </section>
+
+      {/* Le ciel du jour, entre les indicateurs et le travail de la semaine : il se lit
+          d'un coup d'œil et ne pousse rien hors de l'écran. Il ne paraît que si la ferme
+          a allumé le calendrier lunaire. */}
+      <CielDuTableauDeBord />
 
       <div className="dashboard-grid">
         <section className="dashboard-card dashboard-tasks">

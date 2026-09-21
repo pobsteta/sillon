@@ -519,7 +519,8 @@
       "cropsNone": "Aucune espèce de votre référentiel n’est qualifiée de ce type. La partie récoltée se renseigne sur l’espèce.",
       "disclaimer": "Les conseils et les tâches suggérées sont des travaux d’usage, écrits pour Sillon. Ils ne recopient aucun calendrier publié, ne tiennent pas compte de votre terrain et ne remplacent pas votre itinéraire technique.",
       "cropsMore_one": "et 1 autre",
-      "cropsMore_other": "et {{count}} autres"
+      "cropsMore_other": "et {{count}} autres",
+      "open": "Voir la fiche du jour →"
     },
     "phaseDetail": {
       "nouvelle": "Nouvelle lune",

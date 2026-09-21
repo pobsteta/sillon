@@ -42,6 +42,12 @@ test('le calendrier lunaire ne se voit qu’une fois allumé', async ({ page }, 
     await expect(page.getByRole('heading', { name: 'Tableau de bord' })).toBeVisible();
   });
 
+  await test.step('le tableau de bord n’en dit pas un mot', async () => {
+    // C'est la première page qu'on ouvre : c'est donc là que « éteint par défaut » compte
+    // le plus. Qui ne pratique pas ne doit pas voir un mot de plus à l'écran.
+    await expect(page.getByLabel('Calendrier lunaire')).toHaveCount(0);
+  });
+
   await test.step('la feuille de tâches n’en dit pas un mot', async () => {
     // « Éteint par défaut : qui ne pratique pas ne doit pas voir un mot de plus à
     // l'écran. » C'est une promesse d'interface, et rien dans le serveur ne la tient.
@@ -73,11 +79,30 @@ test('le calendrier lunaire ne se voit qu’une fois allumé', async ({ page }, 
     await expect(bandeau).not.toContainText(/favorable|idéal|meilleur moment|propice/i);
   });
 
+  await test.step('le ciel du jour paraît sur le tableau de bord', async () => {
+    await page.goto('/');
+    const ciel = page.getByLabel('Calendrier lunaire');
+    await expect(ciel).toBeVisible();
+    await expect(ciel).toContainText(/montante|descendante/);
+
+    // L'indice chiffré et les conseils restent dans la fiche du jour, derrière le bouton
+    // qui les explique. Les remonter ici les afficherait à quelqu'un qui n'a rien
+    // demandé, et sans le garde-fou qui les accompagne.
+    await expect(ciel.getByRole('img', { name: /Indice du jour/ })).toHaveCount(0);
+    await expect(ciel).not.toContainText(/Conseils du jour|Exceptionnel/);
+
+    // Le chemin vers la fiche doit être court depuis la page qu'on ouvre en premier.
+    await page.getByRole('link', { name: 'Voir la fiche du jour →' }).click();
+    await expect(page).toHaveURL(/\/calendrier-lunaire\/\d{4}-\d{2}-\d{2}$/);
+  });
+
   await test.step('on l’éteint, et tout disparaît', async () => {
     await page.goto('/parametres');
     await basculer(page, false);
     await page.goto('/taches');
     await expect(page.getByLabel('Calendrier lunaire de la semaine')).toHaveCount(0);
+    await page.goto('/');
+    await expect(page.getByLabel('Calendrier lunaire')).toHaveCount(0);
   });
 });
 

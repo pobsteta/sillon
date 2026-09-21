@@ -519,7 +519,8 @@
       "cropsNone": "No crop in your reference list carries this harvested part. It is set on the crop.",
       "disclaimer": "The notes and suggested jobs are customary tasks, written for Sillon. They copy no published calendar, know nothing of your ground, and do not replace your growing plan.",
       "cropsMore_one": "and 1 more",
-      "cropsMore_other": "and {{count}} more"
+      "cropsMore_other": "and {{count}} more",
+      "open": "Open the day sheet →"
     },
     "phaseDetail": {
       "nouvelle": "New moon",
