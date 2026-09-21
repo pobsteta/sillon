@@ -17,6 +17,7 @@ import { useMutation } from '@tanstack/react-query';
 import {
   arrondirLatLng,
   centroidOfAll,
+  toGeoJsonPolygon,
   isLatitude,
   isLongitude,
   fromGeoJsonPolygon,
@@ -62,6 +63,14 @@ export function MapPage() {
   const [applique, setApplique] = useState(false);
   const [angle, setAngle] = useState('15');
   const [pivote, setPivote] = useState<number | null>(null);
+  /** Angle du glisser en cours, en degrés horaires. Nul quand la poignée est au repos. */
+  const [apercu, setApercu] = useState(0);
+  /** Dimensions saisies pour l'emplacement choisi : mètres et centimètres, comme au champ. */
+  const [dimensions, setDimensions] = useState<{ longueur: string; largeur: string }>({
+    longueur: '',
+    largeur: '',
+  });
+  const [dimensionsEnregistrees, setDimensionsEnregistrees] = useState(false);
   const emplacements = useLocations(farmId);
 
   const chercher = useMutation({
@@ -81,14 +90,58 @@ export function MapPage() {
     }),
   );
 
+  /**
+   * Ce qui tourne quand on tire la poignée : la sélection **et toute sa descendance**.
+   *
+   * C'est la règle qui rend le geste utile. Sélectionner un jardin et le faire pivoter
+   * doit emmener ses planches — sans quoi le jardin se déplacerait autour d'elles, ce qui
+   * n'a aucun sens sur le terrain. Sélectionner une planche ne fait tourner qu'elle.
+   *
+   * On descend l'arbre par `parentId` plutôt que de s'arrêter aux enfants directs : un
+   * parcellaire peut compter des sous-jardins, et n'en prendre qu'un niveau laisserait des
+   * planches derrière, silencieusement.
+   */
+  const descendance = (racine: number): number[] => {
+    const tous = emplacements.data ?? [];
+    const retenus = [racine];
+    for (let i = 0; i < retenus.length; i += 1) {
+      const parent = retenus[i]!;
+      for (const lieu of tous) if (lieu.parentId === parent) retenus.push(lieu.id);
+    }
+    return retenus;
+  };
+
+  const aFaireTourner = cible
+    ? descendance(Number(cible)).filter((id) =>
+        isGeoJsonPolygon((emplacements.data ?? []).find((lieu) => lieu.id === id)?.geometry),
+      )
+    : [];
+
+  // Le centre commun : tout le bloc tourne autour de lui, en gardant ses passe-pieds.
+  // Chacune sur son propre centre les ferait tourner en croix.
+  const sommetsDuBloc = aFaireTourner
+    .map((id) => (emplacements.data ?? []).find((lieu) => lieu.id === id)!.geometry)
+    .map((geometrie) => fromGeoJsonPolygon(geometrie as GeoJsonPolygon));
+  const centreDuBloc = sommetsDuBloc.length > 0 ? centroidOfAll(sommetsDuBloc) : null;
+
   const contours = (emplacements.data ?? [])
     .filter((lieu) => isGeoJsonPolygon(lieu.geometry))
-    .map((lieu) => ({
-      id: lieu.id,
-      nom: lieu.name,
-      polygone: lieu.geometry as GeoJsonPolygon,
-      actif: String(lieu.id) === cible,
-    }));
+    .map((lieu) => {
+      const sommets = fromGeoJsonPolygon(lieu.geometry as GeoJsonPolygon);
+      // L'aperçu se calcule ici et ne touche pas la base : tant que la poignée n'est pas
+      // lâchée, rien n'est enregistré, et relâcher hors de la carte ne laisse pas un
+      // parcellaire à moitié tourné.
+      const tourne =
+        apercu !== 0 && centreDuBloc && aFaireTourner.includes(lieu.id)
+          ? toGeoJsonPolygon(rotateAround(sommets, apercu, centreDuBloc))
+          : (lieu.geometry as GeoJsonPolygon);
+      return {
+        id: lieu.id,
+        nom: lieu.name,
+        polygone: tourne,
+        actif: aFaireTourner.includes(lieu.id),
+      };
+    });
 
   const dessiner = useFarmMutation(
     farmId,
@@ -103,6 +156,23 @@ export function MapPage() {
         setMesure(reponse.measured ? { nom: lieu?.name ?? '', ...reponse.measured } : null);
       },
     },
+  );
+
+  /**
+   * Les dimensions saisies à la main.
+   *
+   * Elles priment sur la mesure du tracé : `bedLength` alimente les calculs de semences,
+   * de rendement et de commande, et un contour tracé au doigt ne doit pas en devenir la
+   * base tout seul. Le tracé propose, la saisie décide.
+   */
+  const enregistrerDimensions = useFarmMutation(
+    farmId,
+    ({ id, bedLength, bedWidth }: { id: number; bedLength: number; bedWidth: number | null }) =>
+      api(`/api/farms/${farmId}/locations/${id}`, {
+        method: 'PATCH',
+        body: { bedLength, bedWidth },
+      }),
+    { onSuccess: () => setDimensionsEnregistrees(true) },
   );
 
   const appliquerMesure = useFarmMutation(
@@ -164,6 +234,50 @@ export function MapPage() {
    * de Guinée. Rien ne plantait, l'enregistrement réussissait, et la carte s'ouvrait en
    * plein océan sans que personne comprenne d'où venait le point.
    */
+  /**
+   * Choisir un emplacement, d'où que vienne le geste — la liste ou un clic sur la carte.
+   *
+   * Un seul chemin pour deux gestes : sans cela, cliquer un contour aurait laissé le
+   * tiroir sur les dimensions du précédent, et l'on aurait saisi la longueur d'une planche
+   * dans une autre sans rien voir passer.
+   */
+  const choisirEmplacement = (identifiant: string) => {
+    setCible(identifiant);
+    setApplique(false);
+    setDimensionsEnregistrees(false);
+    setApercu(0);
+
+    const lieu = (emplacements.data ?? []).find((candidat) => String(candidat.id) === identifiant);
+    // Millimètres en base, mètres à l'écran ; centièmes de millimètre pour la largeur,
+    // centimètres à l'écran. La conversion n'a lieu qu'ici, au bord.
+    setDimensions({
+      longueur: lieu?.bedLength ? String(lieu.bedLength / 1000) : '',
+      largeur: lieu?.bedWidth ? String(lieu.bedWidth / 10) : '',
+    });
+
+    // Un emplacement déjà dessiné montre sa mesure tout de suite : la calculer ici évite
+    // d'obliger à retracer un contour pour la relire, et le noyau est la même bibliothèque
+    // que celle du serveur — les deux ne peuvent pas diverger.
+    if (lieu && isGeoJsonPolygon(lieu.geometry)) {
+      const sommets = fromGeoJsonPolygon(lieu.geometry);
+      setMesure({
+        nom: lieu.name,
+        areaM2: polygonArea(sommets),
+        longestSideMm: longestSideMm(sommets),
+      });
+    } else {
+      setMesure(null);
+    }
+  };
+
+  /** Une longueur de planche doit être un nombre positif : zéro n'est pas une planche. */
+  const longueurValide = (() => {
+    const brut = dimensions.longueur.trim().replace(',', '.');
+    if (brut === '') return false;
+    const valeur = Number(brut);
+    return Number.isFinite(valeur) && valeur > 0;
+  })();
+
   const saisieValide = (() => {
     const lat = saisie.lat.trim();
     const lng = saisie.lng.trim();
@@ -204,8 +318,25 @@ export function MapPage() {
               ? { onDessin: (points: LatLng[]) => dessiner.mutate({ id: Number(cible), points }) }
               : {})}
             {...(canManageFarm && !cible ? { onClick: poser } : {})}
+            {...(canManageFarm
+              ? { onContour: (id: number) => choisirEmplacement(String(id)) }
+              : {})}
+            {...(canManageFarm && centreDuBloc ? { poignee: centreDuBloc } : {})}
+            onRotation={setApercu}
+            onRotationFinie={() => {
+              if (apercu !== 0 && aFaireTourner.length > 0) {
+                pivoter.mutate({ ids: aFaireTourner, degres: apercu });
+              }
+              setApercu(0);
+            }}
             {...(session?.map ? { tuiles: session.map } : {})}
           />
+          {canManageFarm && centreDuBloc ? (
+            <p className="mt-2 text-xs text-earth-700 dark:text-earth-200">
+              {t('map.handleHint', { count: aFaireTourner.length })}
+              {apercu !== 0 ? ` · ${apercu > 0 ? '+' : ''}${apercu}°` : ''}
+            </p>
+          ) : null}
           {canManageFarm && !cible ? (
             <p className="mt-2 text-xs text-earth-700 dark:text-earth-200">{t('map.clickHint')}</p>
           ) : null}
@@ -283,25 +414,7 @@ export function MapPage() {
                   value={cible}
                   onChange={(event) => {
                     const choisi = event.target.value;
-                    setCible(choisi);
-                    setApplique(false);
-                    // Un emplacement déjà dessiné montre sa mesure tout de suite : la calculer
-                    // ici évite d'obliger à retracer un contour pour la relire, et le noyau
-                    // est la même bibliothèque que celle du serveur — les deux ne peuvent pas
-                    // diverger.
-                    const lieu = (emplacements.data ?? []).find(
-                      (candidat) => String(candidat.id) === choisi,
-                    );
-                    if (lieu && isGeoJsonPolygon(lieu.geometry)) {
-                      const sommets = fromGeoJsonPolygon(lieu.geometry);
-                      setMesure({
-                        nom: lieu.name,
-                        areaM2: polygonArea(sommets),
-                        longestSideMm: longestSideMm(sommets),
-                      });
-                    } else {
-                      setMesure(null);
-                    }
+                    choisirEmplacement(choisi);
                   }}
                 >
                   <option value="">{t('map.targetNone')}</option>
@@ -357,6 +470,77 @@ export function MapPage() {
                 <p role="status" className="mt-2 text-sm text-sillon-800 dark:text-sillon-200">
                   {t('map.measureApplied')}
                 </p>
+              ) : null}
+
+              {/* Les dimensions, saisies à la main.
+                  Elles **priment** sur la mesure du tracé, et c'est le bon ordre :
+                  `bedLength` alimente les calculs de semences, de rendement et de
+                  commande. Un contour tracé au doigt vaut ce que vaut le doigt ; une
+                  longueur relevée au décamètre vaut ce que vaut le décamètre. Le tracé
+                  propose, la saisie décide — et aucune des deux ne modifie l'autre. */}
+              {cible ? (
+                <div className="mt-4 border-t border-earth-200 pt-4 dark:border-earth-700">
+                  <h3 className="mb-1 font-medium">{t('map.dimensions')}</h3>
+                  <p className="mb-3 text-sm text-earth-700 dark:text-earth-200">
+                    {t('map.dimensionsHint')}
+                  </p>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <Field
+                      label={t('map.bedLength')}
+                      type="number"
+                      inputMode="decimal"
+                      min={0}
+                      step="0.1"
+                      value={dimensions.longueur}
+                      onChange={(event) => {
+                        setDimensions({ ...dimensions, longueur: event.target.value });
+                        setDimensionsEnregistrees(false);
+                      }}
+                    />
+                    <Field
+                      label={t('map.bedWidth')}
+                      type="number"
+                      inputMode="decimal"
+                      min={0}
+                      step="1"
+                      value={dimensions.largeur}
+                      onChange={(event) => {
+                        setDimensions({ ...dimensions, largeur: event.target.value });
+                        setDimensionsEnregistrees(false);
+                      }}
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    className="btn-ghost mt-3"
+                    disabled={!longueurValide || enregistrerDimensions.isPending}
+                    onClick={() =>
+                      enregistrerDimensions.mutate({
+                        id: Number(cible),
+                        bedLength: Math.round(Number(dimensions.longueur.replace(',', '.')) * 1000),
+                        // Largeur vide : on l'efface plutôt que d'imposer un zéro, que les
+                        // calculs prendraient pour une planche sans largeur.
+                        bedWidth:
+                          dimensions.largeur.trim() === ''
+                            ? null
+                            : Math.round(Number(dimensions.largeur.replace(',', '.')) * 10),
+                      })
+                    }
+                  >
+                    {/* Un libellé propre, et non « Enregistrer » : l'écran en porte déjà
+                        un pour la saisie des coordonnées. Deux boutons du même nom sur la
+                        même page s'annoncent à l'identique au lecteur d'écran. */}
+                    {t('map.saveDimensions')}
+                  </button>
+                  {dimensionsEnregistrees ? (
+                    <p role="status" className="mt-2 text-sm text-sillon-800 dark:text-sillon-200">
+                      {t('map.dimensionsSaved')}
+                    </p>
+                  ) : null}
+                  {enregistrerDimensions.error ? (
+                    <ErrorNotice error={enregistrerDimensions.error} />
+                  ) : null}
+                </div>
               ) : null}
 
               <div className="mt-4 border-t border-earth-200 pt-4 dark:border-earth-700">

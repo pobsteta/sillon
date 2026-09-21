@@ -981,7 +981,15 @@
     "rotateAll": "All outlines ({{count}})",
     "rotated": "{{count}} outline(s) rotated by {{angle}}°.",
     "fullscreen": "Full-screen map",
-    "exitFullscreen": "Leave full screen"
+    "exitFullscreen": "Leave full screen",
+    "handleHint_one": "Drag the handle to rotate this location.",
+    "handleHint_other": "Drag the handle to rotate this location and the {{count}} it contains.",
+    "dimensions": "Location dimensions",
+    "dimensionsHint": "What you enter here is authoritative for seed, yield and order calculations. The measurement above only offers a value.",
+    "bedLength": "Length (m)",
+    "bedWidth": "Width (cm)",
+    "dimensionsSaved": "Dimensions saved.",
+    "saveDimensions": "Save dimensions"
   },
   "references": {
     "suggested": "Published figure: {{value}} per bed metre",

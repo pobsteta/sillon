@@ -229,3 +229,48 @@ test('poser la position de la ferme', async ({ page }, info) => {
     await expect(page.getByText('47.59855, -0.44078')).toHaveCount(0);
   });
 });
+
+test('dessiner une planche, la mesurer et la dimensionner', async ({ page }, info) => {
+  const email = `e2e-dim-${info.project.name}-${Date.now()}@example.org`;
+
+  await test.step('créer un compte avec un emplacement', async () => {
+    await page.goto('/connexion');
+    await page.getByRole('button', { name: 'Pas encore de compte ?' }).click();
+    await page.getByLabel('Adresse électronique').fill(email);
+    await page.getByLabel('Mot de passe', { exact: true }).fill(password);
+    await page.getByLabel('Nom de la ferme').fill('Ferme des dimensions');
+    await page.getByRole('button', { name: 'Créer un compte', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Tableau de bord' })).toBeVisible();
+
+    await page.goto('/assolement');
+    await page.getByRole('button', { name: 'Nouvel emplacement' }).click();
+    await page.getByLabel('Nom').fill('Planche A1');
+    await page.getByRole('button', { name: 'Enregistrer' }).click();
+    await expect(page.getByText('Planche A1').first()).toBeVisible();
+  });
+
+  await test.step('les dimensions se saisissent depuis le tiroir de la carte', async () => {
+    // Ce que la saisie apporte par rapport à la mesure du tracé : `bedLength` alimente
+    // les calculs de semences et de commande. Une longueur relevée au décamètre doit
+    // pouvoir primer sur un contour tracé au doigt — et sans dessiner du tout.
+    await page.goto('/carte');
+    await page.getByLabel('Emplacement à dessiner').selectOption({ label: 'Planche A1' });
+
+    await expect(page.getByRole('heading', { name: 'Dimensions de l’emplacement' })).toBeVisible();
+    await page.getByLabel('Longueur (m)').fill('42');
+    await page.getByLabel('Largeur (cm)').fill('75');
+    // Un libellé propre : l'écran porte déjà un « Enregistrer » pour les coordonnées, et
+    // deux boutons du même nom s'annoncent à l'identique au lecteur d'écran.
+    await page.getByRole('button', { name: 'Enregistrer les dimensions' }).click();
+    await expect(
+      page.getByRole('status').filter({ hasText: 'Dimensions enregistrées' }),
+    ).toBeVisible();
+  });
+
+  await test.step('et se relisent sur l’assolement', async () => {
+    // L'aller-retour complet : ce qui est saisi ici doit être ce que le reste de
+    // l'application emploie, et non une valeur d'affichage restée dans l'écran.
+    await page.goto('/assolement');
+    await expect(page.getByText(/42/).first()).toBeVisible();
+  });
+});

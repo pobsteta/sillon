@@ -1025,7 +1025,15 @@
     "rotateAll": "Tous les contours ({{count}})",
     "rotated": "{{count}} contour(s) pivoté(s) de {{angle}}°.",
     "fullscreen": "Carte en plein écran",
-    "exitFullscreen": "Quitter le plein écran"
+    "exitFullscreen": "Quitter le plein écran",
+    "handleHint_one": "Tirez la poignée pour faire pivoter cet emplacement.",
+    "handleHint_other": "Tirez la poignée pour faire pivoter cet emplacement et les {{count}} qu’il contient.",
+    "dimensions": "Dimensions de l’emplacement",
+    "dimensionsHint": "Ce que vous saisissez ici fait foi pour les calculs de semences, de rendement et de commande. La mesure du tracé, plus haut, se contente de proposer.",
+    "bedLength": "Longueur (m)",
+    "bedWidth": "Largeur (cm)",
+    "dimensionsSaved": "Dimensions enregistrées.",
+    "saveDimensions": "Enregistrer les dimensions"
   },
   "references": {
     "suggested": "Repère publié : {{value}} par mètre de planche",

@@ -41,6 +41,24 @@ export interface CarteProps {
   /** Contours à afficher, par emplacement. */
   contours?: { id: number; nom: string; polygone: GeoJsonPolygon; actif?: boolean }[];
   /**
+   * Appelé quand on clique un contour. C'est la façon naturelle de désigner ce qu'on veut
+   * manipuler : on montre la planche du doigt plutôt que de la chercher dans une liste.
+   */
+  onContour?: ((id: number) => void) | undefined;
+  /**
+   * Centre de la poignée de rotation, quand il y a une sélection à faire tourner. Absent,
+   * aucune poignée n'est posée.
+   *
+   * La poignée est **hors du composant** au sens de la décision : c'est l'appelant qui sait
+   * ce qui tourne — une planche seule, ou un jardin avec toutes les siennes — et qui tient
+   * l'aperçu. Ici on ne fait que rendre le geste.
+   */
+  poignee?: LatLng | null;
+  /** Angle courant pendant le glisser, en degrés horaires depuis la position de départ. */
+  onRotation?: ((degres: number) => void) | undefined;
+  /** Le glisser est terminé : l'appelant enregistre. */
+  onRotationFinie?: (() => void) | undefined;
+  /**
    * La carte pourra-t-elle servir à dessiner ? À connaître **dès le premier rendu** :
    * Geoman s'accroche à la carte au moment où elle est créée (`addInitHook`), si bien
    * qu'il doit être chargé **avant** `L.map()`. Le charger ensuite laisse `map.pm`
@@ -71,6 +89,10 @@ export function Carte({
   contours,
   avecDessin = false,
   onDessin,
+  onContour,
+  poignee,
+  onRotation,
+  onRotationFinie,
   nomDuPlan = 'Plan',
   hauteur,
   etiquette,
@@ -86,6 +108,13 @@ export function Carte({
   const dessin = useRef(onDessin);
   dessin.current = onDessin;
   const couche = useRef<L.LayerGroup | null>(null);
+  const poigneeCouche = useRef<L.LayerGroup | null>(null);
+  const surContour = useRef(onContour);
+  surContour.current = onContour;
+  const surRotation = useRef(onRotation);
+  surRotation.current = onRotation;
+  const surRotationFinie = useRef(onRotationFinie);
+  surRotationFinie.current = onRotationFinie;
   // Le parcellaire a-t-il déjà donné le cadrage ? Une référence et non un état : elle se
   // lit dans un effet voisin, et un rendu de plus n'apporterait rien.
   const cadre = useRef(false);
@@ -182,6 +211,7 @@ export function Carte({
       });
 
       couche.current = L.layerGroup().addTo(instance);
+      poigneeCouche.current = L.layerGroup().addTo(instance);
       carte.current = instance;
       setPrete((compteur) => compteur + 1);
     })();
@@ -192,6 +222,7 @@ export function Carte({
       carte.current = null;
       marque.current = null;
       couche.current = null;
+      poigneeCouche.current = null;
       cadre.current = false;
     };
     // Monté une fois : le fond et la possibilité de dessiner ne changent pas en cours de
@@ -263,13 +294,21 @@ export function Carte({
       const sommets = fromGeoJsonPolygon(contour.polygone).map(
         (sommet) => [sommet.lat, sommet.lng] as L.LatLngExpression,
       );
-      L.polygon(sommets, {
+      const trace = L.polygon(sommets, {
         color: contour.actif ? '#b45309' : '#4d7c0f',
         weight: contour.actif ? 3 : 2,
         fillOpacity: contour.actif ? 0.35 : 0.18,
       })
         .bindTooltip(contour.nom)
         .addTo(groupe);
+
+      trace.on('click', (evenement) => {
+        // Sans cela, le clic traverse jusqu'à la carte et **pose la position de la ferme**
+        // au lieu de sélectionner la planche : deux gestes radicalement différents pour
+        // un seul clic, et le second est difficile à défaire.
+        L.DomEvent.stopPropagation(evenement);
+        surContour.current?.(contour.id);
+      });
     }
 
     // Cadrer sur ce qui est **dessiné**, et non sur le point de la ferme.
@@ -292,6 +331,92 @@ export function Carte({
       cadre.current = true;
     }
   }, [contours, prete]);
+
+  /**
+   * La poignée de rotation : un marqueur qu'on tire autour du centre de la sélection.
+   *
+   * **L'angle se lit sur l'écran, pas sur la carte.** On compare la position du curseur au
+   * centre en **pixels**, et non en degrés : un degré de longitude ne vaut pas un degré de
+   * latitude, et calculer l'angle sur les coordonnées ferait tourner le parcellaire plus
+   * vite d'un côté que de l'autre — un geste qui ne suit pas la main.
+   *
+   * L'aperçu est rendu par l'appelant, qui seul sait ce qui tourne : ici on n'émet que
+   * l'angle. Le pas de cinq degrés est ce qui rend l'alignement d'un parcellaire possible
+   * à la souris ; sans lui on vise au pixel et on n'y arrive pas.
+   */
+  useEffect(() => {
+    const instance = carte.current;
+    const groupe = poigneeCouche.current;
+    if (!instance || !groupe) return;
+
+    groupe.clearLayers();
+    if (!poignee) return;
+
+    const centre = L.latLng(poignee.lat, poignee.lng);
+    const enPixels = (position: L.LatLng) => instance.latLngToContainerPoint(position);
+    // Quarante pixels au nord du centre : une distance constante à l'écran, donc une
+    // poignée qui reste saisissable quel que soit le zoom.
+    const posePoignee = () =>
+      instance.containerPointToLatLng(enPixels(centre).subtract(L.point(0, 40)));
+
+    const angleDepuisCentre = (position: L.LatLng) => {
+      const c = enPixels(centre);
+      const p = enPixels(position);
+      // `atan2` compte en sens trigonométrique et l'écran a son y vers le bas : le signe
+      // remet le geste dans le sens horaire, celui qu'attend la main.
+      return (Math.atan2(p.x - c.x, c.y - p.y) * 180) / Math.PI;
+    };
+
+    const depart = posePoignee();
+    const angleDepart = angleDepuisCentre(depart);
+
+    L.circleMarker(centre, {
+      radius: 4,
+      weight: 2,
+      color: '#b45309',
+      fillColor: '#b45309',
+      fillOpacity: 1,
+      interactive: false,
+    }).addTo(groupe);
+    const tige = L.polyline([centre, depart], {
+      color: '#b45309',
+      weight: 2,
+      dashArray: '4 3',
+      interactive: false,
+    }).addTo(groupe);
+
+    const marqueur = L.marker(depart, {
+      draggable: true,
+      keyboard: false,
+      icon: L.divIcon({
+        className: '',
+        html: '<div class="carte-poignee" title="Faire pivoter">⟳</div>',
+        iconSize: [28, 28],
+        iconAnchor: [14, 14],
+      }),
+    }).addTo(groupe);
+
+    const surGlisse = () => {
+      const position = marqueur.getLatLng();
+      tige.setLatLngs([centre, position]);
+      const brut = angleDepuisCentre(position) - angleDepart;
+      surRotation.current?.(Math.round(brut / 5) * 5);
+    };
+
+    marqueur.on('drag', surGlisse);
+    marqueur.on('dragend', () => {
+      surRotationFinie.current?.();
+      // La poignée revient au nord : l'aperçu est retombé à zéro une fois enregistré, et
+      // la laisser où elle est ferait croire que l'angle court encore.
+      marqueur.setLatLng(posePoignee());
+      tige.setLatLngs([centre, posePoignee()]);
+    });
+
+    return () => {
+      marqueur.off();
+      groupe.clearLayers();
+    };
+  }, [poignee, prete]);
 
   /**
    * Prévenir Leaflet que son conteneur a changé de taille.
