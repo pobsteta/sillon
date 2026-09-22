@@ -333,7 +333,12 @@ export function MapPage() {
           />
           {canManageFarm && centreDuBloc ? (
             <p className="mt-2 text-xs text-earth-700 dark:text-earth-200">
-              {t('map.handleHint', { count: aFaireTourner.length })}
+              {/* Moins un : `aFaireTourner` comprend l'emplacement choisi lui-même, et
+                  annoncer « cet emplacement et les 3 qu'il contient » pour un jardin de
+                  deux planches en compte une de trop. Zéro retombe sur la forme
+                  singulière, qui ne parle que de l'emplacement — ce qui est juste pour
+                  une planche seule. */}
+              {t('map.handleHint', { count: aFaireTourner.length - 1 })}
               {apercu !== 0 ? ` · ${apercu > 0 ? '+' : ''}${apercu}°` : ''}
             </p>
           ) : null}

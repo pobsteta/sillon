@@ -122,6 +122,9 @@ export function Carte({
   // qui l'attendent, faute de quoi ils s'exécuteraient sur une carte pas encore là.
   const [prete, setPrete] = useState(0);
   const [pleinEcran, setPleinEcran] = useState(false);
+  // Voir l'effet de la poignée : on retient les coordonnées, non l'objet qui les porte.
+  const poigneeLat = poignee?.lat ?? null;
+  const poigneeLng = poignee?.lng ?? null;
 
   useEffect(() => {
     if (!conteneur.current || carte.current) return;
@@ -350,9 +353,9 @@ export function Carte({
     if (!instance || !groupe) return;
 
     groupe.clearLayers();
-    if (!poignee) return;
+    if (poigneeLat === null || poigneeLng === null) return;
 
-    const centre = L.latLng(poignee.lat, poignee.lng);
+    const centre = L.latLng(poigneeLat, poigneeLng);
     const enPixels = (position: L.LatLng) => instance.latLngToContainerPoint(position);
     // Quarante pixels au nord du centre : une distance constante à l'écran, donc une
     // poignée qui reste saisissable quel que soit le zoom.
@@ -416,7 +419,13 @@ export function Carte({
       marqueur.off();
       groupe.clearLayers();
     };
-  }, [poignee, prete]);
+    // **Les dépendances sont les coordonnées, pas l'objet.** L'appelant recalcule le
+    // centre à chaque rendu, donc `poignee` change d'identité à chaque fois — y compris
+    // pendant le glisser, que `setApercu` fait re-rendre à chaque pixel. L'effet se
+    // rejouait alors en plein geste, son nettoyage détruisait le marqueur qu'on tenait, et
+    // `dragend` n'arrivait jamais : la rotation s'affichait puis disparaissait sans rien
+    // enregistrer. Comparer deux nombres plutôt que deux objets suffit à l'empêcher.
+  }, [poigneeLat, poigneeLng, prete]);
 
   /**
    * Prévenir Leaflet que son conteneur a changé de taille.
@@ -457,16 +466,24 @@ export function Carte({
         }`}
         {...(hauteur && !pleinEcran ? { style: { height: hauteur } } : {})}
       />
-      {/* Au-dessus des commandes de Leaflet, qui montent à 1000. Un `z-10` suffirait à
-          l'écran et laisserait le bouton sous le sélecteur de fond dès qu'un déploiement
-          en configure un : la panne serait invisible ici et visible chez l'utilisateur. */}
+      {/* **En bas à gauche, et non en haut à droite.** Leaflet occupe déjà trois coins :
+          le zoom et le sélecteur de fond en haut à gauche, les outils de dessin de Geoman
+          en haut à droite, l'attribution — due par la licence — en bas à droite. Posé en
+          haut à droite, ce bouton **recouvrait la barre de dessin** : on ne pouvait plus
+          tracer une planche sans le déplacer.
+
+          Le `z-[1100]` reste nécessaire : les commandes de Leaflet montent à 1000, et un
+          `z-10` laisserait le bouton dessous dès qu'un déploiement configure un second
+          fond de carte — panne invisible ici, visible chez l'utilisateur. */}
       <button
         type="button"
-        className="btn-ghost no-print absolute right-3 top-3 z-[1100] min-h-11 w-11 px-0"
-        // En plein écran, la carte couvre la barre d'état : sans l'encoche, le bouton de
+        className="btn-ghost no-print absolute bottom-3 left-3 z-[1100] min-h-11 w-11 px-0"
+        // En plein écran, la carte couvre la barre système : sans l'encoche, le bouton de
         // sortie passerait dessous sur un téléphone, et l'on ne pourrait plus refermer
         // autrement qu'au clavier — que ces appareils n'ont pas.
-        {...(pleinEcran ? { style: { top: 'calc(0.75rem + env(safe-area-inset-top, 0px))' } } : {})}
+        {...(pleinEcran
+          ? { style: { bottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))' } }
+          : {})}
         aria-pressed={pleinEcran}
         aria-label={pleinEcran ? t('map.exitFullscreen') : t('map.fullscreen')}
         title={pleinEcran ? t('map.exitFullscreen') : t('map.fullscreen')}
