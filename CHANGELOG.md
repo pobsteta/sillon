@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.8.0](https://github.com/pobsteta/sillon/compare/v0.7.0...v0.8.0) (2026-09-23)
+
+
+### Fonctionnalités
+
+* **carte:** poignée de rotation sur la carte et dimensions modifiables ([af96708](https://github.com/pobsteta/sillon/commit/af96708043ab144ce312e939b77faff638d2bd3e))
+
+
+### Corrections
+
+* **carte:** la rotation à la poignée n'enregistrait rien ([256e9bd](https://github.com/pobsteta/sillon/commit/256e9bd92bfd0f2cd86632dd95e0c98613536b14))
+
 ## [0.7.0](https://github.com/pobsteta/sillon/compare/v0.6.0...v0.7.0) (2026-09-21)
 
 
