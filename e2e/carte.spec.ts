@@ -186,7 +186,15 @@ test('poser la position de la ferme', async ({ page }, info) => {
 
     /** Étendue de chaque contour, en degrés : de quoi dire s'il est debout ou couché. */
     const etendues = async () => {
-      const lieux = await page.request.get(`/api/farms/${ferme}/locations`).then((r) => r.json());
+      // Lecture **dans la page** plutôt que par `page.request`. Les réponses de ce dernier
+      // ont leur propre durée de vie, et cet essai échouait par intermittence sur
+      // « Response has been disposed » — une panne de l'outillage, sans rapport avec ce
+      // qu'il vérifie. `fetch` depuis la page emprunte le cookie de session et ne garde
+      // aucun objet vivant.
+      const lieux = await page.evaluate(
+        (id: number) => fetch(`/api/farms/${id}/locations`).then((r) => r.json()),
+        ferme,
+      );
       return lieux
         .filter((lieu: { geometry: unknown }) => lieu.geometry)
         .map((lieu: { geometry: { coordinates: number[][][] } }) => {
@@ -227,5 +235,152 @@ test('poser la position de la ferme', async ({ page }, info) => {
   await test.step('et se retirent aussi simplement', async () => {
     await page.getByRole('button', { name: 'Retirer la position' }).click();
     await expect(page.getByText('47.59855, -0.44078')).toHaveCount(0);
+  });
+});
+
+test('dessiner une planche, la mesurer et la dimensionner', async ({ page }, info) => {
+  const email = `e2e-dim-${info.project.name}-${Date.now()}@example.org`;
+
+  await test.step('créer un compte avec un emplacement', async () => {
+    await page.goto('/connexion');
+    await page.getByRole('button', { name: 'Pas encore de compte ?' }).click();
+    await page.getByLabel('Adresse électronique').fill(email);
+    await page.getByLabel('Mot de passe', { exact: true }).fill(password);
+    await page.getByLabel('Nom de la ferme').fill('Ferme des dimensions');
+    await page.getByRole('button', { name: 'Créer un compte', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Tableau de bord' })).toBeVisible();
+
+    await page.goto('/assolement');
+    await page.getByRole('button', { name: 'Nouvel emplacement' }).click();
+    await page.getByLabel('Nom').fill('Planche A1');
+    await page.getByRole('button', { name: 'Enregistrer' }).click();
+    await expect(page.getByText('Planche A1').first()).toBeVisible();
+  });
+
+  await test.step('les dimensions se saisissent depuis le tiroir de la carte', async () => {
+    // Ce que la saisie apporte par rapport à la mesure du tracé : `bedLength` alimente
+    // les calculs de semences et de commande. Une longueur relevée au décamètre doit
+    // pouvoir primer sur un contour tracé au doigt — et sans dessiner du tout.
+    await page.goto('/carte');
+    await page.getByLabel('Emplacement à dessiner').selectOption({ label: 'Planche A1' });
+
+    await expect(page.getByRole('heading', { name: 'Dimensions de l’emplacement' })).toBeVisible();
+    await page.getByLabel('Longueur (m)').fill('42');
+    await page.getByLabel('Largeur (cm)').fill('75');
+    // Un libellé propre : l'écran porte déjà un « Enregistrer » pour les coordonnées, et
+    // deux boutons du même nom s'annoncent à l'identique au lecteur d'écran.
+    await page.getByRole('button', { name: 'Enregistrer les dimensions' }).click();
+    await expect(
+      page.getByRole('status').filter({ hasText: 'Dimensions enregistrées' }),
+    ).toBeVisible();
+  });
+
+  await test.step('et se relisent sur l’assolement', async () => {
+    // L'aller-retour complet : ce qui est saisi ici doit être ce que le reste de
+    // l'application emploie, et non une valeur d'affichage restée dans l'écran.
+    await page.goto('/assolement');
+    await expect(page.getByText(/42/).first()).toBeVisible();
+  });
+});
+
+test('faire pivoter un jardin entraîne ses planches', async ({ page }, info) => {
+  const email = `e2e-pivot-${info.project.name}-${Date.now()}@example.org`;
+
+  await test.step('créer un jardin avec deux planches, situé et dessiné', async () => {
+    await page.goto('/connexion');
+    await page.getByRole('button', { name: 'Pas encore de compte ?' }).click();
+    await page.getByLabel('Adresse électronique').fill(email);
+    await page.getByLabel('Mot de passe', { exact: true }).fill(password);
+    await page.getByLabel('Nom de la ferme').fill('Ferme qui pivote');
+    await page.getByRole('button', { name: 'Créer un compte', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Tableau de bord' })).toBeVisible();
+
+    // Le parcellaire se pose par l'API : dessiner trois contours à la souris rendrait
+    // l'essai long et fragile, alors que ce qu'il vérifie est la **rotation**.
+    const farmId: number = await page.evaluate(async () => {
+      const session = await fetch('/api/auth/me').then((r) => r.json());
+      const id = session.farms[0].id;
+      const jardin = await fetch(`/api/farms/${id}/locations`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          name: 'Jardin nord',
+          parentId: null,
+          bedLength: 0,
+          greenhouse: false,
+        }),
+      }).then((r) => r.json());
+      const carre = (est: number) => [
+        { lat: 47.322, lng: 5.041 + est },
+        { lat: 47.322, lng: 5.0411 + est },
+        { lat: 47.3221, lng: 5.0411 + est },
+        { lat: 47.3221, lng: 5.041 + est },
+      ];
+      await fetch(`/api/farms/${id}/locations/${jardin.id}/geometry`, {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ points: carre(0) }),
+      });
+      for (const [rang, nom] of [
+        [1, 'Planche A1'],
+        [2, 'Planche A2'],
+      ] as const) {
+        const planche = await fetch(`/api/farms/${id}/locations`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            name: nom,
+            parentId: jardin.id,
+            bedLength: 30000,
+            bedWidth: 800,
+            greenhouse: false,
+          }),
+        }).then((r) => r.json());
+        await fetch(`/api/farms/${id}/locations/${planche.id}/geometry`, {
+          method: 'PUT',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ points: carre(rang * 0.0002) }),
+        });
+      }
+      await fetch(`/api/farms/${id}`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ latitude: 47.322, longitude: 5.041 }),
+      });
+      return id;
+    });
+    expect(farmId).toBeGreaterThan(0);
+  });
+
+  await test.step('la poignée fait pivoter le jardin et ses deux planches', async () => {
+    await page.goto('/carte');
+    // Par la valeur, non par le libellé : une fois le contour tracé, l'option porte un
+    // suffixe « déjà dessiné », et une correspondance exacte sur le nom ne trouve plus rien.
+    const valeur = await page
+      .locator('option', { hasText: 'Jardin nord' })
+      .first()
+      .getAttribute('value');
+    await page.getByLabel('Emplacement à dessiner').selectOption(valeur!);
+
+    // Le libellé dit ce qui va tourner : le jardin **et** ce qu'il contient.
+    await expect(page.getByText(/Tirez la poignée/)).toContainText(/2/);
+
+    const poignee = page.locator('.carte-poignee');
+    await expect(poignee).toBeVisible();
+    const depart = await poignee.boundingBox();
+    expect(depart).not.toBeNull();
+
+    // Un vrai glisser, en plusieurs pas : d'un seul bond, Leaflet ne voit pas de
+    // déplacement et n'émet jamais l'événement de glissement.
+    await page.mouse.move(depart!.x + depart!.width / 2, depart!.y + depart!.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(depart!.x + 90, depart!.y + 70, { steps: 12 });
+    await page.mouse.up();
+
+    // C'est ici que le défaut se voyait : l'aperçu tournait, puis tout revenait en place.
+    // Le compte rendu ne paraît que si la rotation a été **enregistrée**.
+    await expect(page.getByRole('status').filter({ hasText: /pivoté/ })).toBeVisible({
+      timeout: 15_000,
+    });
   });
 });

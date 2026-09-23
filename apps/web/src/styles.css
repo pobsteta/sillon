@@ -825,3 +825,26 @@
     display: none !important;
   }
 }
+
+@layer components {
+  /* La poignée de rotation du parcellaire. Elle vit sur la carte, donc au-dessus des
+   * tuiles mais sous les commandes de Leaflet — et assez large pour le doigt : le brief
+   * impose 44 px de cible, que la zone tactile du marqueur complète autour du rond. */
+  .carte-poignee {
+    display: grid;
+    width: 28px;
+    height: 28px;
+    place-items: center;
+    border: 2px solid #b45309;
+    border-radius: 999px;
+    background: #fff;
+    color: #b45309;
+    font-size: 16px;
+    line-height: 1;
+    cursor: grab;
+    box-shadow: 0 1px 4px rgba(31, 29, 25, 0.35);
+  }
+  .carte-poignee:active {
+    cursor: grabbing;
+  }
+}
